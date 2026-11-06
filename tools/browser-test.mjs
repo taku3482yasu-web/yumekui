@@ -91,13 +91,21 @@ while(q.length){const [x,y]=q.shift();if(x===tx&&y===ty){let c=key(x,y),step=nul
 for(const [n,dx,dy] of D){const nx=x+dx,ny=y+dy,k=key(nx,ny);if(prev.has(k))continue;const ch=t[ny]?.[nx];if(!ch||ch==='w'||ch==='M')continue;if(ch==='G'&&!s.flags.gateOpen)continue;
 const hit=window.__objects().find(o=>o.x===nx&&o.y===ny);if(hit&&!(nx===tx&&ny===ty)&&hit.kind!=='exit')continue;prev.set(k,[key(x,y),n]);q.push([nx,ny]);}}return null;}`;
 
-async function battle(useShake) {
+async function battle(useShake, eat = false) {
+    let turn = 0;
     for (let i = 0; i < 400; i++) {
         const now = await state();
         if (now.m !== 'battle') return now;
         const labels = await read('[...document.querySelectorAll("#menu button")].map(b=>b.textContent)');
         if (now.menu && labels.length) {
-            const pick = labels.findIndex((label) => label.includes('ほんとは、自分で'));
+            const devourAt = labels.indexOf('バクに喰らわせる');
+            if (eat && devourAt >= 0) {
+                await shot('16-devour');
+                for (let k = 0; k < devourAt; k++) await key('ArrowDown');
+                await key('j');
+                continue;
+            }
+            const pick = labels.findIndex((label) => ['ほんとは、自分で決めたかった', '一緒に吹きたかった', '相談してほしかった'].includes(label));
             if (pick >= 0) {
                 await shot('05-truth-choices');
                 for (let k = 0; k < pick; k++) await key('ArrowDown');
@@ -105,7 +113,15 @@ async function battle(useShake) {
             } else {
                 const wanted = labels.findIndex((label) => label === '本音を言い当てる');
                 const shake = labels.indexOf('ココロ攻撃');
-                const target = wanted >= 0 ? wanted : (useShake && shake >= 0 ? shake : 0);
+                const hp = await read('Number(document.querySelector("#ally-status .num").textContent.split("/")[0])');
+                const heal = labels.indexOf('悪夢を食べる');
+                const healOff = heal >= 0 && await read(`document.querySelectorAll("#menu button")[${heal}].disabled`);
+                const needHeal = hp < 28 && heal >= 0 && !healOff;
+                const guard = labels.indexOf('まもる');
+                const big = (useShake || eat) && turn % 4 === 3;
+                const hit = labels.indexOf(eat ? 'ひっかく' : labels[0]);
+                const target = wanted >= 0 && !eat ? wanted : big ? guard : needHeal ? heal : (useShake && shake >= 0 ? shake : Math.max(hit, 0));
+                turn++;
                 for (let k = 0; k < target; k++) await key('ArrowDown');
                 await key('j');
             }
@@ -189,26 +205,150 @@ await sleep(900);
 await shot('08-boss');
 await battle(true);
 await sleep(300);
-await skip(10).catch(() => {});
-for (let i = 0; i < 60; i++) {
+
+// 結末から 2 月 2 日へ
+const pick = async (text) => {
+    for (let i = 0; i < 200; i++) {
+        const now = await state();
+        const labels = await read('[...document.querySelectorAll("#menu button")].map(b=>b.textContent)');
+        if (now.menu && labels.length) {
+            const index = labels.findIndex((label) => label.includes(text));
+            if (index < 0) throw new Error(text + ' がない: ' + labels);
+            for (let k = 0; k < index; k++) await key('ArrowDown');
+            await key('j');
+            await sleep(200);
+            return;
+        }
+        if (now.msg) await key('j');
+        else await sleep(80);
+    }
+    throw new Error('メニューが出ない ' + text);
+};
+const waitField = async () => {
+    for (let i = 0; i < 200; i++) {
+        const now = await state();
+        if (now.m === 'field' && !now.msg) return;
+        if (now.msg) await key('j');
+        else await sleep(80);
+    }
+    throw new Error('夢に入れない');
+};
+const fightAt = async (x, y, shake = false) => {
+    await walkTo(x, y);
+    await sleep(300);
+    await skip();
+    await sleep(900);
+    await battle(shake);
+    await sleep(300);
+};
+
+await pick('音楽室');
+await sleep(300);
+await shot('12-town');
+await pick('ミオの夢');
+await sleep(900);
+await waitField();
+await shot('13-mio-dream');
+await fightAt(9, 7);
+await skip();
+await fightAt(15, 4);
+await skip();
+await walkTo(15, 1);
+await skip();
+console.log('2/2 の言葉', JSON.stringify((await state()).s.words));
+await walkTo(10, 9);
+await sleep(300);
+await shot('13b-wake-door');
+await pick('目を覚ます');
+await sleep(1000);
+for (let day = 3; day < 7; day++) {
+    await pick('今夜は休む').catch(() => {});
+    await sleep(300);
+    await pick('家に帰る');
+    await sleep(300);
+}
+await pick('今夜は休む');
+await sleep(300);
+await pick('家に帰る');
+await sleep(300);
+const seven = await state();
+console.log('今の日', seven.s.day, seven.s.phase, '活性化', seven.s.flags.active);
+await pick('ミオの夢');
+await sleep(900);
+await waitField();
+await fightAt(9, 4, true);
+await sleep(500);
+console.log('ボス戦のあと: 解決', JSON.stringify(await read('yumekui.keep.solved')), '画面', (await state()).m, '文', await read('document.getElementById("text").textContent'));
+await shot('14-after-rescue');
+await pick('今夜は休む').catch(() => {});
+const rescued = await state();
+console.log('仲間', JSON.stringify(await read('yumekui.keep.allies')), '状態', JSON.stringify(rescued.s.status));
+for (let i = 0; i < 12; i++) {
     const now = await state();
-    if (now.m === 'shadow' && now.msg) { await sleep(400); await shot('09-shadow'); }
-    if (now.m === 'morning' && now.msg) { await sleep(300); await shot('10-morning'); }
-    if (now.title) break;
+    if ((await read('yumekui.keep.loop')) === 2) break;
+    const labels = await read('[...document.querySelectorAll("#menu button")].map(b=>b.textContent)');
+    if (now.menu && labels.some((l) => l.includes('早送り'))) await pick('早送り');
+    else if (now.menu && labels.some((l) => l.includes('休む'))) await pick('今夜は休む');
+    else if (now.menu) await pick('家に帰る');
+    else if (now.msg) await key('j');
+    await sleep(300);
+}
+for (let i = 0; i < 30 && (await read('yumekui.keep.loop')) !== 2; i++) {
+    const now = await state();
+    if (now.msg) await key('j');
+    else if (now.menu) await key('j');
+    else await sleep(100);
+}
+await sleep(1200);
+await shot('15-loop-2');
+const looped = await state();
+const loop = await read('yumekui.keep.loop');
+const allies = await read('yumekui.keep.allies');
+console.log('周', loop, '日', looped.s.day, '仲間', JSON.stringify(allies), '状態', JSON.stringify(looped.s.status));
+
+// 2 周目: 2/7 まで進めて カナのユメクイを喰らう
+for (let day = 2; day < 7; day++) {
+    await pick('家に帰る');
+    await sleep(300);
+    await pick('今夜は休む');
+    await sleep(300);
+}
+await pick('家に帰る');
+await sleep(300);
+await pick('カナの夢');
+await sleep(900);
+await waitField();
+await walkTo(6, 8);
+await sleep(300);
+await skip();
+await sleep(900);
+await battle(false);
+await skip();
+await walkTo(10, 8);
+await walkTo(10, 7);
+await walkTo(9, 5);
+await sleep(300);
+await skip();
+await sleep(900);
+await battle(false, true);
+await sleep(1200);
+for (let i = 0; i < 40; i++) {
+    const now = await state();
+    if (now.menu) break;
     if (now.msg) await key('j');
     else await sleep(100);
 }
-await sleep(300);
-const last = await state();
-console.log('最後の画面', last.m, 'タイトル', last.title);
+const after = await state();
+const growth = await read('yumekui.keep.growth');
+console.log('成長', JSON.stringify(growth), '状態', JSON.stringify(after.s.status), '喰らった', JSON.stringify(await read('yumekui.keep.eaten')));
+console.log('エラー', errors.length ? errors : 'なし');
 await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
 await send('Emulation.setTouchEmulationEnabled', { enabled: true });
-await send('Emulation.setEmitTouchEventsForMouse', { enabled: true });
 await send('Page.reload');
 await sleep(1200);
 await shot('11-phone');
-console.log('エラー', errors.length ? errors : 'なし');
 chrome.kill();
 await sleep(400);
 try { rmSync(profile, { recursive: true, force: true }); } catch { /* Chrome が つかんでいることがある */ }
-process.exit(errors.length || !last.title ? 1 : 0);
+const ok = !errors.length && loop === 2 && allies.includes('gakufume') && looped.s.status.mio === 'idle' && growth.eaten === 1 && after.s.status.kana === 'eaten';
+process.exit(ok ? 0 : 1);

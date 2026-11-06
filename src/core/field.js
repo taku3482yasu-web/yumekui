@@ -6,7 +6,10 @@ const SOLID = new Set(['w', 'M']);
 
 export function createState() {
     const start = MAPS.odoriba.start;
-    return { map: 'odoriba', x: start.x, y: start.y, dir: 'up', flags: {}, words: [], shards: 0, gone: {} };
+    return {
+        map: 'odoriba', x: start.x, y: start.y, dir: 'up', flags: {}, words: [], shards: 0, gone: {},
+        day: 1, phase: 'night', status: { mio: 'idle', kana: 'idle' }, visits: {}
+    };
 }
 
 export function isVisible(object, state) {
@@ -41,7 +44,7 @@ export function step(state, dir) {
     const y = state.y + dy;
     state.dir = dir;
     const object = objectAt(state, x, y);
-    if (object?.kind === 'foe' || object?.kind === 'word') return { type: 'bump', object };
+    if (['foe', 'word', 'wake'].includes(object?.kind)) return { type: 'bump', object };
     if (object && object.kind !== 'exit') return { type: 'stop' };
     if (isBlocked(state, x, y)) return { type: 'stop' };
     state.x = x;
@@ -63,5 +66,8 @@ export function warp(state, exit) {
 export function pickWord(state, object) {
     state.words.push(object.word);
     state.gone[object.id] = true;
-    if (state.words.length === 3) state.flags.gateOpen = true;
+    const rest = MAPS[state.map].objects.some((item) => item.kind === 'word' && !state.gone[item.id]);
+    const opens = !rest && state.map === 'omen';
+    if (opens) state.flags.gateOpen = true;
+    return opens;
 }

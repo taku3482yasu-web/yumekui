@@ -51,6 +51,7 @@ export function createUi(input) {
             menuBox.classList.toggle('wide', wide);
             menuBox.classList.toggle('tall', tall);
             menuBox.classList.toggle('center', center);
+            menuBox.classList.toggle('grid', !wide && items.length > 5);
             if (head) {
                 const title = document.createElement('div');
                 title.className = 'head';
@@ -97,10 +98,10 @@ export function createUi(input) {
         return new Promise((resolve) => setTimeout(resolve, 420));
     }
 
-    function hud(place, state) {
+    function hud(place, state, date) {
         $('hud').hidden = false;
-        $('place').textContent = `2月1日（月）の夜　${place}`;
-        $('items').textContent = `言葉 ${state.words.length}/3　夢のかけら ${state.shards}`;
+        $('place').textContent = `${date}　${place}`;
+        $('items').textContent = `言葉 ${state.words.length}　夢のかけら ${state.shards}`;
     }
 
     const hideHud = () => { $('hud').hidden = true; };

@@ -34,7 +34,13 @@ export function drawSky(ctx, time) {
     }
 }
 
-function drawTile(ctx, tile, x, y, open) {
+const FLOORS = {
+    water: ['#3d7c8c', '#35707f', '#55a0ac'],
+    tempo: ['#8c5560', '#7f4c58', '#b0727c'],
+    base: ['#5c6aa6', '#566399', '#6a79b8']
+};
+
+function drawTile(ctx, tile, x, y, open, theme) {
     if (tile === 'w') return;
     if (tile === 'M') {
         ctx.fillStyle = '#231f4c';
@@ -47,9 +53,10 @@ function drawTile(ctx, tile, x, y, open) {
         ctx.fillRect(x + 6, y + 10, 4, 1);
         return;
     }
-    ctx.fillStyle = (x / TILE + y / TILE) % 2 ? '#5c6aa6' : '#566399';
+    const floor = FLOORS[theme ?? 'base'];
+    ctx.fillStyle = (x / TILE + y / TILE) % 2 ? floor[0] : floor[1];
     ctx.fillRect(x, y, TILE, TILE);
-    ctx.fillStyle = '#6a79b8';
+    ctx.fillStyle = floor[2];
     ctx.fillRect(x, y + 15, TILE, 1);
     if (tile === 's') {
         ctx.fillStyle = '#8895cf';
@@ -78,7 +85,7 @@ export function drawField(ctx, state, walk, time) {
     ctx.save();
     ctx.translate(-Math.round(camX), -Math.round(camY));
     map.tiles.forEach((row, y) => [...row].forEach((tile, x) => {
-        drawTile(ctx, tile, x * TILE, y * TILE, state.flags.gateOpen);
+        drawTile(ctx, tile, x * TILE, y * TILE, state.flags.gateOpen, map.theme);
     }));
     for (const object of objectsOf(state)) drawObject(ctx, object, time);
     drawHal(ctx, state, px, py, walk);
@@ -123,7 +130,7 @@ export function drawBattle(ctx, view, time) {
     const foeY = 130 - foe.height * scale + Math.sin(time / 500) * 2;
     ctx.drawImage(foe, Math.round(205 - (foe.width * scale) / 2 + foeShake), Math.round(foeY), foe.width * scale, foe.height * scale);
 
-    const bak = sprite('bak');
+    const bak = sprite(view.ally);
     const bakShake = view.allyHit > time ? Math.sin(time / 20) * 4 : 0;
     ctx.drawImage(bak, Math.round(26 + bakShake), 100, bak.width * 4, bak.height * 4);
 
@@ -150,6 +157,14 @@ export function drawShadow(ctx, time) {
     ctx.quadraticCurveTo(70, 120, 160, 112);
     ctx.quadraticCurveTo(250, 120, 280, H);
     ctx.fill();
+}
+
+export function drawTown(ctx) {
+    drawMorning(ctx);
+    ctx.fillStyle = '#b0627a';
+    for (let x = 0; x < W; x += 8) ctx.fillRect(x, 170 - (x % 48) / 2, 8, H);
+    ctx.fillStyle = '#6f4a78';
+    ctx.fillRect(0, 196, W, H);
 }
 
 export function drawMorning(ctx) {

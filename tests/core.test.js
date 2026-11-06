@@ -6,6 +6,9 @@ import { act, answer, commands, createBattle } from '../src/core/battle.js';
 import { createState, isBlocked, objectAt, pickWord, step } from '../src/core/field.js';
 import { BAK, FOES } from '../src/data/units.js';
 import { MAPS } from '../src/data/maps.js';
+import { advance, createKeep, dateLabel, devour, dreamsTonight, nextLoop, rescue } from '../src/core/calendar.js';
+import { bakUnit, grow, MAX_GROWTH } from '../src/core/growth.js';
+import { ALLIES } from '../src/data/units.js';
 import { actionOf, DEFAULT_KEYS, rebind } from '../src/core/keys.js';
 
 const truth = FOES.muresuima.truth;
@@ -186,4 +189,241 @@ test('ほかの操作のキーを取っても 操作が 空にならない', () 
     const next = rebind(single, 'a', 'x');
     assert.equal(actionOf(next, 'x'), 'a');
     assert.ok(next.b.length > 0);
+});
+
+function fightBoss(foe, party, seed) {
+    const b = createBattle(party, foe, { rng: seeded(seed) });
+    for (let turn = 0; turn < 80 && !b.over; turn++) {
+        if (b.chance) { answer(b, foe.truth.answer); break; }
+        const list = commands(b);
+        const heal = list.find((c) => c.id === 'heal');
+        const next = foe.pattern[b.step % foe.pattern.length];
+        if (next === 'swirl') act(b, 'guard');
+        else if (heal && !heal.disabled && b.ally.hp < 25) act(b, 'heal');
+        else act(b, 'shake');
+    }
+    return b;
+}
+
+for (const id of ['gakufume', 'togemetoro']) {
+    test(`${id} に バク 1 体でも ふつうに勝てる`, () => {
+        let wins = 0;
+        for (let seed = 1; seed <= 300; seed++) if (fightBoss(FOES[id], [BAK], seed).over === 'truth') wins++;
+        assert.ok(wins >= 240, `勝率 ${wins}/300`);
+    });
+}
+
+test('倒れると 控えが 前に出る', () => {
+    const b = createBattle([BAK, ALLIES.gakufume], FOES.muresuima, { rng: () => 0.5 });
+    b.ally.hp = 1;
+    act(b, 'guard');
+    assert.equal(b.ally.id, 'gakufume');
+    assert.equal(b.over, null);
+});
+
+test('ほそいソロで 相手が 1 回休む', () => {
+    const b = createBattle(ALLIES.gakufume, FOES.nanashi, { rng: () => 0.5 });
+    const hp = b.ally.hp;
+    act(b, 'sleep');
+    assert.equal(b.ally.hp, hp);
+});
+
+test('せかすリズムの次は 2 回攻撃', () => {
+    const b = createBattle(ALLIES.togemetoro, FOES.muresuima, { rng: () => 0.5 });
+    act(b, 'rush');
+    const hits = act(b, 'attack').filter((e) => e.t === 'hit' && e.target === 'foe');
+    assert.equal(hits.length, 2);
+});
+
+test('日付の表示', () => {
+    assert.equal(dateLabel(1), '2月1日（月）');
+    assert.equal(dateLabel(14), '2月14日（日）');
+});
+
+test('片方を救うと もう片方は 刈り取られ 仲間が増える', () => {
+    const state = createState();
+    const keep = createKeep();
+    const result = rescue(state, keep, 'mio', 'gakufume');
+    assert.equal(result.other, 'kana');
+    assert.equal(state.status.kana, 'reaped');
+    assert.ok(keep.allies.includes('gakufume'));
+    assert.deepEqual(dreamsTonight({ ...state, day: 8 }), []);
+});
+
+test('9 日の夜を過ぎると 結界が破られる', () => {
+    const state = createState();
+    state.day = 9;
+    state.phase = 'night';
+    advance(state);
+    assert.equal(state.status.mio, 'broken');
+    assert.equal(state.day, 10);
+});
+
+test('7 日に ボスが現れる', () => {
+    const state = createState();
+    state.day = 6;
+    state.phase = 'night';
+    advance(state);
+    assert.equal(state.flags.active, true);
+});
+
+test('14 日の夜の次は ループする。仲間は残り 周の状態は消える', () => {
+    const state = createState();
+    const keep = createKeep();
+    rescue(state, keep, 'mio', 'gakufume');
+    state.day = 14;
+    state.phase = 'night';
+    assert.equal(advance(state), 'loop');
+    const next = nextLoop(keep);
+    assert.equal(keep.loop, 2);
+    assert.equal(next.status.mio, 'idle');
+    assert.deepEqual(next.words, []);
+    assert.ok(keep.allies.includes('gakufume'));
+});
+
+test('同じユメクイを また救うと 夢写しになる', () => {
+    const keep = createKeep();
+    rescue(createState(), keep, 'mio', 'gakufume');
+    const result = rescue(createState(), keep, 'mio', 'gakufume');
+    assert.equal(result.copied, true);
+    assert.equal(keep.copies.gakufume, 1);
+    assert.equal(keep.allies.filter((id) => id === 'gakufume').length, 1);
+});
+
+test('ミオとカナの夢: 言葉とボスに 歩いて届く', () => {
+    for (const [map, word, boss] of [['mizuzoko', '15,1', '9,4'], ['renshu', '15,3', '9,5']]) {
+        const state = createState();
+        state.map = map;
+        state.x = MAPS[map].start.x;
+        state.y = MAPS[map].start.y;
+        state.flags.active = true;
+        const seen = reach(state);
+        assert.ok(seen.has(word), map + ' の言葉');
+        assert.ok(seen.has(boss), map + ' のボス');
+    }
+});
+
+test('門が開くのは お面通りで 言葉がそろったときだけ', () => {
+    const state = createState();
+    state.map = 'mizuzoko';
+    const word = MAPS.mizuzoko.objects.find((o) => o.kind === 'word');
+    assert.equal(pickWord(state, word), false);
+    assert.equal(state.flags.gateOpen, undefined);
+});
+
+test('ミオとカナの夢には 最初の場所のすぐ近くに 見える出口がある', () => {
+    for (const map of ['mizuzoko', 'renshu']) {
+        const state = createState();
+        state.map = map;
+        state.x = MAPS[map].start.x;
+        state.y = MAPS[map].start.y;
+        const door = MAPS[map].objects.find((o) => o.kind === 'wake');
+        assert.ok(door, map);
+        assert.ok(reach(state).has(`${door.x},${door.y}`), map);
+        state.x = door.x;
+        state.y = door.y - 1;
+        assert.equal(step(state, 'down').type, 'bump');
+    }
+});
+
+test('救うと 防御と言葉が伸び、喰らうと 攻撃が伸びる', () => {
+    const base = bakUnit(createKeep());
+    const savedKeep = createKeep();
+    grow(savedKeep, 'saved');
+    const kind = bakUnit(savedKeep);
+    assert.ok(kind.def > base.def);
+    assert.ok(kind.kokoro > base.kokoro);
+    assert.equal(kind.atk, base.atk);
+    assert.deepEqual(kind.moves.extra.map((s) => s.id), ['shield']);
+
+    const eatenKeep = createKeep();
+    grow(eatenKeep, 'eaten');
+    const wild = bakUnit(eatenKeep);
+    assert.ok(wild.atk > base.atk);
+    assert.equal(wild.def, base.def);
+    assert.equal(wild.sprite, 'bak-wild');
+    assert.deepEqual(wild.moves.extra.map((s) => s.id), ['bite']);
+});
+
+test('成長には 上限がある', () => {
+    const keep = createKeep();
+    for (let i = 0; i < 20; i++) grow(keep, 'saved');
+    assert.equal(keep.growth.saved, MAX_GROWTH);
+});
+
+test('言葉の成長で ココロ攻撃の ゆらぎが増える', () => {
+    const keep = createKeep();
+    grow(keep, 'saved');
+    const b = createBattle(bakUnit(keep), FOES.muresuima, { rng: () => 0.1 });
+    assert.equal(act(b, 'shake').find((e) => e.t === 'shake').gain, 40);
+});
+
+test('ふとんの守りで 防御が上がる', () => {
+    const keep = createKeep();
+    grow(keep, 'saved');
+    const b = createBattle(bakUnit(keep), FOES.nanashi, { rng: () => 0.5 });
+    const def = b.ally.def;
+    act(b, 'shield');
+    assert.ok(b.ally.def > def);
+});
+
+test('かみくだくは 強いが 自分も傷つく', () => {
+    const keep = createKeep();
+    grow(keep, 'eaten');
+    const b = createBattle(bakUnit(keep), FOES.gakufume, { rng: () => 0.5 });
+    b.foe.pattern = ['charge'];
+    const foeHp = b.foe.hp;
+    const hp = b.ally.hp;
+    act(b, 'bite');
+    assert.ok(foeHp - b.foe.hp > 20);
+    assert.ok(b.ally.hp < hp);
+});
+
+test('むさぼると 体力を奪う', () => {
+    const keep = createKeep();
+    grow(keep, 'eaten');
+    grow(keep, 'eaten');
+    const b = createBattle(bakUnit(keep), FOES.gakufume, { rng: () => 0.5 });
+    b.foe.pattern = ['charge'];
+    b.ally.hp = 10;
+    act(b, 'gorge');
+    assert.ok(b.ally.hp > 10);
+});
+
+test('体力を尽くすと 喰らえる。チュートリアルのボスは 喰らえない', () => {
+    const b = createBattle(BAK, FOES.gakufume, { rng: () => 0.5 });
+    assert.ok(!commands(b).some((c) => c.id === 'devour'));
+    b.foe.hp = 1;
+    act(b, 'attack');
+    assert.ok(commands(b).some((c) => c.id === 'devour'));
+    act(b, 'devour');
+    assert.equal(b.over, 'devour');
+
+    const first = createBattle(BAK, FOES.muresuima, { rng: () => 0.5 });
+    first.foe.hp = 1;
+    act(first, 'attack');
+    assert.ok(!commands(first).some((c) => c.id === 'devour'));
+});
+
+test('喰らった夢主は 次の周も 抜け殻のまま', () => {
+    const state = createState();
+    const keep = createKeep();
+    devour(state, keep, 'mio');
+    assert.equal(state.status.mio, 'eaten');
+    assert.equal(state.status.kana, 'reaped');
+    assert.equal(keep.growth.eaten, 1);
+    assert.ok(!keep.allies.includes('gakufume'));
+    const next = nextLoop(keep);
+    assert.equal(next.status.mio, 'eaten');
+    assert.equal(next.status.kana, 'idle');
+    assert.deepEqual(dreamsTonight(next), ['kana']);
+});
+
+test('カナを救っても 喰らったミオは 抜け殻のまま', () => {
+    const keep = createKeep();
+    const first = createState();
+    devour(first, keep, 'mio');
+    const next = nextLoop(keep);
+    rescue(next, keep, 'kana', 'togemetoro');
+    assert.equal(next.status.mio, 'eaten');
 });

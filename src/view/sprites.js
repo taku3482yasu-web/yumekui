@@ -79,6 +79,81 @@ const ART = {
         '...kmk....kmk.........',
         '...kkk....kkk.........'
     ],
+    gakufume: [
+        '.......ww.......',
+        '......wwww......',
+        '.....wwkwww.....',
+        '.....wwwwwllll..',
+        '..wwwwwwwww.....',
+        '.wkkkkkkkkww....',
+        'wwwwwwwwwwwww...',
+        'wkkkkkkkkkkww...',
+        'wwwwwwwwwwww....',
+        '.wkkkkkkkkw.....',
+        '..wwwwwwww......',
+        '....ll..ll......',
+        '....u.....u.....',
+        '...uu....uu.....'
+    ],
+    togemetoro: [
+        '.......aa.......',
+        '.......aa.......',
+        '......azza......',
+        '......azza......',
+        '.....azzzza.....',
+        '..r.razzzzar.r..',
+        '.rrrrrrrrrrrrrr.',
+        'rrrrrrrrrrrmmmm.',
+        'rrrrrrrrrrmmkmm.',
+        'rrrrrrrrrrmmmmkk',
+        'rrrrrrrrrrrmmmk.',
+        '.rrrrrrrrrrrrr..',
+        '..mm.....mm.....'
+    ],
+    onpu: [
+        '.........uuuu...',
+        '.........uuuuu..',
+        '.........u...uu.',
+        '.........u......',
+        '.........u......',
+        '......fffu......',
+        '....ffffffu.....',
+        '...ffffffff.....',
+        '...ffuffuff.....',
+        '...ffffffff.....',
+        '...ffffffff.....',
+        '...f.ff.f.f.....'
+    ],
+    hari: [
+        '...r...r...r....',
+        '....r..r..r.....',
+        '.....ffffff.....',
+        '...ffffffffff...',
+        'rr.ffrffffrff.rr',
+        '...ffffffffff...',
+        '.rrffffffffffrr.',
+        '...ffffffffff...',
+        '...ffffffffff...',
+        '...f.ff..ff.f...'
+    ],
+    wakeDoor: [
+        '....llllllll....',
+        '...lmmmmmmmml...',
+        '..lmmmmmmmmmml..',
+        '..lmmyyyyyymml..',
+        '..lmyyyyyyyyml..',
+        '..lmyyyyyyyyml..',
+        '..lmyyyyyyyyml..',
+        '..lmyyyyyyyyml..',
+        '..lmyyyyyyyyml..',
+        '..lmyyyyyyyyml..',
+        '..lmyyyyyyyyml..',
+        '..lmyyyyyyyyml..',
+        '..lmyyyyyyyyml..',
+        '..lmyyyyyyyyml..',
+        '..llllllllllll..',
+        '................'
+    ],
     blanket: [
         '................',
         '................',
@@ -232,12 +307,18 @@ function schoolArt(size) {
     return canvas;
 }
 
+// 喰らうほど 毛布は黒ずみ、目が赤くなる
+function wildRows() {
+    return ART.bak.map((row) => row.replaceAll('b', 'k').replaceAll('c', 'g').replaceAll('y', 'r').replaceAll('e', 'r'));
+}
+
 export function sprite(name) {
     if (cache.has(name)) return cache.get(name);
     let canvas;
     if (name.startsWith('omote-')) canvas = maskArt(name.slice(6));
     else if (name === 'muresuima') canvas = schoolArt(64);
     else if (name === 'muresuima-map') canvas = schoolArt(32);
+    else if (name === 'bak-wild') canvas = paint(wildRows());
     else canvas = paint(ART[name]);
     cache.set(name, canvas);
     return canvas;

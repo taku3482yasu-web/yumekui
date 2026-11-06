@@ -97,6 +97,9 @@ canvas {
 #menu.tall { bottom: 3%; }
 #menu.center { left: 50%; right: auto; bottom: 14%; min-width: 34%; transform: translateX(-50%); }
 
+#menu.grid { display: grid; grid-template-columns: 1fr 1fr; }
+#menu.grid .head { grid-column: 1 / -1; }
+
 #menu .head {
     color: var(--kokoro);
     font-size: 0.85em;

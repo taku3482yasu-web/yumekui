@@ -41,6 +41,34 @@ const hiroba = [
     'wwwwwwwwwwwwwwwwwwww'
 ];
 
+const mizuzoko = [
+    'wwwwwwwwwwwwwwwwwwww',
+    'wwww............wwww',
+    'wwww.wwww..wwww.wwww',
+    'wwww.w........w.wwww',
+    'wwww.w........w.wwww',
+    'wwww.w........w.wwww',
+    'wwww.wwww..wwww.wwww',
+    'wwww............wwww',
+    'wwwwwwww....wwwwwwww',
+    'wwwwwwww....wwwwwwww',
+    'wwwwwwwwwwwwwwwwwwww'
+];
+
+const renshu = [
+    'wwwwwwwwwwwwwwwwwwww',
+    'ww................ww',
+    'ww.wwwwwwwwwwwwww.ww',
+    'ww.w............w.ww',
+    'ww.w.wwwwwwwwww.w.ww',
+    'ww.w.w........w.w.ww',
+    'ww.w.w........w.w.ww',
+    'ww.w.wwwww.wwww.w.ww',
+    'ww.............ww.ww',
+    'ww..wwwwwwwwwwwww.ww',
+    'wwwwwwwwwwwwwwwwwwww'
+];
+
 export const MAPS = {
     odoriba: {
         id: 'odoriba', name: '目覚めの踊り場', tiles: odoriba, start: { x: 9, y: 7 },
@@ -76,6 +104,28 @@ export const MAPS = {
         objects: [
             { id: 'rest', kind: 'talk', x: 6, y: 7, sprite: 'blanket', script: 'rest' },
             { id: 'boss', kind: 'foe', x: 9, y: 3, foe: 'muresuima', sprite: 'muresuima-map', script: 'boss' }
+        ]
+    },
+    mizuzoko: {
+        id: 'mizuzoko', name: '水底の音楽室', tiles: mizuzoko, start: { x: 9, y: 9 }, theme: 'water',
+        objects: [
+            { id: 'mioWake', kind: 'wake', x: 10, y: 9, sprite: 'wakeDoor' },
+            { id: 'mioOnpu1', kind: 'foe', x: 9, y: 7, foe: 'onpu' },
+            { id: 'mioSuima', kind: 'foe', x: 15, y: 4, foe: 'suima' },
+            { id: 'mioOnpu2', kind: 'foe', x: 4, y: 4, foe: 'onpu' },
+            { id: 'mioWord', kind: 'word', x: 15, y: 1, word: '吹きたかった', sprite: 'word' },
+            { id: 'mioBoss', kind: 'foe', x: 9, y: 4, foe: 'gakufume', needs: 'active', script: 'pairBoss' }
+        ]
+    },
+    renshu: {
+        id: 'renshu', name: '止まらない練習室', tiles: renshu, start: { x: 2, y: 8 }, theme: 'tempo',
+        objects: [
+            { id: 'kanaWake', kind: 'wake', x: 3, y: 9, sprite: 'wakeDoor' },
+            { id: 'kanaHari1', kind: 'foe', x: 6, y: 8, foe: 'hari' },
+            { id: 'kanaHari2', kind: 'foe', x: 4, y: 5, foe: 'hari' },
+            { id: 'kanaSuima', kind: 'foe', x: 17, y: 5, foe: 'suima' },
+            { id: 'kanaWord', kind: 'word', x: 15, y: 3, word: 'ほしかった', sprite: 'word' },
+            { id: 'kanaBoss', kind: 'foe', x: 9, y: 5, foe: 'togemetoro', needs: 'active', script: 'pairBoss' }
         ]
     }
 };
