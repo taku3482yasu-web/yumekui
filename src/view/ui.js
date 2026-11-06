@@ -44,11 +44,13 @@ export function createUi(input) {
         });
     }
 
-    function menu(items, { head = '', wide = false } = {}) {
+    function menu(items, { head = '', wide = false, tall = false, center = false } = {}) {
         return new Promise((resolve) => {
             menuBox.replaceChildren();
             menuBox.hidden = false;
             menuBox.classList.toggle('wide', wide);
+            menuBox.classList.toggle('tall', tall);
+            menuBox.classList.toggle('center', center);
             if (head) {
                 const title = document.createElement('div');
                 title.className = 'head';
@@ -115,23 +117,17 @@ export function createUi(input) {
 
     const hideStatus = () => { $('status').hidden = true; };
 
-    function title() {
-        return new Promise((resolve) => {
-            const box = $('title');
-            box.hidden = false;
-            const go = () => {
-                off();
-                box.hidden = true;
-                resolve();
-            };
-            const off = input.onPress((key) => {
-                if (key === 'a') go();
-            });
-            $('start').onclick = go;
-        });
+    function title(on) {
+        $('title').hidden = !on;
     }
 
-    return { say, menu, hideMsg, fade, hud, hideHud, status, hideStatus, title };
+    function show(line) {
+        msg.hidden = false;
+        speaker.textContent = '';
+        text.textContent = line;
+    }
+
+    return { say, show, menu, hideMsg, fade, hud, hideHud, status, hideStatus, title };
 }
 
 function paintUnit(id, unit) {

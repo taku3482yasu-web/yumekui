@@ -6,6 +6,7 @@ import { act, answer, commands, createBattle } from '../src/core/battle.js';
 import { createState, isBlocked, objectAt, pickWord, step } from '../src/core/field.js';
 import { BAK, FOES } from '../src/data/units.js';
 import { MAPS } from '../src/data/maps.js';
+import { actionOf, DEFAULT_KEYS, rebind } from '../src/core/keys.js';
 
 const truth = FOES.muresuima.truth;
 
@@ -167,4 +168,22 @@ test('門が閉じているあいだは 通り抜けられない', () => {
     state.x = 29;
     state.y = 5;
     assert.equal(step(state, 'right').type, 'stop');
+});
+
+test('J キーは 最初から 決定', () => {
+    assert.equal(actionOf(DEFAULT_KEYS, 'j'), 'a');
+});
+
+test('キーを変えると 前のキーは 効かなくなる', () => {
+    const next = rebind(DEFAULT_KEYS, 'a', 'k');
+    assert.equal(actionOf(next, 'k'), 'a');
+    assert.equal(actionOf(next, 'j'), null);
+    assert.ok(DEFAULT_KEYS.a.includes('j'));
+});
+
+test('ほかの操作のキーを取っても 操作が 空にならない', () => {
+    const single = rebind(DEFAULT_KEYS, 'b', 'x');
+    const next = rebind(single, 'a', 'x');
+    assert.equal(actionOf(next, 'x'), 'a');
+    assert.ok(next.b.length > 0);
 });

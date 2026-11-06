@@ -45,9 +45,9 @@ const send = (method, params = {}) => new Promise((resolve) => {
     ws.send(JSON.stringify({ id: n, method, params }));
 });
 const read = async (code) => (await send('Runtime.evaluate', { expression: code, returnByValue: true })).result.value;
-const CODES = { ArrowUp: 38, ArrowDown: 40, ArrowLeft: 37, ArrowRight: 39, z: 90 };
+const CODES = { ArrowUp: 38, ArrowDown: 40, ArrowLeft: 37, ArrowRight: 39, j: 74 };
 const key = async (name, hold = 40) => {
-    const base = { key: name, code: name === 'z' ? 'KeyZ' : name, windowsVirtualKeyCode: CODES[name] };
+    const base = { key: name, code: name === 'j' ? 'KeyJ' : name, windowsVirtualKeyCode: CODES[name] };
     await send('Input.dispatchKeyEvent', { type: 'keyDown', ...base });
     await sleep(hold);
     await send('Input.dispatchKeyEvent', { type: 'keyUp', ...base });
@@ -65,7 +65,7 @@ async function skip(limit = 80) {
         const now = await state();
         if (now.m === 'field' && !now.msg) return now;
         if (now.menu || now.m === 'battle') return now;
-        if (now.msg) await key('z');
+        if (now.msg) await key('j');
         else await sleep(60);
     }
     throw new Error('会話が終わらない');
@@ -101,16 +101,16 @@ async function battle(useShake) {
             if (pick >= 0) {
                 await shot('05-truth-choices');
                 for (let k = 0; k < pick; k++) await key('ArrowDown');
-                await key('z');
+                await key('j');
             } else {
                 const wanted = labels.findIndex((label) => label === '本音を言い当てる');
                 const shake = labels.indexOf('ココロ攻撃');
                 const target = wanted >= 0 ? wanted : (useShake && shake >= 0 ? shake : 0);
                 for (let k = 0; k < target; k++) await key('ArrowDown');
-                await key('z');
+                await key('j');
             }
         } else if (now.msg) {
-            await key('z');
+            await key('j');
         } else {
             await sleep(60);
         }
@@ -124,7 +124,14 @@ await send('Log.enable');
 await send('Page.navigate', { url });
 await sleep(1500);
 await shot('01-title');
-await key('z');
+await key('ArrowDown');
+await key('j');
+await sleep(300);
+await shot('01b-settings');
+await key('ArrowUp');
+await key('j');
+await sleep(300);
+await key('j');
 await sleep(700);
 await skip();
 await read(`(async()=>{const m=await import('/src/data/maps.js');const f=await import('/src/core/field.js');window.__tiles=(id)=>m.MAPS[id].tiles;window.__objects=()=>f.objectsOf(yumekui.state);})()`);
@@ -134,7 +141,7 @@ await shot('02-field');
 await walkTo(9, 5);
 await key('ArrowUp', 40);
 await sleep(100);
-await key('z');
+await key('j');
 await sleep(400);
 await shot('03-talk');
 await skip();
@@ -170,6 +177,7 @@ for (const [fx, fy] of [[10, 5], [6, 2], [14, 8], [17, 3], [19, 2], [24, 5]]) {
     if (fx === 19) { await walkTo(20, 1); await skip(); }
 }
 console.log('言葉', JSON.stringify((await state()).s.words));
+if ((await state()).s.words.length !== 3) throw new Error('言葉が 3 つ そろっていない');
 await shot('07-omen-end');
 await walkTo(31, 5);
 await sleep(700);
@@ -187,7 +195,7 @@ for (let i = 0; i < 60; i++) {
     if (now.m === 'shadow' && now.msg) { await sleep(400); await shot('09-shadow'); }
     if (now.m === 'morning' && now.msg) { await sleep(300); await shot('10-morning'); }
     if (now.title) break;
-    if (now.msg) await key('z');
+    if (now.msg) await key('j');
     else await sleep(100);
 }
 await sleep(300);

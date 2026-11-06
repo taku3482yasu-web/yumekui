@@ -1,4 +1,5 @@
 import { act, answer, commands, createBattle } from './core/battle.js';
+import { ACTIONS, keyName } from './core/keys.js';
 import { createState, facing, pickWord, step, tileAt, warp, DIRS } from './core/field.js';
 import { buildChoices } from './core/truth.js';
 import { MAPS } from './data/maps.js';
@@ -99,7 +100,9 @@ function updateField(delta) {
 }
 
 input.onPress((key) => {
-    if (key !== 'a' || mode !== 'field' || walk.left > 0) return;
+    if (mode !== 'field' || walk.left > 0) return;
+    if (key === 'b') scene(fieldMenu);
+    if (key !== 'a') return;
     const object = facing(state);
     if (object && object.kind !== 'exit') scene(() => touch(object));
 });
@@ -217,12 +220,50 @@ async function ending() {
     await start();
 }
 
+// ---- 設定 --------------------------------------------------------------
+
+async function fieldMenu() {
+    const id = await ui.menu([{ id: 'keys', label: 'ボタン設定' }, { id: 'close', label: 'とじる' }]);
+    if (id === 'keys') await settings();
+}
+
+async function settings() {
+    for (;;) {
+        const bindings = input.bindings();
+        const items = ACTIONS.map(({ id, label }) => ({ id, label: `${label}：${bindings[id].map(keyName).join(' / ')}` }));
+        items.push({ id: 'swap', label: `スマホのボタン：${input.swapped() ? '左右入れかえ' : 'ふつう'}` });
+        items.push({ id: 'reset', label: '最初の設定にもどす' });
+        items.push({ id: 'back', label: 'もどる' });
+        const id = await ui.menu(items, { head: 'ボタン設定', wide: true, tall: true });
+        if (id === 'back') return;
+        if (id === 'swap') input.toggleSwap();
+        else if (id === 'reset') input.reset();
+        else await assignKey(id);
+    }
+}
+
+async function assignKey(action) {
+    const { label } = ACTIONS.find((item) => item.id === action);
+    ui.show(`「${label}」にするキーを押してください（Esc でやめる）`);
+    const key = await input.capture();
+    ui.hideMsg();
+    if (key) input.assign(action, key);
+}
+
 // ---- 全体 --------------------------------------------------------------
 
 async function start() {
     mode = 'title';
     ui.hideHud();
-    await ui.title();
+    ui.title(true);
+    for (;;) {
+        const id = await ui.menu([{ id: 'start', label: 'はじめる' }, { id: 'keys', label: 'ボタン設定' }], { center: true });
+        if (id === 'start') break;
+        ui.title(false);
+        await settings();
+        ui.title(true);
+    }
+    ui.title(false);
     await ui.fade(true);
     mode = 'opening';
     await ui.fade(false);

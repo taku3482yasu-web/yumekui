@@ -125,7 +125,7 @@ export function drawBattle(ctx, view, time) {
 
     const bak = sprite('bak');
     const bakShake = view.allyHit > time ? Math.sin(time / 20) * 4 : 0;
-    ctx.drawImage(bak, Math.round(38 + bakShake), 96, 64, 64);
+    ctx.drawImage(bak, Math.round(26 + bakShake), 100, bak.width * 4, bak.height * 4);
 
     for (const pop of view.pops) {
         const left = (pop.until - time) / 700;
