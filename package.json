@@ -1,0 +1,16 @@
+{
+  "name": "yumekui",
+  "private": true,
+  "version": "0.1.0",
+  "description": "ユメクイ (仮題): 言えなかった気持ちから生まれたモンスターを仲間にする、ループ型モンスター育成RPG",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build --base=./",
+    "preview": "vite preview",
+    "test": "node --test \"tests/**/*.test.js\""
+  },
+  "devDependencies": {
+    "vite": "^5.4.11"
+  }
+}
