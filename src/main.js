@@ -3,7 +3,7 @@ import { ACTIONS, keyName } from './core/keys.js';
 import { advance, createKeep, dateLabel, devour, dreamsTonight, nextLoop, rescue, ACTIVE_DAY, LAST_DAY, PAIR } from './core/calendar.js';
 import { bakSkills, bakUnit, grow } from './core/growth.js';
 import { createState, facing, pickWord, placeName, step, tileAt, warp, DIRS } from './core/field.js';
-import { deepTalk, startDay, startMorning, timeLabel, timesBetween, NIGHT_START, TOWN_START } from './core/town.js';
+import { deepTalk, startDay, startMorning, timeLabel, timesBetween, NIGHT_START, PROLOGUE_START, RIKU_BRANCH_Y, TOWN_START } from './core/town.js';
 import { isWeekend } from './core/days.js';
 import { buildChoices } from './core/truth.js';
 import { MAPS } from './data/maps.js';
@@ -14,6 +14,7 @@ import { createUi } from './view/ui.js';
 import { drawBattle, drawField, drawMorning, drawShadow, drawSky } from './view/draw.js';
 import { drawCalendar, drawLapse } from './view/time.js';
 import { drawEncounter, encounterTheme } from './view/encounter.js';
+import { createPainting, drawPainting, finishPainting, updatePainting } from './view/painting.js';
 import { morningMovie } from './scenes/mornings.js';
 import { canUseBrush, hasImageFor, learnImage, paint } from './core/brush.js';
 import { IMAGES, TILE_IMAGES } from './data/brush.js';
@@ -41,15 +42,17 @@ let calendarView = null;   // カレンダーが はがれる演出
 let skipTear = false;      // チュートリアルの 結末で もう カレンダーを 見せた
 let encounter = null;      // 戦闘に入るときの 演出
 let actors = [];           // ムービーに 出ている 人 (朝の 通学路)
-const follow = { x: 0, y: 0, fromX: 0, fromY: 0 };   // 夢の中で ハルに ついてくる バクの 位置
+const follow = { x: 0, y: 0, fromX: 0, fromY: 0 };   // ハルに ついてくる 仲間の 位置 (夢の中の バク・プロローグの リク)
+let painting = null;       // プロローグで キャンバスに 描く 画面
 
 // バクを ハルの いる マスに 置き直す (夢に入ったとき・地図を 移ったとき)
 function resetFollow() {
     Object.assign(follow, { x: state.x, y: state.y, fromX: state.x, fromY: state.y });
 }
 
-// 夢の中で、バクと 出会ったあとだけ ついてくる (現実では 姿を見せない)
+// 夢の中で、バクと 出会ったあとだけ ついてくる (現実では 姿を見せない)。プロローグでは リクが いっしょに 坂を下る
 function followerView() {
+    if (state.flags.rikuWalk && state.map === 'saka') return { ...follow, sprite: 'riku' };
     if (MAPS[state.map].real || !state.flags.bak || mode === 'battle') return null;
     return { ...follow, sprite: keep.growth.eaten > 0 ? 'bak-mini-wild' : 'bak-mini' };
 }
@@ -126,6 +129,8 @@ const SCRIPTS = {
     rikuRoad: () => talk(LINES.rikuRoad(state)),
     rikuDoor: () => talk(LINES.rikuDoor),
     schoolClosed: () => talk(LINES.schoolClosed),
+    prologueSchool: () => talk(LINES.prologueSchool),
+    prologueStay: () => talk(LINES.prologueStay),
     goHome: homeDoor
 };
 
@@ -158,8 +163,12 @@ async function deepTalkTo(who) {
     wakeUp();
 }
 
-// 家の玄関: 入ると その日は おしまい (夜になる)。夜の町からは 帰って寝る
+// 家の玄関: 入ると その日は おしまい (夜になる)。夜の町からは 帰って寝る。プロローグでは 家に入る
 async function homeDoor() {
+    if (state.flags.prologue) {
+        await enterHomePrologue();
+        return;
+    }
     if (state.phase === 'night') {
         const id = await ui.menu([{ id: 'yes', label: LINES.nightHomeYes }, { id: 'no', label: LINES.nightHomeNo }], { head: LINES.nightHomeHead });
         if (id === 'yes') wakeUp('sleep');
@@ -175,7 +184,10 @@ async function homeDoor() {
 
 async function touch(object) {
     if (object.kind === 'talk' || object.kind === 'door' || object.kind === 'block') await SCRIPTS[object.script]();
-    if (object.kind === 'person') await talkTo(object.who);
+    if (object.kind === 'person') {
+        if (state.flags.prologue && object.who === 'father') await talk(LINES.fatherAfter);
+        else await talkTo(object.who);
+    }
     if (object.kind === 'brushSpot') await useBrushAt(object);
     if (object.kind === 'look') await lookAt(object.image);
     if (object.kind === 'canvas') await useCanvas();
@@ -224,6 +236,11 @@ async function lookAt(imageId) {
     await talk(learnImage(keep, imageId) ? LINES.learnImage(label) : LINES.lookAgain(label));
 }
 
+function facingTile() {
+    const [dx, dy] = DIRS[state.dir];
+    return tileAt(state, state.x + dx, state.y + dy);
+}
+
 // 現実の地図で 正面の タイルを 見る (ピアノ・階段・イーゼル・手すり・坂道から 見える 海)
 function tileImage() {
     const [dx, dy] = DIRS[state.dir];
@@ -259,6 +276,7 @@ function updateField(delta) {
     const from = { x: state.x, y: state.y };
     const result = step(state, dir);
     if (result.type === 'moved') Object.assign(follow, { fromX: follow.x, fromY: follow.y, x: from.x, y: from.y });
+    if (result.type === 'moved' && state.flags.prologue) prologueStep();
     if (result.type === 'moved' || result.type === 'exit') {
         [walk.dx, walk.dy] = DIRS[dir];
         walk.left = 1;
@@ -280,6 +298,7 @@ input.onPress((key) => {
     if (key !== 'a') return;
     const object = facing(state);
     if (object && object.kind !== 'exit') scene(() => touch(object));
+    else if (state.map === 'home' && facingTile() === 'd') scene(lookDesk);
     else if (MAPS[state.map].real && tileImage()) scene(() => lookAt(tileImage()));
 });
 
@@ -605,6 +624,10 @@ async function nightPhase() {
 
 // キャンバス: だれの夢を描くか選ぶ (描く画面は 段階2 で作る)
 async function useCanvas() {
+    if (state.flags.prologue) {
+        await prologueCanvas();
+        return;
+    }
     if (state.phase !== 'night') {
         await talk(LINES.canvas);
         return;
@@ -634,6 +657,15 @@ async function useCanvas() {
 }
 
 async function useBed() {
+    if (state.flags.prologue) {
+        if (!state.flags.painted) {
+            await talk(LINES.bedNotYet);
+            return;
+        }
+        const id = await ui.menu([{ id: 'yes', label: LINES.sleepYes }, { id: 'no', label: LINES.sleepNo }], { head: LINES.sleepHead });
+        if (id === 'yes') wakeUp('sleep');
+        return;
+    }
     if (state.phase !== 'night') {
         await talk(LINES.bed);
         return;
@@ -673,7 +705,14 @@ async function campaign() {
             if (keep.loop === 1) await talk(LINES.nextPlan);
             state = nextLoop(keep);
             await ui.fade(true);
-        } else if (state.day !== before && !skipTear) await playCalendar(before, state.day);   // 土日は 朝が 飛んで 昼へ
+        } else if (state.day !== before && !skipTear) {
+            await playCalendar(before, state.day);
+            // 土日: カレンダーが めくれたあと、朝が 飛んで 昼まで 時間が進む
+            if (state.phase === 'day' && isWeekend(state.day)) {
+                await playLapse(timesBetween('朝', '昼', true));
+                await ui.fade(true);
+            }
+        }
         skipTear = false;
         if (state.phase === 'morning') await morningPhase();
         else if (state.phase === 'day') await dayPhase();
@@ -717,6 +756,99 @@ async function assignKey(action) {
     if (key) input.assign(action, key);
 }
 
+// ---- プロローグ (台本 1-0: 2月1日の放課後) --------------------------------
+// 校門から リクと 坂道を 下り (分かれ道で 別れる)、家で 父に 進路を 問われ、自分の部屋で 初めて キャンバスに 描く。
+// 何を描いても 海のような絵に なる。ベッドで 眠ると オープニング (1-1) から ハルの夢へ
+
+async function prologue() {
+    Object.assign(state, { day: 1, phase: 'day', time: 'day' }, PROLOGUE_START);
+    state.flags.prologue = true;
+    state.flags.rikuWalk = true;
+    resetFollow();
+    const done = explore();
+    mode = 'scene';
+    await ui.fade(false);
+    await scene(() => talk(LINES.prologueStart));
+    await done;
+    state.flags.prologue = false;
+    state.phase = 'night';
+    state.time = 'day';
+}
+
+// 歩くたびに 見る: 坂の分かれ道で リクと 別れる・自分の部屋に 入る
+function prologueStep() {
+    if (state.flags.rikuWalk && state.map === 'saka' && state.y >= RIKU_BRANCH_Y) scene(rikuLeaves);
+    if (state.map === 'home' && state.x >= 8 && !state.flags.roomEntered) {
+        state.flags.roomEntered = true;
+        scene(() => talk(LINES.prologueRoom));
+    }
+}
+
+async function rikuLeaves() {
+    await talk(LINES.rikuBye);
+    state.flags.rikuWalk = false;
+    const riku = { who: 'riku', x: follow.x, y: follow.y };
+    actors = [riku];
+    while (riku.x < 24) {   // 分かれ道を 右へ 去っていく
+        riku.x++;
+        await sleep(110);
+    }
+    actors = [];
+}
+
+async function enterHomePrologue() {
+    await ui.fade(true);
+    Object.assign(state, { map: 'home', x: 3, y: 7, dir: 'up' });
+    state.time = 'evening';
+    resetFollow();
+    showHud();
+    await ui.fade(false);
+    if (state.flags.homeTalk) return;
+    state.flags.homeTalk = true;
+    await talk(LINES.fatherTalk);
+    // どれを選んでも 言葉が出ない
+    await ui.menu(LINES.fatherChoices.map((label, i) => ({ id: 'c' + i, label })), { head: LINES.fatherHead });
+    const screen = document.getElementById('screen');
+    screen.classList.remove('shake');
+    void screen.offsetWidth;
+    screen.classList.add('shake');
+    await talk(LINES.fatherAngry);
+    await talk(LINES.fatherDone);
+}
+
+async function lookDesk() {
+    if (state.flags.prologue && !state.flags.deskSeen) {
+        state.flags.deskSeen = true;
+        await talk(LINES.desk);
+        return;
+    }
+    await talk(state.flags.painted || !state.flags.prologue ? LINES.seaPainting : LINES.deskAgain);
+}
+
+async function prologueCanvas() {
+    if (state.flags.painted) {
+        await talk(LINES.seaPainting);
+        return;
+    }
+    if (!state.flags.deskSeen) {
+        await talk(LINES.canvasBefore);
+        return;
+    }
+    await talk(LINES.paintingTip);
+    ui.hideHud();
+    await new Promise((resolve) => {
+        const off = input.onPress((key) => { if (key === 'a') finishPainting(painting, performance.now()); });
+        painting = createPainting(performance.now());
+        painting.done = () => { off(); resolve(); };
+        mode = 'painting';
+    });
+    state.flags.painted = true;
+    await talk(LINES.painted);
+    mode = 'scene';
+    painting = null;
+    showHud();
+}
+
 // ---- 全体 --------------------------------------------------------------
 
 async function start() {
@@ -732,6 +864,9 @@ async function start() {
     }
     ui.title(false);
     await ui.fade(true);
+    await prologue();
+    await ui.fade(true);
+    ui.hideHud();
     mode = 'opening';
     await ui.fade(false);
     await talk(LINES.opening);
@@ -746,7 +881,13 @@ function frame(now) {
     last = now;
     if (mode === 'field') updateField(delta);
     if (walk.left > 0 && mode !== 'field') walk.left = Math.max(0, walk.left - delta / WALK_MS);
-    if (mode === 'lapse' && lapse) {
+    if (mode === 'painting' && painting) {
+        updatePainting(painting, input.direction(), delta, now);
+        if (drawPainting(ctx, painting, now) && !painting.finished) {
+            painting.finished = true;
+            painting.done();
+        }
+    } else if (mode === 'lapse' && lapse) {
         if (drawLapse(ctx, lapse, now) && !lapse.finished) {
             lapse.finished = true;   // 最後の 絵の まま 止めておく (次の フェードまで)
             lapse.done();

@@ -170,8 +170,49 @@ await key('j');
 await sleep(300);
 await key('j');
 await sleep(700);
-await skip();
 await read(`(async()=>{const m=await import('/src/data/maps.js');const f=await import('/src/core/field.js');window.__tiles=(id)=>m.MAPS[id].tiles;window.__objects=()=>f.objectsOf(yumekui.state);window.__blocked=(x,y)=>f.isBlocked(yumekui.state,x,y);})()`);
+
+// プロローグ (2月1日の放課後): リクと 坂道を下る → 分かれ道で 別れる → 家で 父 → 机 → キャンバスに 描く → 眠る
+await skip();
+await shot('01c-prologue-gate');
+await walkTo(10, 6);
+await shot('01d-prologue-riku');
+await walkTo(10, 9);
+await sleep(300);
+await skip();
+await walkTo(4, 16);
+await sleep(600);
+await pick('……');
+await sleep(200);
+await shot('01e-prologue-father');
+await skip();
+await walkTo(9, 3);
+await skip();
+await walkTo(9, 3);
+await key('ArrowUp', 40);
+await key('j');
+await sleep(300);
+await skip();
+await walkTo(12, 3);
+await key('ArrowRight', 40);
+await key('j');
+await sleep(300);
+for (let i = 0; i < 40 && (await read('yumekui.mode')) !== 'painting'; i++) {
+    if ((await state()).msg) await key('j');
+    await sleep(80);
+}
+for (const dir of ['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp', 'ArrowRight']) await key(dir, 450);
+await shot('01f-prologue-painting');
+await key('j');
+await sleep(1800);
+await shot('01g-prologue-sea');
+await skip();
+await walkTo(13, 5);
+await key('ArrowDown', 40);
+await key('j');
+await sleep(300);
+await pick('眠る');
+await skip();
 await sleep(200);
 await shot('02-field');
 

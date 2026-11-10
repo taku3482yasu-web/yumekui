@@ -75,5 +75,9 @@ export const TOWN_START = {
     weekend: { map: 'home', x: 12, y: 5, dir: 'down' }   // 土日は 昼に 自分の部屋から。玄関から 外へ
 };
 
+// プロローグ (2月1日の放課後): 校門の前から、リクと 坂道を 下って 家に帰る
+export const PROLOGUE_START = { map: 'saka', x: 11, y: 2, dir: 'down' };
+export const RIKU_BRANCH_Y = 9;   // ここまで 下ると 坂の分かれ道で リクと 別れる
+
 // 夜 (キャンバスの前)
 export const NIGHT_START = { map: 'home', x: 12, y: 3, dir: 'right' };

@@ -219,3 +219,40 @@ test('1 日は 朝 → 放課後 → 夜 → 次の日の朝', async () => {
     assert.equal(advance(state), 'morning');
     assert.equal(state.day, 5);
 });
+
+test('プロローグ: 校門の前から 坂道を下って 家の玄関に 届く。学校には 戻れず、分かれ道を 通る', async () => {
+    const { PROLOGUE_START, RIKU_BRANCH_Y } = await import('../src/core/town.js');
+    const state = dayState(1);
+    state.flags.prologue = true;
+    Object.assign(state, PROLOGUE_START);
+    assert.equal(timeLabel(state), '放課後');
+    const gate = step({ ...state }, 'up');
+    assert.equal(gate.type, 'bump');
+    assert.equal(gate.object.script, 'prologueSchool', '学校には 戻らない');
+    const seen = reachable(state, PROLOGUE_START);
+    const door = TOWN_MAPS.saka.objects.find((o) => o.id === 'homeDoor');
+    assert.ok(canReach(seen, 'saka', door), '家の玄関に 届く');
+    // 家の玄関 (4,16) へは 分かれ道の 行 (RIKU_BRANCH_Y) を かならず 通る
+    assert.ok(PROLOGUE_START.y < RIKU_BRANCH_Y && door.y > RIKU_BRANCH_Y);
+});
+
+test('プロローグ: 家では 玄関から 出られず、机・キャンバス・ベッドに 届く', () => {
+    const state = dayState(1);
+    state.flags.prologue = true;
+    Object.assign(state, { map: 'home', x: 3, y: 7 });
+    assert.equal(step({ ...state }, 'down').object.script, 'prologueStay');
+    const seen = reachable(state, { map: 'home', x: 3, y: 7 });
+    assert.ok(!seen.has('saka,4,17'), '外へは 出られない');
+    assert.ok(seen.has('home,9,3') || seen.has('home,10,3'), '机の前に 立てる');
+    for (const kind of ['canvas', 'bed']) {
+        const object = TOWN_MAPS.home.objects.find((o) => o.kind === kind);
+        assert.ok(canReach(seen, 'home', object), kind);
+    }
+    assert.equal(TOWN_MAPS.home.tiles[2][9], 'd', '机');
+});
+
+test('プロローグと オープニングの セリフ (台本 1-0・1-1)', () => {
+    assert.ok(LINES.prologueStart.some(([n]) => n === 'リク'));
+    assert.equal(LINES.fatherChoices.length, 3);
+    assert.ok(LINES.opening.some(([, t]) => t.includes('さっき描いた海')));
+});

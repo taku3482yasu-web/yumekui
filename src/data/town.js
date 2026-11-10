@@ -106,6 +106,9 @@ export const TOWN_MAPS = {
             { name: '坂道', x: [0, 23], y: [10, 18] }
         ],
         objects: [
+            // プロローグ (2月1日の放課後): 学校には 戻らず、家に帰る
+            { id: 'prologueGate1', kind: 'block', x: 11, y: 1, script: 'prologueSchool', needs: 'prologue' },
+            { id: 'prologueGate2', kind: 'block', x: 12, y: 1, script: 'prologueSchool', needs: 'prologue' },
             { id: 'schoolClosed1', kind: 'block', x: 11, y: 1, script: 'schoolClosed', night: true },
             { id: 'schoolClosed2', kind: 'block', x: 12, y: 1, script: 'schoolClosed', night: true },
             { id: 'toSchool1', kind: 'exit', x: 11, y: 1, to: 'school', at: { x: 2, y: 8 } },
@@ -137,6 +140,7 @@ export const TOWN_MAPS = {
             { name: 'ハルの部屋', x: [7, 15], y: [0, 8] }
         ],
         objects: [
+            { id: 'prologueStay', kind: 'block', x: 3, y: 8, script: 'prologueStay', needs: 'prologue' },   // 父に 部屋へ 行けと 言われた あと
             { id: 'toTown', kind: 'exit', x: 3, y: 8, to: 'saka', at: { x: 4, y: 17 } },
             person('father', 'father', 4, 3),
             { id: 'canvas', kind: 'canvas', x: 13, y: 3, sprite: 'canvas' },
