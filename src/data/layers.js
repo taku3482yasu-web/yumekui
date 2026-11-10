@@ -11,6 +11,8 @@ const entrance = (prefix, wake, rest) => [
 ];
 const stairs = (prefix, x, y, to, at) => ({ id: `${prefix}Down`, kind: 'exit', x, y, to, at });
 const foe = (id, x, y, kind) => ({ id, kind: 'foe', x, y, foe: kind });
+// 夢の住人 (認知で 歪んだ 現実の人)。下の 階層ほど ゆがみが 大きい。gives: 話すと 落とす まちがいの 言葉
+const resident = (id, x, y, sprite, line, gives = null) => ({ id, kind: 'talk', x, y, sprite, script: 'resident', line, gives });
 
 // ---- ミオの夢『水底の音楽室』 ---------------------------------------------
 
@@ -146,6 +148,7 @@ export const LAYER_MAPS = {
             foe('mz2Onpu1', 4, 2, 'onpu'),
             foe('mz2Suima', 9, 3, 'suima'),
             foe('mz2Onpu2', 15, 2, 'onpu'),
+            resident('mz2Queen', 3, 7, 'mio', 'queen1'),
             stairs('mz2', 18, 1, 'mizuzoko3', { x: 2, y: 5 })
         ]
     },
@@ -164,6 +167,7 @@ export const LAYER_MAPS = {
             foe('mz3Suima1', 8, 2, 'suima'),
             foe('mz3Onpu2', 13, 1, 'onpu'),
             foe('mz3Suima2', 10, 4, 'suima'),
+            resident('mz3Queen', 7, 1, 'mio', 'queen2', '一人で'),
             stairs('mz3', 18, 8, 'mizuzoko4', { x: 9, y: 7 })
         ]
     },
@@ -191,6 +195,7 @@ export const LAYER_MAPS = {
             foe('rs2Hari1', 5, 3, 'hari'),
             foe('rs2Suima', 10, 6, 'suima'),
             foe('rs2Hari2', 14, 7, 'hari'),
+            resident('rs2Judge', 3, 4, 'kana', 'judge1'),
             stairs('rs2', 18, 9, 'renshu3', { x: 9, y: 9 })
         ]
     },
@@ -209,6 +214,7 @@ export const LAYER_MAPS = {
             foe('rs3Hari2', 18, 6, 'hari'),
             foe('rs3Suima1', 10, 5, 'suima'),
             foe('rs3Suima2', 12, 1, 'suima'),
+            resident('rs3Judge', 17, 4, 'kana', 'judge2', '勝ちたかった'),
             stairs('rs3', 9, 1, 'renshu4', { x: 9, y: 7 })
         ]
     },
@@ -254,6 +260,8 @@ export const LAYER_MAPS = {
             foe('du3Suima', 8, 5, 'suima'),
             foe('du3Onpu1', 17, 6, 'onpu'),
             foe('du3Onpu2', 3, 4, 'onpu'),
+            resident('du3Queen', 1, 2, 'mio', 'queen2', '一人で'),
+            resident('du3Judge', 24, 2, 'kana', 'judge2', '勝ちたかった'),
             stairs('du3', 2, 1, 'duet4', { x: 2, y: 5 })
         ]
     },

@@ -9,9 +9,11 @@ export const WORDS = {
     '一緒に': { part: 'front', owner: 'mio' },
     '吹きたかった': { part: 'back', owner: 'mio' },
     'やめたかった': { part: 'back', owner: 'mio' },
+    '一人で': { part: 'front', owner: 'mio' },           // まちがい (独奏の女王ミオが 落とす)
     '相談して': { part: 'front', owner: 'kana' },
     'ほしかった': { part: 'back', owner: 'kana' },
-    'くやしかった': { part: 'back', owner: 'kana' }
+    'くやしかった': { part: 'back', owner: 'kana' },
+    '勝ちたかった': { part: 'back', owner: 'kana' }      // まちがい (審査員カナが 落とす。企画書の 例)
 };
 
 export const OWNER_NAMES = { hal: 'ハル', mio: 'ミオ', kana: 'カナ' };

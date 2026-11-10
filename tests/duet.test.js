@@ -35,10 +35,14 @@ function hall() {
     return state;
 }
 
-test('二重奏ホールは 2 周目から、2 人とも 元気な夜に 描ける', () => {
+test('二重奏ホールは 2 周目から、2 人とも 元気で 活性化した夜に 描ける', () => {
     const state = createState();
     state.day = 3;
     const keep = createKeep();
+    keep.loop = 2;
+    assert.deepEqual(dreamsTonight(state, keep), [], '活性化の 前は 合体の 夢にも 入れない');
+    keep.loop = 1;
+    state.day = 7;
     assert.ok(!dreamsTonight(state, keep).includes('duet'), '1 周目は 描けない');
     keep.loop = 2;
     assert.ok(dreamsTonight(state, keep).includes('duet'));

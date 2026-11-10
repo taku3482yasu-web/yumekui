@@ -1,5 +1,6 @@
 import { expToNext, levelOf, statCost, ypLeft, ypMoves, buyMove, buyStat, spentOf, YP_MAX_STEP, MAX_LEVEL } from '../core/level.js';
 import { LEVEL_MOVES, YP_STATS } from '../data/growth.js';
+import { emotionsOf, rebornOf } from '../core/emotion.js';
 import { sprite } from './sprites.js';
 
 // 育成画面「そだてる」(デザイン「ユメクイ 育成画面」① ②)。
@@ -16,7 +17,7 @@ export function openGrow({ input, units, keep, state, head, canSpend, refresh })
         const rows = () => (units[tab].id === 'bak' ? [...YP_STATS.map((s) => ({ kind: 'stat', id: s.id })), ...ypMoves(keep).map((m) => ({ kind: 'move', id: m.id }))] : []);
         const paint = () => {
             const unit = units[tab];
-            box.replaceChildren(header(units, tab, head), unit.id === 'bak' ? bakBody(unit, keep, state, rows()[row], canSpend) : allyBody(unit, state), footer(unit, canSpend, note));
+            box.replaceChildren(header(units, tab, head), unit.id === 'bak' ? bakBody(unit, keep, state, rows()[row], canSpend) : allyBody(unit, state, keep), footer(unit, canSpend, note));
         };
         const off = input.onPress((key) => {
             note = '';
@@ -87,6 +88,26 @@ function profile(unit, state) {
     return card;
 }
 
+// 夢感情 (30 かたむき・60 感情技・80 気まぐれ・100 夢変わり)。夢変わりの あとは 1 本 (200 まで)
+function emotionCard(unit, keep) {
+    const card = el('div', 'g-card');
+    const done = rebornOf(keep, unit.id);
+    const head = el('div', 'g-row');
+    head.append(el('span', 'g-sub', '夢感情'), el('span', 'g-dim', done ? '夢変わりのあと ・ 200 で 夢現' : '30 かたむき・60 感情技・80 気まぐれ'));
+    card.append(head);
+    const rows = done ? [[done.attr, done.point, 200]] : Object.entries(emotionsOf(keep, unit.id)).map(([attr, v]) => [attr, v, 100]);
+    for (const [attr, value, max] of rows) {
+        const line = el('div', 'g-emo');
+        const bar = el('div', 'g-bar');
+        const fill = el('i', `e-${attr}`);
+        fill.style.width = `${Math.round((value / max) * 100)}%`;
+        bar.append(fill);
+        line.append(el('span', `g-emo-name e-t-${attr}`, attr), bar, el('span', '', String(value)));
+        card.append(line);
+    }
+    return card;
+}
+
 function statusCard(unit) {
     const card = el('div', 'g-card');
     card.append(el('div', 'g-sub', 'ステータス'));
@@ -101,7 +122,7 @@ function statusCard(unit) {
 }
 
 // 個人ユメクイ: レベルで 覚える 技 (まだの 技は ？？？)
-function allyBody(unit, state) {
+function allyBody(unit, state, keep) {
     const body = el('div', 'g-body');
     const moves = el('div', 'g-card g-moves');
     moves.append(el('div', 'g-sub', '技'));
@@ -116,7 +137,7 @@ function allyBody(unit, state) {
         moves.append(line);
     }
     const right = el('div', 'g-col');
-    right.append(statusCard(unit), moves);
+    right.append(statusCard(unit), emotionCard(unit, keep), moves);
     body.append(profile(unit, state), right);
     return body;
 }
@@ -163,7 +184,9 @@ function bakBody(unit, keep, state, focus, canSpend) {
         if (on && !move.locked) line.append(el('span', 'g-dim', move.info));
         moves.append(line);
     }
-    body.append(left, stats, moves);
+    const middle = el('div', 'g-col');
+    middle.append(stats, emotionCard(unit, keep));
+    body.append(left, middle, moves);
     body.classList.add('g-bak');
     return body;
 }

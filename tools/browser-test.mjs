@@ -308,8 +308,21 @@ async function pick(text) {
         if (now.msg) await key('j');
         else await sleep(80);
     }
-    throw new Error('メニューが出ない ' + text);
+    throw new Error('メニューが出ない ' + text + ' エラー: ' + JSON.stringify(errors));
 }
+// 夜の キャンバスに 描く 画面: 少し 線を 引いて A で 描き終える
+async function paintNight(name) {
+    for (let i = 0; i < 200 && (await read('yumekui.mode')) !== 'painting'; i++) {
+        if ((await state()).msg) await key('j');
+        else await sleep(60);
+    }
+    await key('ArrowRight', 400);
+    await key('ArrowUp', 300);
+    await key('j');
+    await sleep(2600);
+    await shot(name);
+}
+
 async function waitField() {
     for (let i = 0; i < 200; i++) {
         const now = await state();
@@ -435,21 +448,23 @@ await shot('12-classroom');
 await talkTo(18, 4);
 await shot('12b-music-room');
 await pick('じっくり話す');
-await night('ミオの夢');
-await sleep(900);
-await waitField();
-await shot('13-mio-dream');
-await fightAt(9, 7);
-await skip();
-await fightAt(15, 4);
-await skip();
-await walkTo(15, 1);
-await skip();
-console.log('2/2 の言葉', JSON.stringify((await state()).s.words));
-await walkTo(10, 9);
+// 活性化の 前は キャンバスに 描いても 夢に つながらない
+for (let i = 0; i < 200; i++) {
+    const now = await state();
+    if (now.m === 'field' && !now.msg && now.s.phase === 'night' && now.s.map === 'home') break;
+    if (now.msg) await key('j');
+    else await sleep(80);
+}
+await key('j');
 await sleep(300);
-await shot('13b-wake-door');
-await pick('目を覚ます');
+await shot('13-canvas-not-active');
+const before7 = await read('[...document.querySelectorAll("#menu button")].map(b=>b.textContent)');
+for (let i = 0; i < 30 && !(await state()).menu; i++) {
+    await key('j');
+    await sleep(150);
+}
+console.log('2/2 の キャンバス', JSON.stringify(await read('[...document.querySelectorAll("#menu button")].map(b=>b.textContent)')), JSON.stringify(before7));
+await pick('描かずに寝る');
 await sleep(1000);
 for (let day = 3; day < 7; day++) {
     if (day > 3) {
@@ -484,13 +499,20 @@ await goHome();
 await sleep(300);
 const seven = await state();
 console.log('今の日', seven.s.day, seven.s.phase, '活性化', seven.s.flags.active);
+// 活性化した 夜: ミオの夢に 入れる。キャンバスに 描いて (段階 1 = もや) 第 1 層で 言葉を 拾う
+await night('ミオの夢');
+await paintNight('13-canvas-stage1');
+await waitField();
+await shot('13-mio-dream-fog');
+await fightAt(9, 7);
+await skip();
+await fightAt(15, 4);
+await skip();
+await walkTo(15, 1);
+await skip();
+console.log('7 日の言葉', JSON.stringify((await state()).s.words));
 // 夢合わせ: ミオの 言葉を つないで 本音の 文を 作る (まちがいの「やめたかった」も 持っている)
-for (let i = 0; i < 200; i++) {
-    const now = await state();
-    if (now.m === 'field' && !now.msg && now.s.phase === 'night' && now.s.map === 'home') break;
-    if (now.msg) await key('j');
-    else await sleep(80);
-}
+await waitField();
 await key('Escape');
 await sleep(300);
 await pick('夢合わせ');
@@ -500,8 +522,6 @@ await shot('13f-weave-back');
 await pick('吹きたかった');
 await skip();
 console.log('作った文', JSON.stringify((await state()).s.sentences));
-await night('ミオの夢');
-await sleep(900);
 await waitField();
 // 第 1 層の 階段 → 第 2 層 → 第 3 層 → 最深部の ボス
 await descend([[9, 4], [18, 1], [18, 8]]);
@@ -547,7 +567,7 @@ for (let day = 1; day < 7; day++) {
 await goHome();
 await sleep(300);
 await night('カナの夢');
-await sleep(900);
+await paintNight('17-canvas-kana');
 await waitField();
 await walkTo(6, 8);
 await sleep(300);

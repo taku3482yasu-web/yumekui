@@ -420,6 +420,8 @@ test('喰らった夢主は 次の周も 抜け殻のまま', () => {
     assert.equal(next.status.kana, 'idle');
     assert.deepEqual(dreamsTonight(next), [], '2 月 1 日は まだ 夢が開いていない');
     next.day = 2;
+    assert.deepEqual(dreamsTonight(next), [], '活性化の 前は 描いても 夢に つながらない');
+    next.day = 7;
     assert.deepEqual(dreamsTonight(next), ['kana']);
 });
 

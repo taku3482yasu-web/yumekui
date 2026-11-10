@@ -319,3 +319,7 @@ canvas {
 #grow .g-moves { overflow-y: auto; }
 #grow .g-foot { display: flex; justify-content: flex-end; gap: 1.4em; color: var(--dim); }
 #grow .g-note { margin-right: auto; color: var(--kokoro); }
+#grow .g-emo { display: grid; grid-template-columns: 1.4em 1fr 2em; gap: 0.4em; align-items: center; }
+#grow .g-emo span:last-child { text-align: right; }
+#grow .e-喜 { background: #ffd84a !important; } #grow .e-怒 { background: #ff7a6b !important; } #grow .e-哀 { background: #7fb2ff !important; } #grow .e-楽 { background: #7fe0a8 !important; }
+#grow .e-t-喜 { color: #ffd84a; } #grow .e-t-怒 { color: #ff7a6b; } #grow .e-t-哀 { color: #7fb2ff; } #grow .e-t-楽 { color: #7fe0a8; }

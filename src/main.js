@@ -2,8 +2,10 @@ import { act, aliveFoes, answer, bench, chanceFoe, commands, createBattle, needs
 import { ACTIONS, keyName } from './core/keys.js';
 import { advance, createKeep, dateLabel, devour, dreamsTonight, nextLoop, rescue, rescuePair, ACTIVE_DAY, LAST_DAY, PAIR } from './core/calendar.js';
 import { bakSkills, bakUnit, grow } from './core/growth.js';
-import { battleExp, gainExp, growUnit, layerFoe, reachLayer, reachedLayer, ypLeft } from './core/level.js';
+import { battleExp, gainExp, growUnit, layerFoe, reachLayer, ypLeft } from './core/level.js';
 import { openGrow } from './view/grow.js';
+import { applyEmotion, declineReborn, gainEmotions, pendingReborn, reborn } from './core/emotion.js';
+import { growCanvas, isNightmare, sightOf, stageOf, startLayers, truthHelp, NIGHTMARE_RATE, STAGES } from './core/canvas.js';
 import { createState, facing, isBlocked, objectAt, pickWord, placeName, step, tileAt, warp, DIRS } from './core/field.js';
 import { deepTalk, startDay, startMorning, timeLabel, timesBetween, NIGHT_START, PROLOGUE_START, RIKU_BRANCH_Y, TOWN_START } from './core/town.js';
 import { isWeekend } from './core/days.js';
@@ -105,7 +107,7 @@ function grownUnits() {
         const base = growUnit(id === 'bak' ? bakUnit(keep) : ALLIES[id], keep, state);
         const rate = 1 + (keep.copies[id] ?? 0) * COPY_BONUS;
         const maxHp = Math.round(base.maxHp * rate);
-        return { ...base, maxHp, hp: maxHp, atk: Math.round(base.atk * rate), def: Math.round(base.def * rate) };
+        return applyEmotion({ ...base, maxHp, hp: maxHp, atk: Math.round(base.atk * rate), def: Math.round(base.def * rate) }, keep);
     });
 }
 
@@ -115,7 +117,8 @@ function partyUnits() {
         const base = growUnit(id === 'bak' ? bakUnit(keep) : ALLIES[id], keep, state);
         const rate = 1 + (keep.copies[id] ?? 0) * COPY_BONUS;
         const maxHp = Math.round(base.maxHp * rate);
-        return { ...base, maxHp, hp: Math.min(hp[id] ?? maxHp, maxHp), atk: Math.round(base.atk * rate), def: Math.round(base.def * rate) };
+        const unit = applyEmotion({ ...base, maxHp, atk: Math.round(base.atk * rate), def: Math.round(base.def * rate) }, keep);
+        return { ...unit, hp: Math.min(hp[id] ?? unit.maxHp, unit.maxHp) };
     }).filter((unit) => unit.hp > 0);
 }
 
@@ -160,6 +163,15 @@ const SCRIPTS = {
         await talk(first ? LINES.noteKana : LINES.noteAgain);
     },
     queenMio: () => talk(LINES.queenMio),
+    // 階層の 夢の住人。まちがいの 言葉を 落とすことが ある
+    resident: async (object) => {
+        await talk(LINES.residents[object.line]);
+        if (object.gives && !state.words.includes(object.gives)) {
+            state.words.push(object.gives);
+            showHud();
+            await talk(LINES.wordFound(object.gives));
+        }
+    },
     judgeKana: () => talk(LINES.judgeKana),
     // 町
     tomeShop: () => talk(LINES.tomeShop),
@@ -221,7 +233,7 @@ async function homeDoor() {
 }
 
 async function touch(object) {
-    if (object.kind === 'talk' || object.kind === 'door' || object.kind === 'block') await SCRIPTS[object.script]();
+    if (object.kind === 'talk' || object.kind === 'door' || object.kind === 'block') await SCRIPTS[object.script](object);
     if (object.kind === 'person') {
         if (state.flags.prologue && object.who === 'father') await talk(LINES.fatherAfter);
         else await talkTo(object.who);
@@ -360,7 +372,8 @@ async function fight(object) {
 
     // 敵は 1 体 (foe) か 複数 (foes)。本音を持つ 敵 (なければ 1 体目) が この戦いの 主
     const layer = layerOf()?.layer ?? 1;   // 下の 階層ほど 敵が 強い
-    const foeList = (object.foes ?? [object.foe]).map((id) => layerFoe(FOES[id], layer));
+    const nightmare = state.sight?.nightmare ? NIGHTMARE_RATE : 1;   // 悪夢化した 合体の夢は 敵が 強い
+    const foeList = (object.foes ?? [object.foe]).map((id) => layerFoe(FOES[id], layer)).map((f) => nightmare === 1 ? f : { ...f, maxHp: Math.round(f.maxHp * nightmare), hp: Math.round(f.maxHp * nightmare), atk: Math.round(f.atk * nightmare) });
     const foe = foeList.find((f) => f.truth) ?? foeList[0];
     const battle = createBattle(partyUnits(), foeList, { noEscape: object.script === 'firstBattle', musou: keep.musou });
     await playEncounter(encounterTheme(MAPS[state.map], state.x), foeList.some((f) => f.truth));
@@ -420,7 +433,9 @@ function chooseTruth(battle) {
     battle.foe = chanceFoe(battle) ?? battle.foe;
     const solvedBefore = keep.solved.includes(battle.foe.solvedAs ?? battle.foe.id);
     // 本音の 3 択には、夢合わせで 作った その夢主の 文を 持ち込む (正しい文を 作っていないと 正解は 出ない)
-    const choices = sentenceChoices(battle.foe.truth, state.sentences, { solvedBefore });
+    const here = layerOf();
+    const help = here ? truthHelp(stageOf(keep, here.dream)) : {};   // キャンバスの 段階 4・5
+    const choices = sentenceChoices(battle.foe.truth, state.sentences, { solvedBefore, ...help });
     const items = choices.map((line) => ({ id: line, label: line }));
     return ui.menu(items, { head: battle.foe.truthHead ?? LINES.truthHead, wide: true }).then((line) => answer(battle, line));
 }
@@ -553,6 +568,7 @@ async function finish(battle, object, foe) {
 
 // 経験値: 倒した 敵 (本音を 届けた・喰らった 敵も) の 合計を、パーティは そのまま、控えは 半分
 async function awardExp(battle) {
+    gainEmotions(keep, battle.party, battle.foes, battle.over);   // 夢感情 (倒した 敵の 属性に)
     const amount = battleExp(battle.foes.map((f) => ({ exp: (f.exp ?? 0) * (f.expRate ?? 1) })), layerOf()?.layer ?? 1);
     if (!amount) return;
     const hadYp = (keep.ypTotal ?? 0) > 0;
@@ -783,11 +799,15 @@ async function useCanvas() {
         return;
     }
     const dreams = dreamsTonight(state, keep);
-    if (dreams.length && !keep.canvasTold) {
+    if (!keep.canvasTold) {
         keep.canvasTold = true;
         await talk(LINES.firstCanvas);
     }
-    if (!dreams.length) await talk(LINES.noDreamYet);
+    if (!dreams.length && state.day < ACTIVE_DAY) {
+        // 活性化の 前: 描いても 絵が 漠然としていて、夢の チャンネルに 引っかからない
+        await talk(keep.channelTold ? LINES.notActiveAgain : LINES.notActive);
+        keep.channelTold = true;
+    } else if (!dreams.length) await talk(LINES.noDreamYet);
     const items = dreams.map((id) => ({ id, label: LINES.dreamNames[id] }));
     items.push({ id: 'rest', label: LINES.dreamNames.rest });
     items.push({ id: 'cancel', label: LINES.canvasCancel });
@@ -799,7 +819,29 @@ async function useCanvas() {
         return;
     }
     await talk(id === 'duet' ? LINES.drewDuet : LINES.drew(NAMES[id]));
+    await paintCanvas(id);
+    if (id === 'duet' && isNightmare(keep)) await talk(LINES.nightmareWarn);
     wakeUp({ dream: id });
+}
+
+// 夜の キャンバスに 描く 画面。今の 段階の 絵に なる (十字キーで 線、A で 描き終える)
+const CANVAS_COLORS = { water: [79, 134, 184], tempo: [176, 88, 104] };
+async function paintCanvas(id) {
+    const stage = stageOf(keep, id);
+    const colors = id === 'duet' ? [CANVAS_COLORS.water, CANVAS_COLORS.tempo] : [CANVAS_COLORS[id === 'mio' ? 'water' : 'tempo'], CANVAS_COLORS[id === 'mio' ? 'water' : 'tempo']];
+    const caption = LINES.canvasCaption(stage, STAGES[stage].label);
+    ui.hideHud();
+    await new Promise((resolve) => {
+        const off = input.onPress((key) => { if (key === 'a') finishPainting(painting, performance.now()); });
+        painting = createPainting(performance.now(), { colors, caption, blur: (5 - stage) / 4 });
+        painting.done = () => { off(); resolve(); };
+        mode = 'painting';
+    });
+    await new Promise((resolve) => setTimeout(resolve, 900));
+    painting = null;
+    mode = 'scene';
+    showHud();
+    await talk(LINES.canvasStageInfo(STAGES[stage].effect));
 }
 
 async function useBed() {
@@ -831,14 +873,17 @@ function layerLabel(dreamId, layer) {
 async function enterDream(id) {
     // たどり着いた 階層が あれば、どこから 始めるか 選ぶ (その周の あいだ)
     let layer = 1;
-    const reached = reachedLayer(state, id);
+    const reached = startLayers(state, keep, id, DREAM_LAYERS[id].length);
     if (reached > 1) {
         const items = Array.from({ length: reached }, (_, i) => ({ id: String(i + 1), label: layerLabel(id, i + 1) }));
         layer = Number(await ui.menu(items, { head: LINES.layerHead, wide: true }));
     }
     const map = DREAM_LAYERS[id][layer - 1];
+    const stage = stageOf(keep, id);
     await ui.fade(true);
     const entered = dream(map);
+    state.sight = { ...sightOf(stage), nightmare: id === 'duet' && isNightmare(keep) };
+    reachLayer(state, id, layer);
     mode = 'scene';   // 夢に入る セリフが 終わるまで 歩けない (フェードの あいだに 敵に ぶつからない)
     await ui.fade(false);
     await scene(async () => {
@@ -846,8 +891,32 @@ async function enterDream(id) {
             await talk(map === 'duet' ? LINES.duetEnter : LINES.enterDream[map]);
             if (!state.flags.active) await talk(LINES.noBoss);
         } else await talk(LINES.layerEnter(layerLabel(id, layer)));
+        if (state.sight.nightmare) await talk(LINES.nightmareIn);
     });
     await entered;
+    // 夢から 覚めると、夢の中で 見た 景色が 絵に 描き足される (その日に 言葉を 拾っていれば もう 1 段)
+    state.sight = null;
+    const before = stageOf(keep, id);
+    const after = growCanvas(keep, id, state.words.length > (state.wordsAtDay ?? 0));
+    if (after > before) await talk(LINES.canvasGrew(after, STAGES[after].label));
+    await askReborn();
+}
+
+// 夢感情が 100 に なった 仲間は、夢から 覚めたときに 夢変わり (夢昇華) するか 聞かれる
+async function askReborn() {
+    for (const p of pendingReborn(keep, grownUnits())) {
+        const name = ALLIES[p.id].name;
+        await talk(p.sublime ? LINES.sublimeAsk(name, p.attr) : LINES.rebornAsk(name, p.attr));
+        const id = await ui.menu([{ id: 'yes', label: p.sublime ? LINES.sublimeYes : LINES.rebornYes }, { id: 'no', label: LINES.rebornNo }], { head: p.sublime ? LINES.sublimeHead : LINES.rebornHead });
+        if (id === 'yes') {
+            reborn(keep, p.id, p.attr, ALLIES[p.id].attr);
+            const unit = grownUnits().find((u) => u.id === p.id);
+            await talk(LINES.rebornDone(name, unit.name, unit.moves.extra.at(-1).label));
+        } else {
+            declineReborn(keep, p.id, p.attr);
+            await talk(LINES.rebornLater);
+        }
+    }
 }
 
 async function campaign() {
@@ -864,7 +933,7 @@ async function campaign() {
             await ui.fade(false);
             await talk(LINES.loop);
             if (keep.loop === 1) await talk(LINES.nextPlan);
-            state = nextLoop(keep);
+            state = nextLoop(keep, state);
             await ui.fade(true);
         } else if (state.day !== before && !skipTear) {
             await playCalendar(before, state.day);

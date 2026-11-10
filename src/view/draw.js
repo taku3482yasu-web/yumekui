@@ -1,3 +1,4 @@
+import { SIGHT } from '../core/canvas.js';
 import { MAPS } from '../data/maps.js';
 import { FOES } from '../data/units.js';
 import { objectsOf } from '../core/field.js';
@@ -151,7 +152,11 @@ export function drawField(ctx, state, walk, time, actors = [], follower = null) 
     } else drawSky(ctx, time);
     ctx.save();
     ctx.translate(-Math.round(camX), -Math.round(camY));
+    // キャンバスの 段階 (state.sight): 1 は もやで 近くしか 見えない、2 は 地図だけ 見えて 物は 近くだけ、3 から 敵の 属性も
+    const sight = !map.real && state.sight ? state.sight : null;
+    const near = (x, y) => Math.abs(x - state.x) + Math.abs(y - state.y) <= SIGHT;
     map.tiles.forEach((row, y) => [...row].forEach((tile, x) => {
+        if (sight?.fog && !near(x, y)) return;
         if (map.real) drawRealTile(ctx, tile, x * TILE, y * TILE, time);
         else {
             // 二重奏ホールは 左が 水 (ミオ)、右が トゲ (カナ)。左右の扉は それぞれの 合図で 開く
@@ -160,18 +165,39 @@ export function drawField(ctx, state, walk, time, actors = [], follower = null) 
             drawTile(ctx, tile, x * TILE, y * TILE, open, theme);
         }
     }));
-    for (const object of objectsOf(state)) drawObject(ctx, object, time);
+    for (const object of objectsOf(state)) {
+        const always = ['wake', 'talk'].includes(object.kind);
+        if (sight && (sight.fog || sight.nearObjects) && !always && !near(object.x, object.y)) continue;
+        drawObject(ctx, object, time);
+        if (sight?.attrs && object.kind === 'foe') drawAttr(ctx, object);
+    }
     for (const actor of actors) drawObject(ctx, { kind: 'person', x: actor.x, y: actor.y, sprite: actor.who }, time);
     const behind = follower && follower.y <= state.y;   // バクが 上 (奥) にいるときは ハルより 先に 描く
     if (behind) drawFollower(ctx, follower, walk, time);
     drawHal(ctx, state, px, py, walk);
     if (follower && !behind) drawFollower(ctx, follower, walk, time);
     ctx.restore();
+    if (sight?.nightmare) {
+        ctx.fillStyle = 'rgba(120, 10, 40, 0.28)';   // 悪夢化: 絵の具が にじんで 赤黒い
+        ctx.fillRect(0, 0, W, H);
+    }
     const tint = map.real && (state.phase === 'night' ? TINT.night : state.phase === 'morning' ? TINT.morning : state.time === 'evening' ? TINT.evening : null);
     if (tint) {
         ctx.fillStyle = tint;
         ctx.fillRect(0, 0, W, H);
     }
+}
+
+const ATTR_COLORS = { 喜: '#ffd84a', 怒: '#ff7a6b', 哀: '#7fb2ff', 楽: '#7fe0a8' };
+
+// 敵の 属性の しるし (キャンバスの 段階 3 から)
+function drawAttr(ctx, object) {
+    const attr = FOES[object.foe]?.attr;
+    if (!attr) return;
+    ctx.fillStyle = '#0d1030';
+    ctx.fillRect(object.x * TILE + 11, object.y * TILE - 6, 6, 6);
+    ctx.fillStyle = ATTR_COLORS[attr];
+    ctx.fillRect(object.x * TILE + 12, object.y * TILE - 5, 4, 4);
 }
 
 // 動かない物 (看板・人・家具) は 上下に揺らさない

@@ -9,8 +9,9 @@ const BLEED_MS = 900;        // 線が 青に にじむまでの 時間
 export const PAINT_LIMIT_MS = 12000;
 const FINISH_MS = 2200;
 
-export function createPainting(now) {
-    return { cx: BOARD.w / 2, cy: BOARD.h / 2, strokes: [], start: now, finishAt: null };
+// opts (夜の キャンバス): colors = にじむ色 [左, 右] (合体の夢は 左右で 別)、caption = 描き終えたあとの 文字、blur = 段階が 低いほど ぼやける (0〜1)
+export function createPainting(now, opts = {}) {
+    return { cx: BOARD.w / 2, cy: BOARD.h / 2, strokes: [], start: now, finishAt: null, opts };
 }
 
 // 筆を 動かす (dir: 'up' など。なければ 動かない)
@@ -51,16 +52,20 @@ export function drawPainting(ctx, p, now) {
             const fromBottom = (BOARD.h - y) / BOARD.h;
             const level = finish * 1.25 - fromBottom * 0.5;
             if (level <= 0) continue;
-            const shade = mix([214, 232, 244], SEA, Math.min(1, y / BOARD.h + 0.2));
-            ctx.fillStyle = `rgba(${shade.join(',')}, ${Math.min(1, level)})`;
+            const [left, right] = p.opts.colors ?? [SEA, SEA];
             const wave = Math.sin(y / 6 + now / 500) * 3;
-            ctx.fillRect(BOARD.x, BOARD.y + y + wave * 0.2, BOARD.w, 2);
+            for (const [color, x0, w] of left === right ? [[left, 0, BOARD.w]] : [[left, 0, BOARD.w / 2], [right, BOARD.w / 2, BOARD.w / 2]]) {
+                const shade = mix([214, 232, 244], color, Math.min(1, y / BOARD.h + 0.2));
+                ctx.fillStyle = `rgba(${shade.join(',')}, ${Math.min(1, level) * (1 - (p.opts.blur ?? 0) * 0.4)})`;
+                ctx.fillRect(BOARD.x + x0, BOARD.y + y + wave * 0.2, w, 2);
+            }
         }
     }
     // 線: 時間が たつほど 青く 大きく にじむ
     for (const s of p.strokes) {
         const age = Math.min(1, (now - s.t) / BLEED_MS);
-        const color = mix(INK, SEA, age);
+        const bleed = p.opts.colors ? p.opts.colors[s.x < BOARD.w / 2 ? 0 : 1] : SEA;
+        const color = mix(INK, bleed, age);
         const size = 2 + age * 2;
         ctx.fillStyle = `rgba(${color.join(',')}, ${1 - finish * 0.6})`;
         ctx.fillRect(Math.round(BOARD.x + s.x - size / 2), Math.round(BOARD.y + s.y - size / 2), Math.round(size), Math.round(size));
@@ -71,6 +76,15 @@ export function drawPainting(ctx, p, now) {
         ctx.fillRect(Math.round(BOARD.x + p.cx) - 1, Math.round(BOARD.y + p.cy) - 8, 2, 7);
         ctx.fillStyle = '#4f86b8';
         ctx.fillRect(Math.round(BOARD.x + p.cx) - 1, Math.round(BOARD.y + p.cy) - 1, 2, 2);
+    }
+    if (finish >= 1 && p.opts.caption) {
+        ctx.fillStyle = 'rgba(13, 16, 48, 0.85)';
+        ctx.fillRect(BOARD.x, BOARD.y + BOARD.h + 6, BOARD.w, 18);
+        ctx.fillStyle = '#ffc95e';
+        ctx.font = '10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(p.opts.caption, W / 2, BOARD.y + BOARD.h + 18);
+        ctx.textAlign = 'left';
     }
     return finish >= 1;
 }

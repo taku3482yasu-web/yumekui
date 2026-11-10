@@ -44,14 +44,19 @@ export function nextChoices(words, fronts) {
 }
 
 // 本音の 3 択: その夢主の 文を 持ち込む (最大 3 つ。足りない分は まちがいの 文)。前の周で 言い当てていれば 正解の 文を 持っている
-export function sentenceChoices(truth, sentences = [], { solvedBefore = false, rng = Math.random } = {}) {
+// キャンバスの 段階 4 (fewerWrong): 失敗の 選択肢が 1 つ 減る。段階 5 (allHints): 本音の ヒントが 全部 そろう (正解が 出る)
+export function sentenceChoices(truth, sentences = [], { solvedBefore = false, fewerWrong = false, allHints = false, rng = Math.random } = {}) {
     const own = sentences.filter((s) => s.owner === truth.owner).map((s) => s.text);
-    if (solvedBefore && !own.includes(truth.answer)) own.unshift(truth.answer);
+    if ((solvedBefore || allHints) && !own.includes(truth.answer)) own.unshift(truth.answer);
     const brought = own.includes(truth.answer) ? [truth.answer, ...own.filter((t) => t !== truth.answer)] : own;
     const list = brought.slice(0, 3);
     for (const wrong of shuffle(truth.wrong, rng)) {
         if (list.length >= 3) break;
         if (!list.includes(wrong)) list.push(wrong);
+    }
+    if (fewerWrong) {
+        const drop = list.findLastIndex((t) => t !== truth.answer);
+        if (drop >= 0 && list.length > 1) list.splice(drop, 1);
     }
     return shuffle(list, rng);
 }

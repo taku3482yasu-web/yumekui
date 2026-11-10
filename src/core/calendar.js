@@ -1,6 +1,7 @@
 import { createState } from './field.js';
 import { FIRST_IMAGES } from '../data/brush.js';
 import { grow } from './growth.js';
+import { isActive, loopCanvas } from './canvas.js';
 
 import { ACTIVE_DAY, LAST_DAY, LAST_RESCUE_DAY, OPEN_DAY, PAIR, isWeekend } from './days.js';
 
@@ -15,9 +16,10 @@ export function canTalk(state, id) {
     return state.day < ACTIVE_DAY && state.status[id] === 'idle';
 }
 
-// 今夜 描ける夢。2 周目からは、2 人とも 元気なら ミオ×カナの夢 (夢合体『二重奏ホール』) も 描ける
+// 今夜 入れる夢。2 周目からは、2 人とも 元気なら ミオ×カナの夢 (夢合体『二重奏ホール』) も 描ける。
+//   ユメクイが 活性化する前は、描いても 夢の チャンネルに 引っかからないので どこにも 入れない
 export function dreamsTonight(state, keep = null) {
-    if (state.day < OPEN_DAY) return [];
+    if (state.day < OPEN_DAY || !isActive(state)) return [];
     const list = PAIR.filter((id) => state.status[id] === 'idle');
     if (keep && keep.loop >= 2 && list.length === 2) list.push('duet');
     return list;
@@ -77,14 +79,16 @@ export function advance(state) {
         }
     }
     state.day++;
+    state.wordsAtDay = state.words.length;   // その日に 言葉を 拾ったか (キャンバスの 段階)
     state.phase = isWeekend(state.day) ? 'day' : 'morning';
     if (state.day >= ACTIVE_DAY) state.flags.active = true;
     return state.day > LAST_DAY ? 'loop' : state.phase;
 }
 
 // 2 月 1 日の朝 (自分のベッドで目を覚ます) へ戻る。プロローグとハルの夢は くり返さない (仕様書「ループで残るもの・消えるもの」)
-export function nextLoop(keep) {
+export function nextLoop(keep, prevState = null) {
     keep.loop++;
+    loopCanvas(keep, prevState);
     const state = createState();
     state.day = 1;
     state.phase = 'morning';

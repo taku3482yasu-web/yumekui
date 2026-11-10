@@ -22,7 +22,7 @@ export const MUSOU = {
 };
 
 function makeFoe(foe, index) {
-    return { ...foe, kokoro: 0, index, step: 0, asleep: false, chance: false, exhausted: false, down: false };
+    return { ...foe, baseAtk: foe.atk, kokoro: 0, index, step: 0, asleep: false, chance: false, exhausted: false, down: false };
 }
 
 // noEscape: にげられない 戦い (チュートリアルの 最初の戦い など)。本音を持つ 敵 (ボス) からも にげられない
@@ -50,6 +50,11 @@ export function createBattle(allies, foes, { rng = Math.random, noEscape = false
         boost: 0,         // アンサンブル: 味方全員の 攻撃＋20% (次のターン)
         trueEye: false,   // 夢見の目: ココロ攻撃が 必ず 当たる
         nestle: false,    // よりそう: 本音を 外しても 相手が 強くならない
+        joy: 0,           // はずむ心: 味方全員の ココロ攻撃 1.5 倍の 残りターン
+        kokoroOnce: 1,    // さくらのソロ: 次の ココロ攻撃 1 回だけ 2 倍
+        partyUp: null,    // 味方全員の 攻撃・防御 ＋ (残りターン)
+        cheer: false,     // 喜の 気まぐれ: そのターン 味方全員の 攻撃＋10%
+        used: new Set(),  // バトルで 1 度だけの 技 (夢現)
         get foeSleep() { return this.foe.asleep; },
         set foeSleep(value) { this.foe.asleep = value; }
     };
@@ -95,7 +100,7 @@ export function commands(b) {
     if (aliveFoes(b).some((foe) => foe.truth)) list.push({ id: 'shake', label: 'ココロ攻撃' });
     if (moves.heal) list.push({ id: 'heal', label: moves.heal, disabled: wait > 0 });
     if (moves.skill) list.push({ id: moves.skill.id, label: moves.skill.label, disabled: wait > 0 });
-    for (const skill of moves.extra ?? []) list.push({ ...skill, disabled: wait > 0 });
+    for (const skill of moves.extra ?? []) list.push({ id: skill.id, label: skill.label, disabled: b.used.has(skill.id) || (wait > 0 && !skill.effect?.once) });
     for (const id of b.musou) {
         const ready = musouPair(b, id);
         if (ready) list.push({ id: `musou:${id}`, label: MUSOU[id].label, disabled: ready.some((u) => u.tired > 0) });
@@ -127,6 +132,21 @@ export function act(b, id, target = null) {
     if (b.boost > 0) b.boost--;
     if (b.ally.tempo > 0) b.ally.tempo--;
     if (b.ally.charging && !['swap', 'run', 'guard'].includes(id)) id = 'release';
+    if (b.joy > 0) b.joy--;
+    if (b.partyUp && --b.partyUp.turns <= 0) b.partyUp = null;
+    if (b.ally.dodgeBuff && --b.ally.dodgeBuff.turns <= 0) b.ally.dodgeBuff = null;
+    b.cheer = false;
+    // 夢感情が 80 を こえると、ときどき 気まぐれな 行動 (仕様書「いちばん高い感情で起きること」)
+    if (b.ally.whim && !['swap', 'run', 'release'].includes(id) && !id.startsWith('musou:')) {
+        const whim = whimOf(b, id, events);
+        if (whim === 'play') {
+            if (!b.over) foesTurn(b, events);
+            return events;
+        }
+        if (whim === 'twice') {
+            act2(b, id, target, events);
+        } else if (whim) id = whim;
+    }
     if (b.ally.tired > 0 && id !== 'swap' && id !== 'run') {
         // 夢双の あとは 息切れで 1 回 休み
         b.ally.tired--;
@@ -145,6 +165,8 @@ export function act(b, id, target = null) {
     if (id === 'bite') fierce(b, events, 170, 'bite');
     if (id === 'gorge') fierce(b, events, 120, 'gorge');
     if (GROWTH_MOVES[id]) GROWTH_MOVES[id](b, events);
+    const generic = (b.ally.moves.extra ?? []).find((m) => m.id === id && m.effect);
+    if (generic) runEffect(b, events, generic);
     if (id === 'devour') {
         b.over = 'devour';
         events.push({ t: 'end', result: 'devour' });
@@ -195,7 +217,8 @@ export function answer(b, choice) {
 }
 
 function attack(b, events) {
-    const times = b.rush ? 2 : 1;
+    const times = b.rush || b.ally.rushTurns > 0 ? 2 : 1;
+    if (b.ally.rushTurns > 0) b.ally.rushTurns--;
     b.rush = false;
     for (let i = 0; i < times && !b.over && !b.foe.down; i++) {
         const amount = damage(striker(b), b.foe, 100, b.rng);
@@ -216,7 +239,9 @@ function shake(b, events, rate = 1) {
         events.push({ t: 'say', text: 'しかし 気持ちは 揺れなかった。' });
         return;
     }
-    const gain = Math.round((SHAKE_POWER + (b.ally.kokoro ?? 0)) * rate * affinity(b.ally.attr, foe.attr));
+    const boost = (b.ally.kokoroRate ?? 1) * (b.joy > 0 ? 1.5 : 1) * b.kokoroOnce;
+    b.kokoroOnce = 1;
+    const gain = Math.round((SHAKE_POWER + (b.ally.kokoro ?? 0)) * rate * boost * affinity(b.ally.attr, foe.attr));
     foe.kokoro = Math.min(100, foe.kokoro + gain);
     events.push({ t: 'shake', index: foe.index, gain, kokoro: foe.kokoro });
     if (foe.kokoro >= 100) openChance(b, foe, events);
@@ -286,7 +311,7 @@ function fierce(b, events, power, kind) {
 }
 
 function heal(b, events) {
-    const amount = Math.min(b.ally.maxHp - b.ally.hp, Math.round(b.ally.maxHp * 0.4));
+    const amount = Math.min(b.ally.maxHp - b.ally.hp, Math.round(b.ally.maxHp * 0.4 * (b.ally.healRate ?? 1)));
     b.ally.hp += amount;
     b.ally.wait = SKILL_WAIT;
     events.push({ t: 'say', text: `${b.ally.name}は 悪夢を食べた。` });
@@ -315,6 +340,7 @@ function swapTo(b, unit, events) {
 function hurtFoe(b, foe, amount, events) {
     foe.hp -= amount;
     if (foe.hp > 0) return;
+    foe.finisher ??= b.ally.id;   // とどめを 刺した ユメクイ (夢感情が 2 倍)
     if (foe.truth) {
         // 本音を持つ相手は、言い当てるまで 消えない
         const first = !foe.exhausted;
@@ -377,6 +403,13 @@ function foeTurn(b, foe, events) {
         events.push({ t: 'say', text: `${foe.name}は 眠っている。` });
         return;
     }
+    if (foe.slow > 0) {
+        foe.slow--;
+        if (foe.slow % 2 === 1) {
+            events.push({ t: 'say', text: `${foe.name}は ゆっくりと しか 動けない……。` });
+            return;
+        }
+    }
     if (foe.stun) {
         foe.stun = false;
         events.push({ t: 'say', text: `${foe.name}は ひるんで 動けない！` });
@@ -396,10 +429,18 @@ function foeTurn(b, foe, events) {
     }
     const big = move === 'swirl';
     const name = big ? (foe.bigMove ?? '群れの大渦') : '体当たり';
-    events.push({ t: 'say', text: `${foe.name}の ${name}！` });
+    const dodging = (b.ally.dodge ?? 0) + (b.ally.dodgeBuff?.rate ?? 0) > 0;
+    if (!dodging) events.push({ t: 'say', text: `${foe.name}の ${name}！` });
     const weak = foe.drowsy > 0 ? 0.8 : 1;
     if (foe.drowsy > 0) foe.drowsy--;
-    const raw = damage({ ...foe, atk: foe.atk * weak }, b.ally, big ? 180 : 100, b.rng);
+    const dodge = (b.ally.dodge ?? 0) + (b.ally.dodgeBuff?.rate ?? 0);
+    if (dodge > 0 && b.rng() < dodge) {
+        events.push({ t: 'say', text: `${foe.name}の ${name}！ ${b.ally.name}は ひらりと かわした！` });
+        return;
+    }
+    if (dodging) events.push({ t: 'say', text: `${foe.name}の ${name}！` });
+    const guardUp = b.partyUp ? { ...b.ally, def: b.ally.def * (1 + b.partyUp.def) } : b.ally;
+    const raw = damage({ ...foe, atk: foe.atk * weak }, guardUp, big ? 180 : 100, b.rng);
     const amount = b.guarding ? Math.max(1, Math.round(raw / 3)) : raw;
     b.ally.hp = Math.max(0, b.ally.hp - amount);
     events.push({ t: 'hit', target: 'ally', from: foe.index, amount, aff: affinity(foe.attr, b.ally.attr) });
@@ -421,6 +462,8 @@ function striker(b) {
     let atk = b.ally.atk;
     if (b.ally.tempo > 0) atk *= 1.25;
     if (b.boost > 0) atk *= 1.2;
+    if (b.partyUp) atk *= 1 + b.partyUp.atk;
+    if (b.cheer) atk *= 1.1;
     return { ...b.ally, atk };
 }
 
@@ -440,7 +483,7 @@ function skillSay(b, events, label, text = '') {
 function healAll(b, events, rate) {
     for (const unit of b.party) {
         if (unit.hp <= 0) continue;
-        const amount = Math.min(unit.maxHp - unit.hp, Math.round(unit.maxHp * rate));
+        const amount = Math.min(unit.maxHp - unit.hp, Math.round(unit.maxHp * rate * (b.ally.healRate ?? 1)));
         unit.hp += amount;
         if (unit === b.ally && amount > 0) events.push({ t: 'heal', target: 'ally', amount });
     }
@@ -459,6 +502,100 @@ function regen(b, events) {
     b.regen--;
     healAll(b, events, 0.1);
     events.push({ t: 'say', text: 'ひだまり毛布が みんなを あたためている。' });
+}
+
+// ---- 夢感情の 技 (感情技・夢変わり・夢昇華・夢現)。data/emotions.js の 効果を そのまま 動かす ----
+
+function runEffect(b, events, move) {
+    const e = move.effect;
+    if (e.once) b.used.add(move.id);
+    else b.ally.wait = SKILL_WAIT;
+    events.push({ t: 'say', text: `${b.ally.name}の ${move.label}！` });
+    const foe = b.foe;
+    if (e.power) {
+        const user = e.best ? { ...striker(b), atk: Math.max(striker(b).atk, SHAKE_POWER / 2 + (b.ally.kokoro ?? 0)) } : striker(b);
+        for (let i = 0; i < (e.hits ?? 1) && !b.over && !foe.down; i++) {
+            const amount = damage(user, foe, e.power, b.rng);
+            events.push({ t: 'hit', target: 'foe', index: foe.index, amount, aff: affinity(b.ally.attr, foe.attr) });
+            hurtFoe(b, foe, amount, events);
+            if (e.drain) {
+                const gain = Math.min(b.ally.maxHp - b.ally.hp, Math.round(amount * e.drain));
+                b.ally.hp += gain;
+                if (gain) events.push({ t: 'heal', target: 'ally', amount: gain });
+            }
+        }
+    }
+    if (e.foeAtkDown && !foe.down) foe.atk = Math.round(foe.atk * (1 - e.foeAtkDown));
+    if (e.foeDefDown && !foe.down) foe.def = Math.round(foe.def * (1 - e.foeDefDown));
+    if (e.selfDefDown) b.ally.def = Math.round(b.ally.def * (1 - e.selfDefDown));
+    if (e.healAll) healAll(b, events, e.healAll);
+    if (e.partyAtkUp || e.partyDefUp) {
+        b.partyUp = { atk: e.partyAtkUp ?? 0, def: e.partyDefUp ?? 0, turns: 4 };
+        events.push({ t: 'say', text: 'みんなの 力が 上がった！' });
+    }
+    if (e.kokoroUp) {
+        if (e.kokoroRate) b.kokoroOnce = e.kokoroRate;
+        else b.joy = e.kokoroUp + 1;
+        events.push({ t: 'say', text: 'みんなの 気持ちが はずんでいる。ココロ攻撃が 強くなった！' });
+    }
+    if (e.dodge) b.ally.dodgeBuff = { rate: e.dodge.rate, turns: e.dodge.turns + 1 };
+    if (e.sleep && !foe.down) {
+        foe.asleep = true;
+        events.push({ t: 'say', text: `${foe.name}は 眠りに落ちた。` });
+    }
+    if (e.slow && !foe.down) {
+        foe.slow = e.slow * 2;
+        events.push({ t: 'say', text: `${foe.name}の 動きが ゆっくりに なった。` });
+    }
+    if (e.rushTurns) {
+        b.ally.rushTurns = e.rushTurns;
+        events.push({ t: 'say', text: `${b.ally.name}の テンポが 倍に なった！` });
+    }
+    if (e.cure) events.push({ t: 'say', text: '朝の光が さしこんで、みんなの 気持ちが 晴れた。' });
+    if (e.stealBuffs && !foe.down && foe.atk > foe.baseAtk) {
+        foe.atk = foe.baseAtk;
+        events.push({ t: 'say', text: `${foe.name}の 強さを 喰らった！` });
+    }
+}
+
+// 気まぐれ: 喜 = 応援してから 命令どおり / 怒 = 命令を 聞かず いちばん 強い 攻撃 / 哀 = 体力が 半分を 切ると 勝手に まもる / 楽 = 遊ぶか、2 回 動く
+function whimOf(b, id, events) {
+    const r = b.rng();
+    const ally = b.ally;
+    if (ally.whim === '楽') {
+        if (r < 0.2) {
+            events.push({ t: 'say', text: `${ally.name}は 遊びはじめてしまった……。` });
+            return 'play';
+        }
+        if (r < 0.4) {
+            events.push({ t: 'say', text: `${ally.name}は 楽しくなって、2 回 動いた！` });
+            return 'twice';
+        }
+        return null;
+    }
+    if (r >= 0.2) return null;
+    if (ally.whim === '喜') {
+        b.cheer = true;
+        events.push({ t: 'say', text: `${ally.name}が みんなを 応援した！` });
+        return null;
+    }
+    if (ally.whim === '怒') {
+        const strongest = (ally.moves.extra ?? []).filter((m) => m.effect?.power && !m.effect.once && !b.used.has(m.id)).sort((x, y) => y.effect.power - x.effect.power)[0];
+        events.push({ t: 'say', text: `${ally.name}は 命令を 聞かずに 飛びだした！` });
+        return strongest && ally.wait <= 0 ? strongest.id : 'attack';
+    }
+    if (ally.whim === '哀' && ally.hp < ally.maxHp / 2 && id !== 'guard') {
+        events.push({ t: 'say', text: `${ally.name}は おびえて、身を 守ってしまった。` });
+        return 'guard';
+    }
+    return null;
+}
+
+// 楽の 気まぐれ (2 回 動く) の 1 回目
+function act2(b, id, target, events) {
+    if (id === 'attack') attack(b, events);
+    else if (GROWTH_MOVES[id] && id !== 'release') GROWTH_MOVES[id](b, events);
+    else if (id === 'shake') shake(b, events);
 }
 
 // 属性 → その属性に 強い 属性 (弱点)
