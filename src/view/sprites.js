@@ -3,7 +3,7 @@ const PALETTE = {
     k: '#20203a', s: '#f2c9a0', e: '#20203a', n: '#2f4a7d', d: '#22365e', w: '#e8ecf5', t: '#141428',
     b: '#7e6bd0', c: '#a795ec', y: '#ffe08a', p: '#f0b6c8', g: '#59509a',
     f: '#eef0ff', h: '#c6c9ea', o: '#6fd0d8', q: '#3f96ac', r: '#ff8f7a', l: '#ffd86b', u: '#6fb0ff', v: '#8fe0a0',
-    m: '#fff4dc', a: '#8a6a4a', z: '#5c4630'
+    m: '#fff4dc', a: '#8a6a4a', z: '#5c4630', j: '#c84a48', i: '#2a64a8'
 };
 
 const ART = {
@@ -220,6 +220,23 @@ const ART = {
         '.kmmmmmmmkk.',
         '..kmkkkmk...',
         '..kk...kk...'
+    ],
+    // デュエットの 鳥 (右向き)。哀しみの鳥は 青。怒りの鳥は 赤く 塗り替えて 左向きにする。足もとに 1 本の 楽譜
+    'bird-ai': [
+        '................',
+        '.........uuu....',
+        '........uuuuu...',
+        '........uukuuy..',
+        '........uuuuuyy.',
+        '..ii...uuuuuu...',
+        '.iiiiuuuuuuuu...',
+        'iiiiiiuuuuuuu...',
+        '.iiiiiiuuuuu....',
+        '...iiiiiuuu.....',
+        '.....uuuu.......',
+        '......y.y.......',
+        'hhhhhhhhhhhhhhhh',
+        '................'
     ],
     // 夢筆で 描ける場所: ぼんやり光る 筆あと
     brushMark: [
@@ -556,6 +573,17 @@ function schoolArt(size) {
 }
 
 // 喰らうほど 毛布は黒ずみ、目が赤くなる
+// 怒りの鳥: 青を 赤に 塗り替えて、左右を 反転 (哀しみの鳥と 背中合わせになる)
+function angryBirdRows() {
+    return ART['bird-ai'].map((row) => [...row].reverse().join('').replaceAll('u', 'r').replaceAll('i', 'j'));
+}
+
+// デュエット (地図の上の 姿): 背中合わせの 2 羽
+function duetRows() {
+    const left = angryBirdRows();
+    return ART['bird-ai'].map((row, y) => left[y] + row);
+}
+
 function wildRows(rows = ART.bak) {
     return rows.map((row) => row.replaceAll('b', 'k').replaceAll('c', 'g').replaceAll('y', 'r').replaceAll('e', 'r'));
 }
@@ -568,6 +596,8 @@ export function sprite(name) {
     else if (name === 'muresuima-map') canvas = schoolArt(32);
     else if (name === 'bak-wild') canvas = paint(wildRows());
     else if (name === 'bak-mini-wild') canvas = paint(wildRows(ART['bak-mini']));
+    else if (name === 'bird-do') canvas = paint(angryBirdRows());
+    else if (name === 'duet') canvas = paint(duetRows());
     else if (PEOPLE[name]) canvas = personArt(name);
     else if (ROOM_ART[name]) canvas = paint(ROOM_ART[name]);
     else canvas = paint(ART[name]);

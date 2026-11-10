@@ -100,3 +100,22 @@ test('にげる: ふつうの敵からは にげられる。ボスと にげら�
     act(first, 'run');
     assert.equal(first.over, null, '最初の戦いは にげられない');
 });
+
+test('夢双: ガクフメと トゲメトロが パーティに いると 使え、相手に 有利な 属性で 大技。使った 2 体は 1 回 休み', () => {
+    const party = [{ ...ALLIES.gakufume }, { ...ALLIES.togemetoro }, { ...ALLIES.bak }];
+    const none = createBattle(party, FOES.gakufume, { rng: steady });
+    assert.ok(!commands(none).some((c) => c.id === 'musou:duet'), '相性を 持っていないと 出ない');
+    const b = createBattle(party, { ...FOES.gakufume, hp: 300, maxHp: 300 }, { rng: steady, musou: ['duet'] });
+    assert.ok(commands(b).some((c) => c.id === 'musou:duet'));
+    const hp = b.foe.hp;
+    const events = act(b, 'musou:duet');
+    const hit = events.find((e) => e.t === 'hit' && e.target === 'foe');
+    assert.equal(hit.aff, 1.5, 'ガクフメ (哀) 相手には 怒で 攻撃する');
+    assert.ok(hp - b.foe.hp > 30, '大技');
+    assert.ok(commands(b).find((c) => c.id === 'musou:duet').disabled, '続けては 使えない');
+    const rest = act(b, 'attack');
+    assert.ok(rest.some((e) => e.t === 'say' && e.text.includes('息切れ')));
+    assert.ok(!rest.some((e) => e.t === 'hit' && e.target === 'foe'), '休みの ターンは 攻撃しない');
+    const only = createBattle([{ ...ALLIES.gakufume }, { ...ALLIES.bak }], FOES.nanashi, { rng: steady, musou: ['duet'] });
+    assert.ok(!commands(only).some((c) => c.id === 'musou:duet'), '2 体 そろって いないと 出ない');
+});

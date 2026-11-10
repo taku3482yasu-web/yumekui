@@ -14,7 +14,7 @@ export function createState() {
     const start = MAPS.odoriba.start;
     return {
         map: 'odoriba', x: start.x, y: start.y, dir: 'up', flags: {}, words: [], shards: 0, gone: {},
-        day: 1, phase: 'night', time: 'day', talkedToday: false, status: { mio: 'idle', kana: 'idle' }, visits: {}
+        day: 1, phase: 'night', time: 'day', talkedToday: false, sentences: [], status: { mio: 'idle', kana: 'idle' }, visits: {}
     };
 }
 

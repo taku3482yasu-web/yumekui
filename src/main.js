@@ -5,7 +5,8 @@ import { bakSkills, bakUnit, grow } from './core/growth.js';
 import { createState, facing, isBlocked, objectAt, pickWord, placeName, step, tileAt, warp, DIRS } from './core/field.js';
 import { deepTalk, startDay, startMorning, timeLabel, timesBetween, NIGHT_START, PROLOGUE_START, RIKU_BRANCH_Y, TOWN_START } from './core/town.js';
 import { isWeekend } from './core/days.js';
-import { buildChoices } from './core/truth.js';
+import { frontChoices, makeSentence, nextChoices, sentenceChoices } from './core/sentence.js';
+import { OWNER_NAMES, WORDS } from './data/words.js';
 import { MAPS } from './data/maps.js';
 import { ALLIES, FOES } from './data/units.js';
 import { LINES } from './scenes/story.js';
@@ -212,7 +213,12 @@ async function touch(object) {
         const opened = pickWord(state, object);
         showHud();
         await talk(LINES.wordFound(object.word));
-        if (opened) await talk(LINES.gateOpen);
+        if (opened) {
+            await talk(LINES.gateOpen);
+            // チュートリアル: 3 つの 言葉を バクが つないで、夢合わせを 教える
+            makeSentence(state, ['ほんとは', '自分で'], '決めたかった');
+            await talk(LINES.tutorialWeave);
+        }
         if (keep.tutorial) await talk(LINES.dreamWord);
     }
     if (object.kind === 'wake') {
@@ -329,7 +335,7 @@ async function fight(object) {
     // 敵は 1 体 (foe) か 複数 (foes)。本音を持つ 敵 (なければ 1 体目) が この戦いの 主
     const foeList = (object.foes ?? [object.foe]).map((id) => FOES[id]);
     const foe = foeList.find((f) => f.truth) ?? foeList[0];
-    const battle = createBattle(partyUnits(), foeList, { noEscape: object.script === 'firstBattle' });
+    const battle = createBattle(partyUnits(), foeList, { noEscape: object.script === 'firstBattle', musou: keep.musou });
     await playEncounter(encounterTheme(MAPS[state.map], state.x), foeList.some((f) => f.truth));
     await ui.fade(true);
     mode = 'battle';
@@ -386,7 +392,8 @@ async function chooseTarget(battle) {
 function chooseTruth(battle) {
     battle.foe = chanceFoe(battle) ?? battle.foe;
     const solvedBefore = keep.solved.includes(battle.foe.solvedAs ?? battle.foe.id);
-    const choices = buildChoices(battle.foe.truth, state.words, { solvedBefore });
+    // 本音の 3 択には、夢合わせで 作った その夢主の 文を 持ち込む (正しい文を 作っていないと 正解は 出ない)
+    const choices = sentenceChoices(battle.foe.truth, state.sentences, { solvedBefore });
     const items = choices.map((line) => ({ id: line, label: line }));
     return ui.menu(items, { head: battle.foe.truthHead ?? LINES.truthHead, wide: true }).then((line) => answer(battle, line));
 }
@@ -804,14 +811,52 @@ async function campaign() {
     }
 }
 
+// ---- 夢合わせ (言葉を つなげて 本音の 文を 作る) ----------------------------
+
+async function weaveWords() {
+    const fronts = frontChoices(state.words);
+    const made = state.sentences ?? [];
+    if (!fronts.length) {
+        await talk(made.length ? LINES.sentenceList(made.map((s) => `${OWNER_NAMES[s.owner]}『${s.text}』`)) : LINES.weaveNone);
+        return;
+    }
+    const items = fronts.map((w) => ({ id: w, label: `${w}（${OWNER_NAMES[WORDS[w].owner]}）` }));
+    if (made.length) items.push({ id: 'list', label: '作った文を見る' });
+    items.push({ id: 'cancel', label: 'やめる' });
+    const first = await ui.menu(items, { head: LINES.weaveHead1, wide: true });
+    if (first === 'cancel') return;
+    if (first === 'list') {
+        await talk(LINES.sentenceList(made.map((s) => `${OWNER_NAMES[s.owner]}『${s.text}』`)));
+        return;
+    }
+    const chosen = [first];
+    for (;;) {
+        const next = nextChoices(state.words, chosen);
+        const list = [...next.backs.map((w) => ({ id: w, label: `${chosen.join('、')}……${w}` }))];
+        list.push(...next.fronts.map((w) => ({ id: `front:${w}`, label: `${chosen[0]}、${w}……（つづける）` })));
+        list.push({ id: 'cancel', label: 'やめる' });
+        const pick = await ui.menu(list, { head: LINES.weaveHead2, wide: true });
+        if (pick === 'cancel') return;
+        if (pick.startsWith('front:')) {
+            chosen.push(pick.slice(6));
+            continue;
+        }
+        const sentence = makeSentence(state, chosen, pick);
+        await talk(sentence ? LINES.weaveMade(sentence.text) : LINES.weaveHave);
+        return;
+    }
+}
+
 // ---- 設定 --------------------------------------------------------------
 
 async function fieldMenu() {
     const items = [{ id: 'bak', label: 'バクの成長' }, { id: 'keys', label: 'ボタン設定' }, { id: 'close', label: 'とじる' }];
+    if (keep.tutorial) items.unshift({ id: 'weave', label: '夢合わせ' });
     if (keep.brush) items.unshift({ id: 'brush', label: '夢筆' });
     if (keep.tutorial && MAPS[state.map].dream) items.unshift({ id: 'wake', label: '夢から覚める' });
     const id = await ui.menu(items);
     if (id === 'keys') await settings();
+    if (id === 'weave') await weaveWords();
     if (id === 'brush') await talk(canUseBrush(state, keep) ? LINES.brushInfo(keep.images.map((i) => IMAGES[i].label).join('、')) : LINES.brushReal);
     if (id === 'wake') wakeUp();
     if (id === 'bak') await talk(LINES.growthInfo(keep.growth, bakSkills(keep.growth).map((skill) => skill.label)));

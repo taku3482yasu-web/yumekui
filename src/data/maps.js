@@ -140,6 +140,7 @@ export const MAPS = {
             { id: 'mioSuima', kind: 'foe', x: 15, y: 4, foe: 'suima' },
             { id: 'mioOnpu2', kind: 'foe', x: 4, y: 4, foe: 'onpu' },
             { id: 'mioWord', kind: 'word', x: 15, y: 1, word: '吹きたかった', sprite: 'word' },
+            { id: 'mioDecoy', kind: 'word', x: 4, y: 1, word: 'やめたかった', sprite: 'word' },   // まちがいの 言葉
             { id: 'mioBoss', kind: 'foe', x: 9, y: 4, foe: 'gakufume', needs: 'active', script: 'pairBoss' }
         ]
     },
@@ -154,6 +155,7 @@ export const MAPS = {
             { id: 'kanaHari2', kind: 'foe', x: 4, y: 5, foe: 'hari' },
             { id: 'kanaSuima', kind: 'foe', x: 17, y: 5, foe: 'suima' },
             { id: 'kanaWord', kind: 'word', x: 15, y: 3, word: 'ほしかった', sprite: 'word' },
+            { id: 'kanaDecoy', kind: 'word', x: 17, y: 1, word: 'くやしかった', sprite: 'word' },   // まちがいの 言葉
             { id: 'kanaBoss', kind: 'foe', x: 9, y: 5, foe: 'togemetoro', needs: 'active', script: 'pairBoss' }
         ]
     },
@@ -179,9 +181,11 @@ export const MAPS = {
             { id: 'judgeKana', kind: 'talk', x: 22, y: 4, sprite: 'kana', script: 'judgeKana' },
             { id: 'duetWordMio', kind: 'word', x: 2, y: 7, word: '吹きたかった', sprite: 'word' },
             { id: 'duetWordKana', kind: 'word', x: 23, y: 7, word: 'ほしかった', sprite: 'word' },
+            { id: 'duetDecoyMio', kind: 'word', x: 1, y: 8, word: 'やめたかった', sprite: 'word' },
+            { id: 'duetDecoyKana', kind: 'word', x: 24, y: 8, word: 'くやしかった', sprite: 'word' },
             // 舞台への 道を ふさぐ 中ボスと、舞台の デュエット (7 日から)
             { id: 'duetMid', kind: 'foe', x: 12, y: 3, foe: 'duetSuima', sprite: 'muresuima-map', script: 'duetMid' },
-            { id: 'duetBoss', kind: 'foe', x: 12, y: 1, foe: 'duetDo', foes: ['duetDo', 'duetAi'], sprite: 'gakufume', needs: 'active', script: 'duetBoss' }
+            { id: 'duetBoss', kind: 'foe', x: 12, y: 1, foe: 'duetDo', foes: ['duetDo', 'duetAi'], sprite: 'duet', needs: 'active', script: 'duetBoss' }
         ]
     },
     ...TOWN_MAPS

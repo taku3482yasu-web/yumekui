@@ -14,12 +14,18 @@ const WRONG_ATK = 1.2;
 const PARTNER_RAGE = 1.5;
 const RUN_RATE = 0.75;       // ふつうの 敵から にげられる 確率
 
+// 夢双 (むそう): 相性を 手に入れた 2 体が どちらも パーティにいると 使える 合体の 大技。
+//   使った 2 体は そのあと 1 回 休み (息切れ)。属性は 2 体のうち 相手に 有利なほう
+export const MUSOU = {
+    duet: { label: '夢双「ふたりのアンサンブル」', pair: ['gakufume', 'togemetoro'], power: 220, name: 'デュエット', move: 'ふたりのアンサンブル' }
+};
+
 function makeFoe(foe, index) {
     return { ...foe, kokoro: 0, index, step: 0, asleep: false, chance: false, exhausted: false, down: false };
 }
 
 // noEscape: にげられない 戦い (チュートリアルの 最初の戦い など)。本音を持つ 敵 (ボス) からも にげられない
-export function createBattle(allies, foes, { rng = Math.random, noEscape = false } = {}) {
+export function createBattle(allies, foes, { rng = Math.random, noEscape = false, musou = [] } = {}) {
     const party = (Array.isArray(allies) ? allies : [allies]).map((unit) => ({ ...unit, wait: 0 }));
     const list = (Array.isArray(foes) ? foes : [foes]).map(makeFoe);
     return {
@@ -31,6 +37,7 @@ export function createBattle(allies, foes, { rng = Math.random, noEscape = false
         guarding: false,
         rush: false,
         noEscape,
+        musou,
         over: null,
         get chance() { return this.foe.chance; },
         set chance(value) { this.foe.chance = value; },
@@ -83,6 +90,10 @@ export function commands(b) {
     if (moves.heal) list.push({ id: 'heal', label: moves.heal, disabled: wait > 0 });
     if (moves.skill) list.push({ id: moves.skill.id, label: moves.skill.label, disabled: wait > 0 });
     for (const skill of moves.extra ?? []) list.push({ ...skill, disabled: wait > 0 });
+    for (const id of b.musou) {
+        const ready = musouPair(b, id);
+        if (ready) list.push({ id: `musou:${id}`, label: MUSOU[id].label, disabled: ready.some((u) => u.tired > 0) });
+    }
     if (bench(b).length) list.push({ id: 'swap', label: '交代' });
     if (aliveFoes(b).some((foe) => foe.exhausted && foe.dream)) list.unshift({ id: 'devour', label: 'バクに喰らわせる' });
     if (aliveFoes(b).some((foe) => foe.chance)) list.unshift({ id: 'truth', label: '本音を言い当てる' });
@@ -90,7 +101,13 @@ export function commands(b) {
 }
 
 // 敵を ねらう 技 (複数のときは だれを ねらうか 選ぶ)
-export const TARGETED = ['attack', 'shake', 'sleep', 'softword', 'bite', 'gorge'];
+export const TARGETED = ['attack', 'shake', 'sleep', 'softword', 'bite', 'gorge', 'musou:duet'];
+
+// 夢双の 2 体が どちらも 元気で パーティに いれば その 2 体
+function musouPair(b, id) {
+    const units = MUSOU[id].pair.map((ally) => b.party.find((u) => u.id === ally && u.hp > 0));
+    return units.every(Boolean) ? units : null;
+}
 
 // 本音を 言い当てる・喰らう 相手 (チャンスの 敵 / 体力が 尽きた 夢主の 敵)
 export function chanceFoe(b) {
@@ -101,6 +118,14 @@ export function act(b, id, target = null) {
     const events = [];
     b.guarding = false;
     if (b.ally.wait > 0) b.ally.wait--;
+    if (b.ally.tired > 0 && id !== 'swap' && id !== 'run') {
+        // 夢双の あとは 息切れで 1 回 休み
+        b.ally.tired--;
+        events.push({ t: 'say', text: `${b.ally.name}は 息切れしている……。` });
+        if (!b.over) foesTurn(b, events);
+        return events;
+    }
+    if (id.startsWith('musou:')) musou(b, id.slice(6), events);
     if (id === 'attack') attack(b, events);
     if (id === 'shake') shake(b, events);
     if (id === 'heal') heal(b, events);
@@ -195,6 +220,22 @@ function run(b, events) {
         return;
     }
     events.push({ t: 'say', text: 'しかし、回りこまれてしまった！' });
+}
+
+function musou(b, id, events) {
+    const units = musouPair(b, id);
+    if (!units) return;
+    const data = MUSOU[id];
+    const foe = b.foe;
+    const attr = units.map((u) => u.attr).sort((x, y) => affinity(y, foe.attr) - affinity(x, foe.attr))[0];
+    const fused = { atk: Math.round(units.reduce((sum, u) => sum + u.atk, 0) / units.length), attr };
+    events.push({ t: 'musou', id, units: units.map((u) => u.id) });
+    events.push({ t: 'say', text: `${units.map((u) => u.name).join('と ')}が 重なって、${data.name}になった！` });
+    events.push({ t: 'say', text: `${data.name}の ${data.move}！（${attr}）` });
+    const amount = damage(fused, foe, data.power, b.rng);
+    events.push({ t: 'hit', target: 'foe', index: foe.index, amount, aff: affinity(attr, foe.attr) });
+    for (const unit of units) unit.tired = 1;
+    hurtFoe(b, foe, amount, events);
 }
 
 function shield(b, events) {

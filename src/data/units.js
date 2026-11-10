@@ -27,11 +27,13 @@ const mask = (attr, label) => ({
 // 夢主の 本音 (単独の夢の ボスと、二重奏ホールの デュエットで 同じ)
 const TRUTH = {
     mio: {
+        owner: 'mio',
         words: ['一緒に', '吹きたかった'],
         answer: '一緒に吹きたかった',
         wrong: ['ソロなんて、やりたくなかった', '勝ちたかっただけ', 'カナなんて、もういらない', '一人のほうが、うまく吹ける']
     },
     kana: {
+        owner: 'kana',
         words: ['相談して', 'ほしかった'],
         answer: '相談してほしかった',
         wrong: ['ミオがソロなんて、ずるい', '本当は、吹奏楽が嫌いだった', '負けたのが、くやしかっただけ', 'もう、どうでもいい']
@@ -69,14 +71,14 @@ export const FOES = {
     // 合体ボス「デュエット」: 1 本の楽譜の上で 背中合わせの 2 羽。片方が 倒れると もう片方が 怒る。
     // 本音は カナ (怒りの鳥) → ミオ (哀しみの鳥) の 順に 言い当てる。救うと ガクフメと トゲメトロが 仲間になる
     duetDo: {
-        id: 'duetDo', name: '怒りの鳥', attr: '怒', sprite: 'togemetoro', partnerRage: true, solvedAs: 'togemetoro',
+        id: 'duetDo', name: '怒りの鳥', attr: '怒', sprite: 'bird-do', partnerRage: true, solvedAs: 'togemetoro',
         rageText: '怒りの鳥が、羽を逆立てた！', truthHead: 'カナの本音は？',
         hp: 90, maxHp: 90, atk: 12, def: 6, spd: 10,
         pattern: ['tackle', 'charge', 'swirl', 'tackle'], chargeText: '怒りの鳥の テンポが 速くなっていく……！', bigMove: 'せかすリズム',
         truth: { ...TRUTH.kana }
     },
     duetAi: {
-        id: 'duetAi', name: '哀しみの鳥', attr: '哀', sprite: 'gakufume', partnerRage: true, solvedAs: 'gakufume',
+        id: 'duetAi', name: '哀しみの鳥', attr: '哀', sprite: 'bird-ai', partnerRage: true, solvedAs: 'gakufume',
         rageText: '哀しみの鳥が、高く鳴いた！', truthHead: 'ミオの本音は？', after: 'duetDo',
         waitText: '哀しみの鳥は、背中を向けたままだ。……先に、トゲのほうだ。',
         hp: 90, maxHp: 90, atk: 11, def: 6, spd: 9,
@@ -89,6 +91,7 @@ export const FOES = {
         hp: 120, maxHp: 120, atk: 13, def: 6, spd: 8,
         pattern: ['tackle', 'tackle', 'charge', 'swirl'],
         truth: {
+            owner: 'hal',
             words: ['ほんとは', '自分で', '決めたかった'],
             answer: 'ほんとは、自分で決めたかった',
             wrong: [

@@ -45,7 +45,7 @@ const send = (method, params = {}) => new Promise((resolve) => {
     ws.send(JSON.stringify({ id: n, method, params }));
 });
 const read = async (code) => (await send('Runtime.evaluate', { expression: code, returnByValue: true })).result.value;
-const CODES = { ArrowUp: 38, ArrowDown: 40, ArrowLeft: 37, ArrowRight: 39, j: 74 };
+const CODES = { ArrowUp: 38, ArrowDown: 40, ArrowLeft: 37, ArrowRight: 39, j: 74, Escape: 27 };
 const key = async (name, hold = 40) => {
     const base = { key: name, code: name === 'j' ? 'KeyJ' : name, windowsVirtualKeyCode: CODES[name] };
     await send('Input.dispatchKeyEvent', { type: 'keyDown', ...base });
@@ -469,6 +469,22 @@ await goHome();
 await sleep(300);
 const seven = await state();
 console.log('今の日', seven.s.day, seven.s.phase, '活性化', seven.s.flags.active);
+// 夢合わせ: ミオの 言葉を つないで 本音の 文を 作る (まちがいの「やめたかった」も 持っている)
+for (let i = 0; i < 200; i++) {
+    const now = await state();
+    if (now.m === 'field' && !now.msg && now.s.phase === 'night' && now.s.map === 'home') break;
+    if (now.msg) await key('j');
+    else await sleep(80);
+}
+await key('Escape');
+await sleep(300);
+await pick('夢合わせ');
+await shot('13e-weave-front');
+await pick('一緒に');
+await shot('13f-weave-back');
+await pick('吹きたかった');
+await skip();
+console.log('作った文', JSON.stringify((await state()).s.sentences));
 await night('ミオの夢');
 await sleep(900);
 await waitField();
