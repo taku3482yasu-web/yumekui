@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createState, isBlocked, objectAt, objectsOf, placeName, step } from '../src/core/field.js';
-import { canDeepTalk, deepTalk, present, startDay, timeLabel, NIGHT_START, TOWN_START } from '../src/core/town.js';
+import { canDeepTalk, deepTalk, present, startDay, startMorning, timeLabel, timesBetween, MORNING_START, NIGHT_START, TOWN_START } from '../src/core/town.js';
 import { TOWN_MAPS } from '../src/data/town.js';
 import { MAPS } from '../src/data/maps.js';
 import { LINES } from '../src/scenes/story.js';
@@ -179,15 +179,69 @@ test('夜の町には 人がいない (父は 家にいる)。校門は 閉ま�
     assert.equal(step(state, 'up').type, 'exit', '昼は 学校に入れる');
 });
 
-test('ループした 2 月 1 日は 放課後から始まり、ミオとカナは まだ元気', async () => {
-    const { createKeep, nextLoop } = await import('../src/core/calendar.js');
+test('ループした 2 月 1 日は 朝の 通学路から始まり、放課後には ミオとカナが まだ元気', async () => {
+    const { advance, createKeep, nextLoop } = await import('../src/core/calendar.js');
     const keep = createKeep();
     keep.tutorial = true;
     const state = nextLoop(keep);
-    startDay(state);
+    startMorning(state);
     assert.equal(state.day, 1);
+    assert.equal(timeLabel(state), '朝');
+    assert.equal(state.map, 'saka');
+    assert.equal(advance(state), 'day');
+    startDay(state);
     assert.equal(timeLabel(state), '放課後');
     assert.equal(state.map, 'school');
     assert.ok(present(state, 'riku') && present(state, 'mio'));
-    assert.ok(LINES.day[1].length > 0);
+    assert.ok(LINES.morningEvent[1].length > 0);
+    assert.ok(Array.isArray(LINES.morning), "チュートリアルの 結末の 文は そのまま");
+});
+
+test('朝: 平日は 家の前から 通学路を 校門まで 歩ける。通学路の 生徒は 朝だけで、ヒントを 話す', () => {
+    const state = dayState(2);
+    state.phase = 'morning';
+    startMorning(state);
+    assert.deepEqual({ map: state.map, x: state.x, y: state.y }, { map: 'saka', x: 4, y: 17 });
+    assert.equal(timeLabel(state), '朝');
+    const seen = reachable(state, MORNING_START.weekday);
+    const here = objectsOf(state);
+    const gate = here.find((o) => o.script === 'enterSchool');
+    assert.ok(gate && canReach(seen, 'saka', gate), '校門に 届く');
+    const commuters = here.filter((o) => o.phase === 'morning' && o.kind === 'person');
+    assert.ok(commuters.length >= 4, '通学する生徒と リクがいる');
+    for (const c of commuters) {
+        assert.ok(canReach(seen, 'saka', c), `${c.id} に 届く`);
+        assert.ok(LINES.town(c.who, state).length > 0, `${c.who} の セリフ`);
+    }
+    assert.ok(!here.some((o) => o.who === 'ken'), 'ケンは 朝 いない');
+    state.phase = 'day';
+    assert.ok(!objectsOf(state).some((o) => o.id === 'commuterA'), '放課後は 通学路の 生徒が いない');
+});
+
+test('朝: 土日は 自分の部屋から 始まり、玄関から 出かけられる', () => {
+    const state = dayState(6);
+    state.phase = 'morning';
+    startMorning(state);
+    assert.equal(state.map, 'home');
+    const seen = reachable(state, MORNING_START.weekend);
+    const door = objectsOf(state).find((o) => o.script === 'leaveHome');
+    assert.ok(door && canReach(seen, 'home', door));
+});
+
+test('時間の流れ: 平日は 朝 → 昼 → 放課後、夕方 → 夜。土日は 放課後が ない', () => {
+    assert.deepEqual(timesBetween('朝', '放課後'), ['朝', '昼', '放課後']);
+    assert.deepEqual(timesBetween('放課後', '夜'), ['放課後', '夕方', '夜']);
+    assert.deepEqual(timesBetween('夕方', '夜'), ['夕方', '夜']);
+    assert.deepEqual(timesBetween('朝', '昼', true), ['朝', '昼']);
+    assert.deepEqual(timesBetween('昼', '夜', true), ['昼', '夕方', '夜']);
+});
+
+test('1 日は 朝 → 放課後 → 夜 → 次の日の朝', async () => {
+    const { advance } = await import('../src/core/calendar.js');
+    const state = dayState(4);
+    state.phase = 'morning';
+    assert.equal(advance(state), 'day');
+    assert.equal(advance(state), 'night');
+    assert.equal(advance(state), 'morning');
+    assert.equal(state.day, 5);
 });

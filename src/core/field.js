@@ -22,6 +22,7 @@ export function isVisible(object, state) {
     if (object.hideIf && state.flags[object.hideIf]) return false;
     if (object.needs && !state.flags[object.needs]) return false;
     if (object.night && state.phase !== 'night') return false;   // 夜だけの物 (閉まった校門 など)
+    if (object.phase && object.phase !== state.phase) return false;   // その時間帯だけの物 (朝の 通学路の 生徒 など)
     if (object.who && !present(state, object.who)) return false;
     return true;
 }

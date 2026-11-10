@@ -3,7 +3,8 @@ import { ACTIONS, keyName } from './core/keys.js';
 import { advance, createKeep, dateLabel, devour, dreamsTonight, nextLoop, rescue, ACTIVE_DAY, LAST_DAY, PAIR } from './core/calendar.js';
 import { bakSkills, bakUnit, grow } from './core/growth.js';
 import { createState, facing, pickWord, placeName, step, tileAt, warp, DIRS } from './core/field.js';
-import { deepTalk, startDay, timeLabel, NIGHT_START } from './core/town.js';
+import { deepTalk, startDay, startMorning, timeLabel, timesBetween, NIGHT_START, TOWN_START } from './core/town.js';
+import { isWeekend } from './core/days.js';
 import { buildChoices } from './core/truth.js';
 import { MAPS } from './data/maps.js';
 import { ALLIES, FOES } from './data/units.js';
@@ -11,6 +12,7 @@ import { LINES } from './scenes/story.js';
 import { createInput } from './view/input.js';
 import { createUi } from './view/ui.js';
 import { drawBattle, drawField, drawMorning, drawShadow, drawSky } from './view/draw.js';
+import { drawCalendar, drawLapse } from './view/time.js';
 
 const WALK_MS = 150;
 const NOTE_MS = 650;
@@ -30,6 +32,9 @@ let hp = {};
 let wake = null;
 let mode = 'title';
 let battleView = null;
+let lapse = null;          // 時間が過ぎていく演出
+let calendarView = null;   // カレンダーが はがれる演出
+let skipTear = false;      // チュートリアルの 結末で もう カレンダーを 見せた
 const walk = { dx: 0, dy: 0, left: 0 };
 
 async function talk(lines) {
@@ -88,6 +93,11 @@ const SCRIPTS = {
     rikuRoad: () => talk(LINES.rikuRoad(state)),
     rikuDoor: () => talk(LINES.rikuDoor),
     schoolClosed: () => talk(LINES.schoolClosed),
+    enterSchool: async () => {
+        await talk(LINES.enterSchool);
+        wakeUp('school');
+    },
+    leaveHome: async () => wakeUp('out'),
     goHome: homeDoor
 };
 
@@ -122,6 +132,10 @@ async function deepTalkTo(who) {
 
 // 家の玄関: 入ると その日は おしまい (夜になる)。夜の町からは 帰って寝る
 async function homeDoor() {
+    if (state.phase === 'morning') {
+        await talk(LINES.morningHome);
+        return;
+    }
     if (state.phase === 'night') {
         const id = await ui.menu([{ id: 'yes', label: LINES.nightHomeYes }, { id: 'no', label: LINES.nightHomeNo }], { head: LINES.nightHomeHead });
         if (id === 'yes') wakeUp('sleep');
@@ -345,6 +359,8 @@ async function ending() {
     await ui.fade(false);
     await talk(LINES.shadow);
     await ui.fade(true);
+    await playCalendar(1, 2);
+    skipTear = true;
     mode = 'morning';
     await ui.fade(false);
     await talk(LINES.morning);
@@ -390,6 +406,64 @@ function dream(map) {
     return explore();
 }
 
+// ---- 時間の演出 ----------------------------------------------------------
+
+// 時間が過ぎていく (朝 → 昼 → 放課後 → 夕方 → 夜 のうち labels の順)。A で 飛ばせる
+function playLapse(labels) {
+    if (labels.length < 2) return Promise.resolve();
+    ui.hideHud();
+    ui.hideMsg();
+    return new Promise((resolve) => {
+        const off = input.onPress((key) => { if (key === 'a') lapse.start = -1e9; });
+        lapse = { labels, start: performance.now(), done: () => { off(); resolve(); } };
+        mode = 'lapse';
+    });
+}
+
+// 1 日が 終わって、カレンダーが 1 枚 はがれる。A で 飛ばせる
+async function playCalendar(from, to) {
+    ui.hideHud();
+    ui.hideMsg();
+    await new Promise((resolve) => {
+        const off = input.onPress((key) => { if (key === 'a') calendarView.start = -1e9; });
+        calendarView = { from, to, start: performance.now() + 420, done: () => { off(); resolve(); } };
+        mode = 'calendar';
+        ui.fade(false);
+    });
+    await ui.fade(true);
+}
+
+// 朝: 平日は 家の前から 通学路 (坂道) を 校門まで歩く。通学路では 生徒の 会話から ヒントが 聞ける。
+//   校門に入ると 朝の ホームルームの 出来事 → 時間が 放課後まで 進む。土日は 部屋から 出かけると 昼になる
+async function morningPhase() {
+    startMorning(state);
+    const weekend = isWeekend(state.day);
+    const done = explore();
+    mode = 'scene';
+    await ui.fade(false);
+    await scene(async () => {
+        if (LINES.morningEvent[state.day] && !state.flags[`morning${state.day}`]) {
+            state.flags[`morning${state.day}`] = true;
+            await talk(LINES.morningEvent[state.day]);
+        }
+        if (!weekend && !keep.commuteTold) {
+            keep.commuteTold = true;
+            await talk(LINES.morningHint);
+        }
+    });
+    await done;
+    if (!weekend && LINES.homeroom[state.day] && !state.flags[`homeroom${state.day}`]) {
+        state.flags[`homeroom${state.day}`] = true;
+        await ui.fade(true);
+        Object.assign(state, TOWN_START.weekday);
+        mode = 'scene';
+        showHud();
+        await ui.fade(false);
+        await talk(LINES.homeroom[state.day]);
+    }
+    await playLapse(timesBetween('朝', weekend ? '昼' : '放課後', weekend));
+}
+
 // 放課後 (土日は 昼): 学校と町を 歩いて 話す。夢主と じっくり話すか、家の玄関に入ると 夜になる
 async function dayPhase() {
     startDay(state);
@@ -404,6 +478,7 @@ async function dayPhase() {
         if (state.day === 10 && PAIR.some((id) => state.status[id] === 'broken')) await talk(LINES.broken);
     });
     await done;
+    await playLapse(timesBetween(timeLabel(state), '夜', isWeekend(state.day)));   // 夕方 → 夜
 }
 
 // 夜: ハルの部屋を歩く。キャンバスに描いた夢にだけ入れる。描かずに ベッドで寝るか、
@@ -471,6 +546,7 @@ async function campaign() {
     await first;
     for (;;) {
         await ui.fade(true);
+        const before = state.day;
         const next = advance(state);
         if (next === 'loop') {
             mode = 'opening';
@@ -480,8 +556,10 @@ async function campaign() {
             if (keep.loop === 1) await talk(LINES.nextPlan);
             state = nextLoop(keep);
             await ui.fade(true);
-        }
-        if (state.phase === 'day') await dayPhase();
+        } else if (next === 'morning' && !skipTear) await playCalendar(before, state.day);
+        skipTear = false;
+        if (state.phase === 'morning') await morningPhase();
+        else if (state.phase === 'day') await dayPhase();
         else await nightPhase();
     }
 }
@@ -549,7 +627,17 @@ function frame(now) {
     last = now;
     if (mode === 'field') updateField(delta);
     if (walk.left > 0 && mode !== 'field') walk.left = Math.max(0, walk.left - delta / WALK_MS);
-    if (mode === 'battle' && battleView) drawBattle(ctx, battleView, now);
+    if (mode === 'lapse' && lapse) {
+        if (drawLapse(ctx, lapse, now) && !lapse.finished) {
+            lapse.finished = true;   // 最後の 絵の まま 止めておく (次の フェードまで)
+            lapse.done();
+        }
+    } else if (mode === 'calendar' && calendarView) {
+        if (drawCalendar(ctx, calendarView, now) && !calendarView.finished) {
+            calendarView.finished = true;
+            calendarView.done();
+        }
+    } else if (mode === 'battle' && battleView) drawBattle(ctx, battleView, now);
     else if (mode === 'shadow') drawShadow(ctx, now);
     else if (mode === 'morning') drawMorning(ctx);
     else if (mode === 'title' || mode === 'opening') drawSky(ctx, now);

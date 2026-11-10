@@ -121,8 +121,8 @@ function drawRealTile(ctx, tile, x, y, time) {
     }
 }
 
-// 時間帯の色: 夕方は 橙、夜は 紺 (町は 暖かい色のまま、上から 重ねる)
-const TINT = { evening: 'rgba(240, 120, 60, 0.22)', night: 'rgba(16, 20, 70, 0.5)' };
+// 時間帯の色: 朝は 淡い光、夕方は 橙、夜は 紺 (町は 暖かい色のまま、上から 重ねる)
+const TINT = { morning: 'rgba(255, 236, 200, 0.14)', evening: 'rgba(240, 120, 60, 0.22)', night: 'rgba(16, 20, 70, 0.5)' };
 
 export function drawField(ctx, state, walk, time) {
     const map = MAPS[state.map];
@@ -148,7 +148,7 @@ export function drawField(ctx, state, walk, time) {
     for (const object of objectsOf(state)) drawObject(ctx, object, time);
     drawHal(ctx, state, px, py, walk);
     ctx.restore();
-    const tint = map.real && (state.phase === 'night' ? TINT.night : state.time === 'evening' ? TINT.evening : null);
+    const tint = map.real && (state.phase === 'night' ? TINT.night : state.phase === 'morning' ? TINT.morning : state.time === 'evening' ? TINT.evening : null);
     if (tint) {
         ctx.fillStyle = tint;
         ctx.fillRect(0, 0, W, H);

@@ -277,7 +277,7 @@ test('14 日の夜の次は ループする。仲間は残り 周の状態は消
     const next = nextLoop(keep);
     assert.equal(keep.loop, 2);
     assert.equal(next.day, 1, '2 月 1 日へ戻る');
-    assert.equal(next.phase, 'day');
+    assert.equal(next.phase, 'morning', '朝 (自分のベッド) から');
     assert.equal(next.status.mio, 'idle');
     assert.deepEqual(next.words, []);
     assert.ok(keep.allies.includes('gakufume'));

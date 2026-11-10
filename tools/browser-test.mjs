@@ -239,7 +239,8 @@ const waitField = async () => {
         if (now.msg) await key('j');
         else await sleep(80);
     }
-    throw new Error('夢に入れない');
+    const now = await state();
+    throw new Error(`歩ける画面に ならない: ${now.m} ${now.s.phase} ${now.s.map} 文=${now.msg} メニュー=${now.menu} ${await read('document.getElementById("text").textContent')}`);
 };
 // 夜: ハルの部屋で キャンバスを調べて 選ぶ (夜は キャンバスの方を向いて 始まる)
 const night = async (label) => {
@@ -253,8 +254,24 @@ const night = async (label) => {
     await sleep(200);
     await pick(label);
 };
+// 朝: 通学路を 校門まで歩く (土日は 部屋から 玄関へ)。時間の演出が 終わって 放課後に なるまで 待つ
+const morning = async () => {
+    await waitField();
+    const now = await state();
+    if (now.s.phase !== 'morning') return;
+    await walkTo(...(now.s.map === 'home' ? [3, 8] : [11, 1]));
+    for (let i = 0; i < 300; i++) {
+        const next = await state();
+        if (next.s.phase === 'day' && next.m === 'field' && !next.msg) return;
+        if (next.msg) await key('j');
+        else await sleep(80);
+    }
+    const last = await state();
+    throw new Error(`放課後に ならない: ${last.m} ${last.s.phase} ${last.s.map} ${last.s.x},${last.s.y} 日=${last.s.day} 文=${last.msg} メニュー=${last.menu} エラー=${errors.join(" | ")}`);
+};
 // 町: 人の となりまで歩いて、向いて 話しかける
 const talkTo = async (x, y) => {
+    await morning();
     await waitField();
     await walkTo(x, y, true, true);
     await key('j');
@@ -262,6 +279,7 @@ const talkTo = async (x, y) => {
 };
 // 町: 家の玄関まで歩いて 入る (学校にいれば 階段から 坂道へ出る)
 const goHome = async (label = '家に帰る') => {
+    await morning();
     await waitField();
     if ((await state()).s.map === 'school') {
         await walkTo(1, 8);
@@ -282,6 +300,28 @@ const fightAt = async (x, y, shake = false) => {
     await sleep(300);
 };
 
+// チュートリアルの 結末: カレンダーが はがれて 2 月 2 日へ
+for (let i = 0; i < 200 && (await read('yumekui.mode')) !== 'calendar'; i++) {
+    if ((await state()).msg) await key('j');
+    else await sleep(60);
+}
+await sleep(1100);
+await shot('11b-calendar');
+// 朝の 通学路: 生徒の 会話 (ヒント) を聞いて、校門へ
+await waitField();
+await shot('11c-commute');
+await walkTo(13, 5, true, true);
+await key('j');
+await sleep(900);
+await shot('11d-commute-hint');
+await skip();
+await walkTo(11, 1);
+for (let i = 0; i < 200 && (await read('yumekui.mode')) !== 'lapse'; i++) {
+    if ((await state()).msg) await key('j');
+    else await sleep(60);
+}
+await sleep(1300);
+await shot('11e-time-lapse');
 await waitField();
 await shot('12-classroom');
 await talkTo(18, 4);
@@ -306,7 +346,11 @@ await sleep(1000);
 for (let day = 3; day < 7; day++) {
     if (day > 3) {
         if (day === 4) {
-            for (let i = 0; i < 100 && !(await state()).menu; i++) await sleep(80);
+            for (let i = 0; i < 200; i++) {
+                const now = await state();
+                if (now.m === 'field' && !now.msg && now.s.phase === 'night' && now.s.map === 'home') break;
+                await sleep(80);
+            }
             await shot('13c-night-room');
             await key('j');
             await sleep(400);
@@ -316,6 +360,7 @@ for (let day = 3; day < 7; day++) {
         await sleep(300);
     }
     if (day === 3) {
+        await morning();
         await waitField();
         await walkTo(1, 8);
         await sleep(500);
@@ -347,6 +392,7 @@ for (let i = 0; i < 120; i++) {
     if (now.menu && labels.some((l) => l.includes('描かずに寝る'))) await pick('描かずに寝る');
     else if (now.menu) await key('j');
     else if (now.msg) await key('j');
+    else if (now.m === 'field' && now.s.phase === 'morning') await morning();
     else if (now.m === 'field' && now.s.phase === 'day') await goHome('14日まで');
     else if (now.m === 'field' && now.s.phase === 'night' && now.s.map === 'home') await night('描かずに寝る');
     await sleep(300);

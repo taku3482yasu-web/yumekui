@@ -364,6 +364,10 @@ const PEOPLE = {
     tome: { body: 'old', H: '#c6c9ea', T: '#e8ecf5', U: '#e8ecf5', B: '#59509a', F: '#5c4630' },
     ken: { body: 'child', H: '#20203a', T: '#6fb0ff', U: '#6fb0ff', B: '#8a6a4a', F: '#e8ecf5', marks: [[3, 11, '#5c4630'], [8, 11, '#5c4630']] },
     father: { body: 'short', H: '#20203a', T: '#e8ecf5', U: '#e8ecf5', B: '#3a3a50', F: '#141428', marks: [[5, 8, '#59509a'], [6, 8, '#59509a'], [5, 9, '#59509a'], [6, 9, '#59509a'], [5, 10, '#59509a']] },
+    commuterA: { body: 'skirt', H: '#3a2a20', T: '#2f4a7d', U: '#e8ecf5', B: '#22365e', F: '#141428', marks: [[2, 7, '#8fe0a0'], [9, 7, '#8fe0a0']] },
+    commuterB: { body: 'short', H: '#5c4630', T: '#2f4a7d', U: '#e8ecf5', B: '#22365e', F: '#141428', marks: [[1, 11, '#8a6a4a'], [1, 12, '#8a6a4a']] },
+    commuterC: { body: 'short', H: '#20203a', T: '#2f4a7d', U: '#e8ecf5', B: '#22365e', F: '#141428', marks: [[4, 4, '#c6c9ea'], [7, 4, '#c6c9ea']] },
+    commuterD: { body: 'long', H: '#8a5a32', T: '#2f4a7d', U: '#e8ecf5', B: '#22365e', F: '#141428' },
     rikuMother: { body: 'skirt', H: '#8a5a32', T: '#c07a5a', U: '#c07a5a', B: '#5c4630', F: '#141428' }
 };
 

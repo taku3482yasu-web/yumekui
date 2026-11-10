@@ -77,7 +77,7 @@ canvas {
     color: #c9c4ff;
 }
 
-#time[data-time="昼"], #time[data-time="放課後"] {
+#time[data-time="朝"], #time[data-time="昼"], #time[data-time="放課後"] {
     color: #ffd86b;
 }
 

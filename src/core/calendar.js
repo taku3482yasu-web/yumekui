@@ -7,7 +7,7 @@ export { ACTIVE_DAY, LAST_DAY, LAST_RESCUE_DAY, OPEN_DAY, PAIR, dateLabel } from
 
 // ループしても残るもの
 export function createKeep() {
-    return { loop: 1, allies: ['bak'], solved: [], copies: {}, tutorial: false, growth: { saved: 0, eaten: 0 }, eaten: [], canvasTold: false };
+    return { loop: 1, allies: ['bak'], solved: [], copies: {}, tutorial: false, growth: { saved: 0, eaten: 0 }, eaten: [], canvasTold: false, commuteTold: false };
 }
 
 export function canTalk(state, id) {
@@ -41,7 +41,12 @@ export function devour(state, keep, id) {
     return { other };
 }
 
+// 1 日は 朝 → 放課後 (土日は昼) → 夜。夜が明けると 次の日の朝
 export function advance(state) {
+    if (state.phase === 'morning') {
+        state.phase = 'day';
+        return 'day';
+    }
     if (state.phase === 'day') {
         state.phase = 'night';
         return 'night';
@@ -52,17 +57,17 @@ export function advance(state) {
         }
     }
     state.day++;
-    state.phase = 'day';
+    state.phase = 'morning';
     if (state.day >= ACTIVE_DAY) state.flags.active = true;
-    return state.day > LAST_DAY ? 'loop' : 'day';
+    return state.day > LAST_DAY ? 'loop' : 'morning';
 }
 
-// 2 月 1 日の朝、自分のベッドへ戻る。プロローグとハルの夢は くり返さない (仕様書「ループで残るもの・消えるもの」)
+// 2 月 1 日の朝 (自分のベッドで目を覚ます) へ戻る。プロローグとハルの夢は くり返さない (仕様書「ループで残るもの・消えるもの」)
 export function nextLoop(keep) {
     keep.loop++;
     const state = createState();
     state.day = 1;
-    state.phase = 'day';
+    state.phase = 'morning';
     state.flags.bak = true;
     for (const id of keep.eaten) state.status[id] = 'eaten';
     return state;
