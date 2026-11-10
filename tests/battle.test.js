@@ -73,3 +73,30 @@ test('本音のない 敵に ココロ攻撃しても 揺れない', () => {
     const events = act(b, 'shake');
     assert.ok(!events.some((e) => e.t === 'shake'));
 });
+
+test('コマンド: いちばん上は たたかう・まもる・アイテム・にげる。技は たたかうの中 (まもるは 入らない)', async () => {
+    const { TOP_COMMANDS } = await import('../src/core/battle.js');
+    assert.deepEqual(TOP_COMMANDS.map((c) => c.label), ['たたかう', 'まもる', 'アイテム', 'にげる']);
+    const b = createBattle(bak(), FOES.nanashi, { rng: steady });
+    const ids = commands(b).map((c) => c.id);
+    assert.ok(ids.includes('attack') && ids.includes('heal'));
+    assert.ok(!ids.includes('guard'));
+});
+
+test('にげる: ふつうの敵からは にげられる。ボスと にげられない戦いでは 失敗して 敵が 行動する', async () => {
+    const { canRun } = await import('../src/core/battle.js');
+    const lucky = createBattle(bak(), FOES.nanashi, { rng: () => 0.1 });
+    act(lucky, 'run');
+    assert.equal(lucky.over, 'flee');
+    const unlucky = createBattle(bak(), FOES.nanashi, { rng: () => 0.9 });
+    const events = act(unlucky, 'run');
+    assert.equal(unlucky.over, null);
+    assert.ok(events.some((e) => e.t === 'hit' && e.target === 'ally'), '失敗すると 敵が 行動する');
+    const boss = createBattle(bak(), FOES.gakufume, { rng: () => 0.1 });
+    assert.ok(!canRun(boss));
+    act(boss, 'run');
+    assert.equal(boss.over, null, 'ボスからは にげられない');
+    const first = createBattle(bak(), [FOES.nanashi, FOES.nanashi], { rng: () => 0.1, noEscape: true });
+    act(first, 'run');
+    assert.equal(first.over, null, '最初の戦いは にげられない');
+});

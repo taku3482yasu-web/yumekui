@@ -1,8 +1,8 @@
-import { act, aliveFoes, answer, bench, chanceFoe, commands, createBattle, needsTarget, setTarget, TARGETED } from './core/battle.js';
+import { act, aliveFoes, answer, bench, chanceFoe, commands, createBattle, needsTarget, setTarget, TARGETED, TOP_COMMANDS } from './core/battle.js';
 import { ACTIONS, keyName } from './core/keys.js';
 import { advance, createKeep, dateLabel, devour, dreamsTonight, nextLoop, rescue, ACTIVE_DAY, LAST_DAY, PAIR } from './core/calendar.js';
 import { bakSkills, bakUnit, grow } from './core/growth.js';
-import { createState, facing, pickWord, placeName, step, tileAt, warp, DIRS } from './core/field.js';
+import { createState, facing, isBlocked, objectAt, pickWord, placeName, step, tileAt, warp, DIRS } from './core/field.js';
 import { deepTalk, startDay, startMorning, timeLabel, timesBetween, NIGHT_START, PROLOGUE_START, RIKU_BRANCH_Y, TOWN_START } from './core/town.js';
 import { isWeekend } from './core/days.js';
 import { buildChoices } from './core/truth.js';
@@ -314,7 +314,7 @@ async function fight(object) {
     // 敵は 1 体 (foe) か 複数 (foes)。本音を持つ 敵 (なければ 1 体目) が この戦いの 主
     const foeList = (object.foes ?? [object.foe]).map((id) => FOES[id]);
     const foe = foeList.find((f) => f.truth) ?? foeList[0];
-    const battle = createBattle(partyUnits(), foeList);
+    const battle = createBattle(partyUnits(), foeList, { noEscape: object.script === 'firstBattle' });
     await playEncounter(encounterTheme(MAPS[state.map]), foeList.some((f) => f.truth));
     await ui.fade(true);
     mode = 'battle';
@@ -326,14 +326,14 @@ async function fight(object) {
     while (!battle.over) {
         const names = aliveFoes(battle).map((f) => f.name).join('と');
         await ui.say('', `${names}が 立ちはだかる。どうする？`, { wait: 0 });
-        const id = await ui.menu(commands(battle));
+        // たたかう / まもる / アイテム / にげる。技は「たたかう」の中から 選ぶ
+        const top = await ui.menu(TOP_COMMANDS);
         ui.hideMsg();
         let events = null;
-        if (id === 'truth') events = await chooseTruth(battle);
-        else if (id === 'swap') events = await chooseSwap(battle);
-        else if (TARGETED.includes(id) && needsTarget(battle)) {
-            if (await chooseTarget(battle)) events = act(battle, id);
-        } else events = act(battle, id);
+        if (top === 'fight') events = await chooseMove(battle);
+        if (top === 'guard') events = act(battle, 'guard');
+        if (top === 'item') await ui.say('', LINES.noItem, { wait: NOTE_MS });
+        if (top === 'run') events = act(battle, 'run');
         if (events) await play(battle, events);
     }
 
@@ -344,6 +344,17 @@ async function fight(object) {
     showHud();
     await ui.fade(false);
     await finish(battle, object, foe);
+}
+
+// 「たたかう」: 技を 選ぶ (もどると いちばん上の コマンドへ)
+async function chooseMove(battle) {
+    const items = [...commands(battle), { id: 'back', label: 'もどる' }];
+    const id = await ui.menu(items, { head: `${battle.ally.name}の わざ` });
+    if (id === 'back') return null;
+    if (id === 'truth') return chooseTruth(battle);
+    if (id === 'swap') return chooseSwap(battle);
+    if (TARGETED.includes(id) && needsTarget(battle) && !(await chooseTarget(battle))) return null;
+    return act(battle, id);
 }
 
 // 敵が 複数のとき、ねらう 敵を 選ぶ (もどると 選び直し)
@@ -379,7 +390,7 @@ async function play(battle, events) {
         if (event.t === 'hit') showHit(event);
         if (event.t === 'heal') pop(`+${event.amount}`, 70, 92, '#7fe0a8');
         if (event.t === 'shake') pop(`ゆらぎ +${event.gain}`, foeX(battleView, event.index ?? 0), 40, '#ffc95e');
-        if (event.t === 'chance') await ui.say('', `${event.name}の気持ちが 大きく揺れている！ 本音を言い当てるチャンスだ！`, { wait: NOTE_MS * 2 });
+        if (event.t === 'chance') await ui.say('', `${event.name}の気持ちが 大きく揺れている！ 本音を言い当てるチャンスだ！（「たたかう」から 選べる）`, { wait: NOTE_MS * 2 });
         if (event.t === 'down') {
             battleView.down[event.index] = true;
             if (battle.foes.length > 1 && !battle.over) await ui.say('', `${event.name}を たおした！`, { wait: NOTE_MS });
@@ -408,6 +419,15 @@ function pop(text, x, y, color) {
 
 async function finish(battle, object, foe) {
     for (const unit of battle.party) hp[unit.id] = unit.hp;
+    if (battle.over === 'flee') {
+        // 敵は その場に 残る。ハルは 1 歩 下がる (下がれる ときだけ)
+        const [dx, dy] = DIRS[state.dir];
+        const back = { x: state.x - dx, y: state.y - dy };
+        if (!isBlocked(state, back.x, back.y) && !objectAt(state, back.x, back.y)) Object.assign(state, back);
+        resetFollow();
+        await talk(LINES.fled);
+        return;
+    }
     if (battle.over === 'lose') {
         hp = {};
         if (keep.tutorial) {

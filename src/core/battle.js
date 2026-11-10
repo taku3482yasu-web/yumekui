@@ -10,12 +10,14 @@ const SHAKE_HIT = 0.85;
 const SHAKE_POWER = 34;
 const WRONG_ATK = 1.2;
 const PARTNER_RAGE = 1.5;
+const RUN_RATE = 0.75;       // ふつうの 敵から にげられる 確率
 
 function makeFoe(foe, index) {
     return { ...foe, kokoro: 0, index, step: 0, asleep: false, chance: false, exhausted: false, down: false };
 }
 
-export function createBattle(allies, foes, { rng = Math.random } = {}) {
+// noEscape: にげられない 戦い (チュートリアルの 最初の戦い など)。本音を持つ 敵 (ボス) からも にげられない
+export function createBattle(allies, foes, { rng = Math.random, noEscape = false } = {}) {
     const party = (Array.isArray(allies) ? allies : [allies]).map((unit) => ({ ...unit, wait: 0 }));
     const list = (Array.isArray(foes) ? foes : [foes]).map(makeFoe);
     return {
@@ -26,6 +28,7 @@ export function createBattle(allies, foes, { rng = Math.random } = {}) {
         rng,
         guarding: false,
         rush: false,
+        noEscape,
         over: null,
         get chance() { return this.foe.chance; },
         set chance(value) { this.foe.chance = value; },
@@ -57,6 +60,20 @@ export function bench(b) {
     return b.party.filter((unit) => unit !== b.ally && unit.hp > 0);
 }
 
+// いちばん上の コマンド (2026-11-10 ユーザー指定): たたかう / まもる / アイテム / にげる。技は「たたかう」の中 (commands)
+export const TOP_COMMANDS = [
+    { id: 'fight', label: 'たたかう' },
+    { id: 'guard', label: 'まもる' },
+    { id: 'item', label: 'アイテム' },
+    { id: 'run', label: 'にげる' }
+];
+
+// にげられる 戦いか
+export function canRun(b) {
+    return !b.noEscape && !b.foes.some((foe) => foe.truth);
+}
+
+// 「たたかう」の 中の 技。本音を 言い当てる・喰らう は いちばん上に 出る
 export function commands(b) {
     const { moves, wait } = b.ally;
     const list = [{ id: 'attack', label: moves.attack }];
@@ -64,7 +81,6 @@ export function commands(b) {
     if (moves.heal) list.push({ id: 'heal', label: moves.heal, disabled: wait > 0 });
     if (moves.skill) list.push({ id: moves.skill.id, label: moves.skill.label, disabled: wait > 0 });
     for (const skill of moves.extra ?? []) list.push({ ...skill, disabled: wait > 0 });
-    list.push({ id: 'guard', label: 'まもる' });
     if (bench(b).length) list.push({ id: 'swap', label: '交代' });
     if (aliveFoes(b).some((foe) => foe.exhausted && foe.dream)) list.unshift({ id: 'devour', label: 'バクに喰らわせる' });
     if (aliveFoes(b).some((foe) => foe.chance)) list.unshift({ id: 'truth', label: '本音を言い当てる' });
@@ -101,6 +117,7 @@ export function act(b, id, target = null) {
         b.guarding = true;
         events.push({ t: 'say', text: `${b.ally.name}は 身を守っている。` });
     }
+    if (id === 'run') run(b, events);
     if (!b.over) foesTurn(b, events);
     return events;
 }
@@ -158,6 +175,21 @@ function shake(b, events, rate = 1) {
     foe.kokoro = Math.min(100, foe.kokoro + gain);
     events.push({ t: 'shake', index: foe.index, gain, kokoro: foe.kokoro });
     if (foe.kokoro >= 100) openChance(b, foe, events);
+}
+
+// にげる: ふつうの 敵からは RUN_RATE で にげられる。ボス・にげられない 戦いでは 失敗して 敵が 行動する
+function run(b, events) {
+    events.push({ t: 'say', text: 'ハルたちは にげだした！' });
+    if (!canRun(b)) {
+        events.push({ t: 'say', text: 'しかし、にげられない！' });
+        return;
+    }
+    if (b.rng() < RUN_RATE) {
+        b.over = 'flee';
+        events.push({ t: 'end', result: 'flee' });
+        return;
+    }
+    events.push({ t: 'say', text: 'しかし、回りこまれてしまった！' });
 }
 
 function shield(b, events) {

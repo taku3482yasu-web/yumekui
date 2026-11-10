@@ -114,37 +114,42 @@ async function battle(useShake, eat = false) {
         await sleep(60);
     }
     let turn = 0;
+    const choose = async (index) => {
+        for (let k = 0; k < index; k++) await key('ArrowDown');
+        await key('j');
+    };
     for (let i = 0; i < 400; i++) {
         const now = await state();
         if (now.m !== 'battle') return now;
         const labels = await read('[...document.querySelectorAll("#menu button")].map(b=>b.textContent)');
+        const head = await read('document.querySelector("#menu .head")?.textContent ?? ""');
         if (now.menu && labels.length) {
-            const devourAt = labels.indexOf('バクに喰らわせる');
-            if (eat && devourAt >= 0) {
-                await shot('16-devour');
-                for (let k = 0; k < devourAt; k++) await key('ArrowDown');
-                await key('j');
-                continue;
-            }
-            const pick = labels.findIndex((label) => ['ほんとは、自分で決めたかった', '一緒に吹きたかった', '相談してほしかった'].includes(label));
-            if (pick >= 0) {
+            const answerAt = labels.findIndex((label) => ['ほんとは、自分で決めたかった', '一緒に吹きたかった', '相談してほしかった'].includes(label));
+            if (answerAt >= 0) {
                 await shot('05-truth-choices');
-                for (let k = 0; k < pick; k++) await key('ArrowDown');
-                await key('j');
-            } else {
-                const wanted = labels.findIndex((label) => label === '本音を言い当てる');
+                await choose(answerAt);
+            } else if (labels.includes('たたかう')) {
+                // いちばん上: 大技の ターンは まもる、ほかは たたかう
+                const big = (useShake || eat) && turn % 4 === 3;
+                turn++;
+                if (turn === 1) await shot('04a-commands');
+                await choose(big ? labels.indexOf('まもる') : labels.indexOf('たたかう'));
+            } else if (head.endsWith('の わざ')) {
+                if (turn === 1) await shot('04d-moves');
+                const devourAt = labels.indexOf('バクに喰らわせる');
+                const wanted = labels.indexOf('本音を言い当てる');
                 const shake = labels.indexOf('ココロ攻撃');
                 const hp = await read('Number(document.querySelector("#ally-status .num").textContent.split("/")[0])');
                 const heal = labels.indexOf('悪夢を食べる');
                 const healOff = heal >= 0 && await read(`document.querySelectorAll("#menu button")[${heal}].disabled`);
                 const needHeal = hp < 28 && heal >= 0 && !healOff;
-                const guard = labels.indexOf('まもる');
-                const big = (useShake || eat) && turn % 4 === 3;
-                const hit = labels.indexOf(eat ? 'ひっかく' : labels[0]);
-                const target = wanted >= 0 && !eat ? wanted : big ? guard : needHeal ? heal : (useShake && shake >= 0 ? shake : Math.max(hit, 0));
-                turn++;
-                for (let k = 0; k < target; k++) await key('ArrowDown');
-                await key('j');
+                const attack = eat ? Math.max(0, labels.indexOf('ひっかく')) : labels.findIndex((label) => !['本音を言い当てる', 'バクに喰らわせる'].includes(label));
+                if (eat && devourAt >= 0) {
+                    await shot('16-devour');
+                    await choose(devourAt);
+                } else await choose(wanted >= 0 && !eat ? wanted : needHeal ? heal : useShake && shake >= 0 ? shake : attack);
+            } else {
+                await choose(0);   // ねらう 敵・交代の 相手は 1 番目
             }
         } else if (now.msg) {
             await key('j');
