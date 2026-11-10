@@ -4,7 +4,7 @@ import { HEARTS, HEART_EXP_RATE } from '../data/hearts.js';
 //   時間が 戻ったことで、前の周の ユメクイが 変化したもの。前の周に 救って 仲間にした ユメクイの 状態 (レベル) を 残す。
 //   活性化の 前に 仲間にした ユメクイは 活性化していないので 弱い (state.dormant)。夢のかけらを 使うと
 //   前の周の 状態を 引き継いで 活性化する。合体の夢でも 同じ。使うと なくなり、次の ループで また できる
-export const PAIR_ALLY = { mio: 'gakufume', kana: 'togemetoro' };
+export const PAIR_ALLY = { mio: 'gakufume', kana: 'togemetoro', riku: 'himawarion' };
 
 export function makeDreamShards(keep, prevState) {
     if (!prevState) return;

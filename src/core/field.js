@@ -14,7 +14,7 @@ export function createState() {
     const start = MAPS.odoriba.start;
     return {
         map: 'odoriba', x: start.x, y: start.y, dir: 'up', flags: {}, words: [], shards: 0, gone: {},
-        day: 1, phase: 'night', time: 'day', talkedToday: false, sentences: [], status: { mio: 'idle', kana: 'idle' }, visits: {}
+        day: 1, phase: 'night', time: 'day', talkedToday: false, sentences: [], status: { mio: 'idle', kana: 'idle', riku: 'idle' }, visits: {}
     };
 }
 
@@ -56,6 +56,7 @@ export function isBlocked(state, x, y) {
     if (SOLID.has(tile)) return true;
     if (tile === 'L') return !state.flags.gateL;   // 二重奏ホールの 左右の扉
     if (tile === 'J') return !state.flags.gateR;
+    if (tile === 'Y') return !state.flags.rikuWall;   // リクの夢の しおれた ひまわりの 壁 (3 周目に 開く)
     return tile === 'G' && !state.flags.gateOpen;
 }
 
@@ -92,4 +93,23 @@ export function pickWord(state, object) {
     const opens = !rest && state.map === 'omen';
     if (opens) state.flags.gateOpen = true;
     return opens;
+}
+
+// ナイトメアの 次の 1 マス (壁 w 以外は 何でも すり抜ける)。ハルから 広げて、追う 側の 隣の マスを 返す
+export function chaseStep(tiles, from, to) {
+    const key = (x, y) => `${x},${y}`;
+    const seen = new Set([key(to.x, to.y)]);
+    const queue = [[to.x, to.y]];
+    while (queue.length) {
+        const [x, y] = queue.shift();
+        for (const [dx, dy] of Object.values(DIRS)) {
+            const nx = x + dx;
+            const ny = y + dy;
+            if (nx === from.x && ny === from.y) return { x, y };
+            if (seen.has(key(nx, ny)) || !tiles[ny]?.[nx] || tiles[ny][nx] === 'w') continue;
+            seen.add(key(nx, ny));
+            queue.push([nx, ny]);
+        }
+    }
+    return null;
 }

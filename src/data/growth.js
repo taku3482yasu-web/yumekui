@@ -30,6 +30,12 @@ export const LEVEL_MOVES = {
         { lv: 16, id: 'ensemble', label: 'アンサンブル', info: '次のターン、味方全員の攻撃＋20%' },
         { lv: 25, id: 'endless', label: '止まらないソロ', info: '威力180、ため1ターン', target: true }
     ],
+    himawarion: [
+        { lv: 1, label: 'から元気', info: '体力が 少ないほど 強い (威力80〜200)' },
+        { lv: 8, id: 'sunmane', label: 'たいようのたてがみ', info: '3ターン 味方全員の 攻撃＋15%' },
+        { lv: 16, id: 'shout', label: 'だいじょうぶの叫び', info: '相手の 攻撃−20%、自分の 防御−10%' },
+        { lv: 25, id: 'sunfield', label: 'ひまわり畑', info: '3ターン 味方全員が 毎ターン 10%回復' }
+    ],
     togemetoro: [
         { lv: 1, label: 'せかすリズム', info: '次の攻撃が 2回' },
         { lv: 8, id: 'togebeat', label: 'トゲの拍子', info: '威力90、20%で 相手が 1回休み', target: true },

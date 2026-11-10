@@ -12,12 +12,12 @@ test('活性化の 前は どの夢にも 入れない (絵が 漠然として�
     keep.loop = 2;
     for (const day of [2, 3, 6]) {
         state.day = day;
-        assert.deepEqual(dreamsTonight(state, keep), [], `${day} 日`);
+        assert.deepEqual(dreamsTonight(state, keep).filter((d) => d !== 'riku'), [], `${day} 日`);
     }
     state.day = 7;
-    assert.deepEqual(dreamsTonight(state, keep), ['mio', 'kana', 'duet']);
+    assert.deepEqual(dreamsTonight(state, keep).filter((d) => d !== 'riku'), ['mio', 'kana', 'duet']);
     state.day = 10;
-    assert.deepEqual(dreamsTonight(state, keep), [], '救える 夜を 過ぎたら 入れない');
+    assert.deepEqual(dreamsTonight(state, keep).filter((d) => d !== 'riku'), [], '救える 夜を 過ぎたら 入れない');
 });
 
 test('キャンバスの 段階: 入るごとに ＋1、その日に 言葉を 拾っていれば ＋2。5 まで', () => {

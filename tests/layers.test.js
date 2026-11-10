@@ -13,6 +13,7 @@ function stateAt(map) {
     Object.assign(state, { map, x: MAPS[map].start.x, y: MAPS[map].start.y, phase: 'night', day: 8 });
     state.flags.bak = true;
     state.flags.active = true;
+    state.flags.rikuWall = true;   // リクの夢の しおれた 壁 (3 周目に 開く)
     return state;
 }
 
@@ -78,10 +79,10 @@ test('階段で 次の階層へ。敵を よけても 階段に 届き、着く�
 test('ボスは 最深部に いて、入口から 歩いて 届く。第 1 層には いない', () => {
     for (const list of Object.values(DREAM_LAYERS)) {
         const deep = MAPS[list.at(-1)];
-        const boss = deep.objects.find((o) => o.kind === 'foe' && o.needs === 'active');
+        const boss = deep.objects.find((o) => o.kind === 'foe' && FOES[o.foe].truth);
         assert.ok(boss, deep.id);
         assert.ok(canWalk(stateAt(deep.id), boss));
-        assert.ok(!MAPS[list[0]].objects.some((o) => ['pairBoss', 'duetBoss'].includes(o.script)), list[0]);
+        assert.ok(!MAPS[list[0]].objects.some((o) => o.kind === 'foe' && FOES[o.foe].truth), list[0]);
     }
 });
 

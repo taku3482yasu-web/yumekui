@@ -8,7 +8,7 @@ import { applyEmotion, declineReborn, gainEmotions, pendingReborn, reborn } from
 import { growCanvas, isNightmare, knowsDream, sightOf, stageOf, startLayers, truthHelp, DORMANT_ALLY_RATE, DORMANT_FOE_RATE, NIGHTMARE_RATE, STAGES } from './core/canvas.js';
 import { dreamShardOf, giveHeart, heartsOf, isDormant, pickHeart, setDormant, teachHeart, useDreamShard } from './core/shards.js';
 import { HEARTS } from './data/hearts.js';
-import { createState, facing, isBlocked, objectAt, pickWord, placeName, step, tileAt, warp, DIRS } from './core/field.js';
+import { chaseStep, createState, facing, isBlocked, objectAt, pickWord, placeName, step, tileAt, warp, DIRS } from './core/field.js';
 import { deepTalk, startDay, startMorning, timeLabel, timesBetween, NIGHT_START, PROLOGUE_START, RIKU_BRANCH_Y, TOWN_START } from './core/town.js';
 import { isWeekend } from './core/days.js';
 import { frontChoices, makeSentence, nextChoices, sentenceChoices } from './core/sentence.js';
@@ -186,14 +186,26 @@ const SCRIPTS = {
     tomeShop: () => talk(LINES.tomeShop),
     portSign: () => talk(LINES.portSign),
     rikuRoad: () => talk(LINES.rikuRoad(state)),
-    rikuDoor: () => talk(LINES.rikuDoor),
+    rikuDoor: async () => {
+        // 3 周目: ミオと カナを 救ったことが あれば、リクの母から『引っ越し』を 聞ける (台本 4-2)
+        await talk(LINES.rikuDoor);
+        if (keep.loop >= 3 && savedPair() && !state.words.includes('引っ越し')) {
+            await talk(LINES.rikuMom);
+            state.words.push('引っ越し');
+            showHud();
+        }
+    },
+    rikuWall: async () => {
+        await talk(LINES.rikuWallClosed);
+        if (keep.loop === 1 && !keep.rikuChased) await startChase();   // 1 周目の 最初だけ ナイトメアが 来る (台本 4-1)
+    },
     schoolClosed: () => talk(LINES.schoolClosed),
     prologueSchool: () => talk(LINES.prologueSchool),
     prologueStay: () => talk(LINES.prologueStay),
     goHome: homeDoor
 };
 
-const NAMES = { mio: 'ミオ', kana: 'カナ', duet: 'ミオとカナ' };
+const NAMES = { mio: 'ミオ', kana: 'カナ', riku: 'リク', duet: 'ミオとカナ' };
 
 // 人に話しかける。元気な夢主 (ミオ・カナ) とは「じっくり話す」か 選べる
 async function talkTo(who) {
@@ -241,7 +253,55 @@ async function homeDoor() {
     if (id !== 'no') wakeUp();
 }
 
+// ミオと カナを (どの周でも) 救ったことが ある
+function savedPair() {
+    return ['gakufume', 'togemetoro'].every((id) => keep.solved.includes(id));
+}
+
+// ---- ナイトメアから 逃げる (台本 4-1) --------------------------------------
+//   光る扉まで 逃げ切れば 助かる。捕まると「にがさない」のあと ベッドで 飛び起き、その夜は 失敗
+const CHASE_MS = 240;   // ナイトメアが 1 マス 進む 間隔 (ハルは 150)
+let chaseAt = 0;
+
+async function startChase() {
+    keep.rikuChased = true;
+    await talk(LINES.nightmareCome);
+    state.chaser = { x: 9, y: 1 };
+    chaseAt = performance.now() + 600;
+}
+
+function updateChase(now) {
+    if (now < chaseAt) return;
+    chaseAt = now + CHASE_MS;
+    const next = chaseStep(MAPS[state.map].tiles, state.chaser, state);
+    if (next) Object.assign(state.chaser, next);
+    if (state.chaser.x === state.x && state.chaser.y === state.y) scene(caught);
+}
+
+async function caught() {
+    state.chaser = null;
+    mode = 'scare';
+    const screen = document.getElementById('screen');
+    screen.classList.remove('shake');
+    void screen.offsetWidth;
+    screen.classList.add('shake');
+    await new Promise((resolve) => setTimeout(resolve, 1600));
+    await ui.fade(true);
+    mode = 'scene';
+    await ui.fade(false);
+    await talk(LINES.caughtWake);
+    state.nightFailed = true;
+    wakeUp('fail');
+}
+
 async function touch(object) {
+    if (object.kind === 'wake' && state.chaser) {
+        state.chaser = null;   // 光る扉まで 逃げ切った
+        await talk(LINES.chaseEscaped);
+        wakeUp();
+        return;
+    }
+    if (object.id === 'rikuPhoto') await talk(LINES.rikuPhoto);
     if (object.kind === 'talk' || object.kind === 'door' || object.kind === 'block') await SCRIPTS[object.script](object);
     if (object.kind === 'person') {
         if (state.flags.prologue && object.who === 'father') await talk(LINES.fatherAfter);
@@ -326,7 +386,7 @@ async function enter(exit) {
     showHud();
     await ui.fade(false);
     if (here && here.layer > 1) await talk(LINES.layerEnter(layerLabel(here.dream, here.layer)));
-    if (here?.deepest && !state.flags.active && !state.flags.early) await talk(LINES.noBossDeep);
+    if (here?.deepest && here.dream !== 'riku' && !state.flags.active && !state.flags.early) await talk(LINES.noBossDeep);
     if (exit.to === 'omen') await talk(LINES.enterOmen);
     if (exit.to === 'hiroba') await talk(LINES.enterHiroba);
     if (goingOut && !state.nightOut) {
@@ -379,6 +439,7 @@ async function fight(object) {
     if (object.script === 'pairBoss') await talk(LINES.pairBoss);
     if (object.script === 'duetMid') await talk(LINES.duetMid);
     if (object.script === 'duetBoss') await talk(LINES.duetBoss);
+    if (object.script === 'rikuBoss') await talk(LINES.rikuBoss);
 
     // 敵は 1 体 (foe) か 複数 (foes)。本音を持つ 敵 (なければ 1 体目) が この戦いの 主
     const layer = layerOf()?.layer ?? 1;   // 下の 階層ほど 敵が 強い
@@ -636,6 +697,7 @@ async function saved(foe, before) {
     await talk(LINES.grewSaved);
     await announceSkills(before);
     if (state.flags.early) await awakenAlly(foe.ally);
+    if (foe.dream === 'riku') state.flags.rikuSavedDay = state.day;
     await tellReaped(result.other);
 }
 
@@ -838,6 +900,7 @@ async function morningPhase() {
 // 放課後 (土日は 昼): 学校と町を 歩いて 話す。夢主と じっくり話すか、家の玄関に入ると 夜になる
 async function dayPhase() {
     startDay(state);
+    if (keep.loop >= 3 && savedPair()) state.flags.rikuOpen = true;   // 3 周目、ミオと カナを 救ったことが あれば リクの家へ
     const done = explore();
     mode = 'scene';   // 日の始めの 出来事を 見せるまで 歩けない
     await ui.fade(false);
@@ -861,11 +924,16 @@ async function dayPhase() {
 //   玄関から 夜の町へ出て 帰って寝ると、夢に入らずに 朝になる (仕様書「1日の流れ」)
 async function nightPhase() {
     Object.assign(state, NIGHT_START);
+    // リクを 救った 次の夜 (3 周目): 迷い (台本 4-4)
+    const doubt = keep.loop >= 3 && state.status.riku === 'saved' && state.flags.rikuSavedDay && state.day > state.flags.rikuSavedDay && !state.flags.rikuDoubt;
+    if (doubt) state.flags.rikuDoubt = true;
     state.nightOut = false;
     const done = explore();
     mode = 'scene';
     await ui.fade(false);
-    await scene(async () => {});
+    await scene(async () => {
+        if (doubt) await talk(LINES.rikuDoubt);
+    });
     const ending = await done;
     if (ending?.dream) await enterDream(ending.dream);
 }
@@ -915,10 +983,11 @@ async function useCanvas() {
 }
 
 // 夜の キャンバスに 描く 画面。今の 段階の 絵に なる (十字キーで 線、A で 描き終える)
-const CANVAS_COLORS = { water: [79, 134, 184], tempo: [176, 88, 104] };
+const CANVAS_COLORS = { water: [79, 134, 184], tempo: [176, 88, 104], sun: [214, 180, 70] };
+const CANVAS_THEME = { mio: 'water', kana: 'tempo', riku: 'sun' };
 async function paintCanvas(id) {
     const stage = stageOf(keep, id);
-    const colors = id === 'duet' ? [CANVAS_COLORS.water, CANVAS_COLORS.tempo] : [CANVAS_COLORS[id === 'mio' ? 'water' : 'tempo'], CANVAS_COLORS[id === 'mio' ? 'water' : 'tempo']];
+    const colors = id === 'duet' ? [CANVAS_COLORS.water, CANVAS_COLORS.tempo] : [CANVAS_COLORS[CANVAS_THEME[id]], CANVAS_COLORS[CANVAS_THEME[id]]];
     const caption = LINES.canvasCaption(stage, STAGES[stage].label);
     ui.hideHud();
     await new Promise((resolve) => {
@@ -970,7 +1039,10 @@ async function enterDream(id) {
     }
     const map = DREAM_LAYERS[id][layer - 1];
     const stage = stageOf(keep, id);
-    const early = isEarly(state);   // 完ぺきな 絵で 活性化前に 入る (ボスは まだ 活性化していない)
+    const early = isEarly(state, id);   // 完ぺきな 絵で 活性化前に 入る (ボスは まだ 活性化していない)
+    // リクの夢: 3 周目、リクの家で『引っ越し』を 聞いていれば しおれた 壁が 開く (台本 4-3)
+    const wallOpens = id === 'riku' && keep.loop >= 3 && state.words.includes('引っ越し') && !state.flags.rikuWall;
+    if (wallOpens) state.flags.rikuWall = true;
     state.flags.early = early;
     state.dreamsVisited ??= {};
     state.dreamsVisited[id] = true;
@@ -984,7 +1056,8 @@ async function enterDream(id) {
         if (layer === 1) {
             await talk(map === 'duet' ? LINES.duetEnter : LINES.enterDream[map]);
             if (early) await talk(LINES.earlyIn);
-            else if (!state.flags.active) await talk(LINES.noBoss);
+            else if (!state.flags.active && id !== 'riku') await talk(LINES.noBoss);
+            if (wallOpens) await talk(LINES.rikuWallOpen);
         } else await talk(LINES.layerEnter(layerLabel(id, layer)));
         if (state.sight.nightmare) await talk(LINES.nightmareIn);
     });
@@ -992,6 +1065,10 @@ async function enterDream(id) {
     // 夢から 覚めると、夢の中で 見た 景色が 絵に 描き足される (その日に 言葉を 拾っていれば もう 1 段)
     state.sight = null;
     state.flags.early = false;
+    if (state.nightFailed) {
+        state.nightFailed = false;   // ナイトメアに 捕まった 夜は 失敗 (絵は 描き足されない)
+        return;
+    }
     const before = stageOf(keep, id);
     const after = growCanvas(keep, id, state.words.length > (state.wordsAtDay ?? 0));
     if (after > before) await talk(LINES.canvasGrew(after, STAGES[after].label));
@@ -1261,6 +1338,7 @@ function frame(now) {
     const delta = Math.min(50, now - last);
     last = now;
     if (mode === 'field') updateField(delta);
+    if (mode === 'field' && state.chaser) updateChase(now);
     if (walk.left > 0 && mode !== 'field') walk.left = Math.max(0, walk.left - delta / WALK_MS);
     if (mode === 'intro' && intro) {
         if (drawIntro(ctx, intro, now) && !intro.finished) {
@@ -1296,7 +1374,15 @@ function frame(now) {
     else if (mode === 'shadow') drawShadow(ctx, now);
     else if (mode === 'morning') drawMorning(ctx);
     else if (mode === 'title' || mode === 'opening') drawSky(ctx, now);
-    else drawField(ctx, state, walk, now, actors, followerView());
+    else if (mode === 'scare') {
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, 320, 240);
+        ctx.fillStyle = '#e8203a';
+        ctx.font = 'bold 22px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(LINES.scareText, 160 + (Math.random() - 0.5) * 6, 126 + (Math.random() - 0.5) * 6);
+        ctx.textAlign = 'left';
+    } else drawField(ctx, state, walk, now, state.chaser ? [{ ...state.chaser, who: 'nightmare' }] : actors, followerView());
     requestAnimationFrame(frame);
 }
 

@@ -4,7 +4,7 @@ import { grow } from './growth.js';
 import { isActive, knowsDream, loopCanvas } from './canvas.js';
 import { makeDreamShards } from './shards.js';
 
-import { ACTIVE_DAY, LAST_DAY, LAST_RESCUE_DAY, OPEN_DAY, PAIR, isWeekend } from './days.js';
+import { ACTIVE_DAY, LAST_DAY, LAST_RESCUE_DAY, OPEN_DAY, PAIR, RIKU_DOWN_DAY, isWeekend } from './days.js';
 
 export { ACTIVE_DAY, LAST_DAY, LAST_RESCUE_DAY, OPEN_DAY, PAIR, dateLabel } from './days.js';
 
@@ -20,17 +20,19 @@ export function canTalk(state, id) {
 // 今夜 入れる夢。2 周目からは、2 人とも 元気なら ミオ×カナの夢 (夢合体『二重奏ホール』) も 描ける。
 //   ユメクイが 活性化する前は、描いても 夢の チャンネルに 引っかからないので どこにも 入れない
 //   ただし 完ぺきな 絵 (夢を 知っている) なら、活性化の 前でも 入れる (earlyDreams)
+//   リクは 3 日に 倒れる (ユメクイが もう 活性化している) ので、3 日から 14 日まで 入れる
 export function dreamsTonight(state, keep = null) {
-    if (state.day < OPEN_DAY || state.day > LAST_RESCUE_DAY) return [];
+    const riku = state.day >= RIKU_DOWN_DAY && state.day <= LAST_DAY && state.status.riku === 'idle' ? ['riku'] : [];
+    if (state.day < OPEN_DAY || state.day > LAST_RESCUE_DAY) return riku;
     const list = PAIR.filter((id) => state.status[id] === 'idle');
     if (keep && keep.loop >= 2 && list.length === 2) list.push('duet');
-    if (isActive(state)) return list;
-    return keep ? list.filter((id) => knowsDream(keep, id)) : [];
+    if (isActive(state)) return [...list, ...riku];
+    return [...(keep ? list.filter((id) => knowsDream(keep, id)) : []), ...riku];
 }
 
 // 活性化の 前に 入る 夢か (ボスは まだ 活性化していない)
-export function isEarly(state) {
-    return !isActive(state);
+export function isEarly(state, dream = null) {
+    return dream !== 'riku' && !isActive(state);
 }
 
 // 夢合体で 2 人とも 救う。だれも 刈り取られない。ガクフメと トゲメトロが 仲間に (いれば 夢写し)
@@ -53,7 +55,7 @@ export function rescuePair(state, keep) {
 export function rescue(state, keep, id, ally) {
     const other = PAIR.find((item) => item !== id);
     state.status[id] = 'saved';
-    if (isActive(state) && state.status[other] === 'idle') state.status[other] = 'reaped';
+    if (PAIR.includes(id) && isActive(state) && state.status[other] === 'idle') state.status[other] = 'reaped';
     grow(keep, 'saved');
     const copied = keep.allies.includes(ally);
     if (copied) keep.copies[ally] = (keep.copies[ally] ?? 0) + 1;
@@ -65,7 +67,7 @@ export function rescue(state, keep, id, ally) {
 export function devour(state, keep, id) {
     const other = PAIR.find((item) => item !== id);
     state.status[id] = 'eaten';
-    if (isActive(state) && state.status[other] === 'idle') state.status[other] = 'reaped';
+    if (PAIR.includes(id) && isActive(state) && state.status[other] === 'idle') state.status[other] = 'reaped';
     if (!keep.eaten.includes(id)) keep.eaten.push(id);
     grow(keep, 'eaten');
     return { other };

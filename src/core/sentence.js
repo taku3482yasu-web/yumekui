@@ -4,8 +4,10 @@
 import { WORDS } from '../data/words.js';
 
 // 文の 形: 前が 2 つなら「前、前後ろ」(ほんとは、自分で決めたかった)
+//   言葉に as が あれば その形で つなぐ (引っ越し → 引っ越しが決まってた。……ハルに、)
 export function joinWords(fronts, back) {
-    return fronts.length === 2 ? `${fronts[0]}、${fronts[1]}${back}` : `${fronts[0]}${back}`;
+    const [a, b] = fronts.map((w) => WORDS[w]?.as ?? w);
+    return fronts.length === 2 ? `${a}、${b}${back}` : `${a}${back}`;
 }
 
 // つなげられるか: 前 1〜2 つ + 後ろ 1 つ、ぜんぶ 同じ人の 言葉で、持っている 言葉だけ

@@ -431,7 +431,8 @@ function foeTurn(b, foe, events) {
     const name = big ? (foe.bigMove ?? '群れの大渦') : '体当たり';
     const dodging = (b.ally.dodge ?? 0) + (b.ally.dodgeBuff?.rate ?? 0) > 0;
     if (!dodging) events.push({ t: 'say', text: `${foe.name}の ${name}！` });
-    const weak = foe.drowsy > 0 ? 0.8 : 1;
+    // ヒマワリオン (desperate): 空元気。体力が 減るほど 強くなる
+    const weak = (foe.drowsy > 0 ? 0.8 : 1) * (foe.desperate ? 2 - foe.hp / foe.maxHp : 1);
     if (foe.drowsy > 0) foe.drowsy--;
     const dodge = (b.ally.dodge ?? 0) + (b.ally.dodgeBuff?.rate ?? 0);
     if (dodge > 0 && b.rng() < dodge) {
@@ -690,6 +691,25 @@ const GROWTH_MOVES = {
     tempoup(b, events) {
         skillSay(b, events, 'テンポアップ', '攻撃が 上がった！');
         b.ally.tempo = 4;   // 使った ターンの 次から 3 ターン
+    },
+    // ヒマワリオンの 技
+    bravado(b, events) {
+        skillSay(b, events, 'から元気', 'だいじょうぶ！');
+        const power = Math.round(80 + 120 * (1 - b.ally.hp / b.ally.maxHp));   // 体力が 少ないほど 強い
+        strike(b, events, power);
+    },
+    sunmane(b, events) {
+        skillSay(b, events, 'たいようのたてがみ', 'みんなの 攻撃が 上がった！');
+        b.partyUp = { atk: 0.15, def: 0, turns: 4 };
+    },
+    shout(b, events) {
+        skillSay(b, events, 'だいじょうぶの叫び');
+        if (!b.foe.down) b.foe.atk = Math.round(b.foe.atk * 0.8);
+        b.ally.def = Math.round(b.ally.def * 0.9);
+    },
+    sunfield(b, events) {
+        skillSay(b, events, 'ひまわり畑', 'あたたかい 日ざしが みんなを つつむ。');
+        b.regen = 3;
     },
     fortissimo(b, events) {
         skillSay(b, events, 'フォルテッシモ');

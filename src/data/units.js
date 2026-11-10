@@ -7,6 +7,11 @@ export const BAK = {
 
 export const ALLIES = {
     bak: BAK,
+    himawarion: {
+        id: 'himawarion', name: 'ヒマワリオン', attr: '喜', sprite: 'himawarion',
+        hp: 58, maxHp: 58, atk: 15, def: 7, spd: 11,
+        moves: { attack: 'たてがみアタック', skill: { id: 'bravado', label: 'から元気' } }
+    },
     gakufume: {
         id: 'gakufume', name: 'ガクフメ', attr: '哀', sprite: 'gakufume',
         hp: 52, maxHp: 52, atk: 15, def: 6, spd: 11,
@@ -31,6 +36,12 @@ const TRUTH = {
         words: ['一緒に', '吹きたかった'],
         answer: '一緒に吹きたかった',
         wrong: ['ソロなんて、やりたくなかった', '勝ちたかっただけ', 'カナなんて、もういらない', '一人のほうが、うまく吹ける']
+    },
+    riku: {
+        owner: 'riku',
+        words: ['引っ越し', '言えなかった'],
+        answer: '引っ越しが決まってた。……ハルに、言えなかった',
+        wrong: ['ハルなんて、どうでもよかった', 'ずっと、ひとりのほうが楽だった', '引っ越しなんて、平気だった', 'もう、話すことなんてない']
     },
     kana: {
         owner: 'kana',
@@ -85,6 +96,14 @@ export const FOES = {
         hp: 90, maxHp: 90, atk: 11, def: 6, spd: 9, exp: 125,
         pattern: ['tackle', 'tackle', 'charge', 'swirl'], chargeText: '哀しみの鳥が 高い音を ためている……！', bigMove: '止まらないソロ',
         truth: { ...TRUTH.mio }
+    },
+    // リクの夢の ボス (台本 4-3)。完全な 空元気で、体力が 減るほど 強くなる (desperate)
+    himawarion: {
+        id: 'himawarion', name: 'ヒマワリオン', attr: '喜', sprite: 'himawarion', dream: 'riku', ally: 'himawarion', desperate: true, truthHead: 'リクの本音は？',
+        hp: 120, maxHp: 120, atk: 12, def: 6, spd: 10, exp: 120,
+        pattern: ['tackle', 'tackle', 'charge', 'swirl'],
+        chargeText: 'ヒマワリオンが「だいじょうぶ！」と 叫びながら 力を ためている……！', bigMove: 'から元気',
+        truth: TRUTH.riku
     },
     suima: { id: 'suima', name: 'スイマ', attr: '哀', sprite: 'suima', hp: 18, maxHp: 18, atk: 9, def: 3, spd: 8, drop: 1, exp: 5 },
     muresuima: {

@@ -38,7 +38,8 @@ export function drawSky(ctx, time) {
 const FLOORS = {
     water: ['#3d7c8c', '#35707f', '#55a0ac'],
     tempo: ['#8c5560', '#7f4c58', '#b0727c'],
-    base: ['#5c6aa6', '#566399', '#6a79b8']
+    base: ['#5c6aa6', '#566399', '#6a79b8'],
+    sun: ['#a8a04a', '#9c9442', '#c8bc5a']   // リクの夢: ひまわり畑
 };
 
 function drawTile(ctx, tile, x, y, open, theme) {
@@ -49,6 +50,17 @@ function drawTile(ctx, tile, x, y, open, theme) {
         ctx.fillStyle = '#8895cf';
         ctx.fillRect(x + 2, y + 12, 5, 2);
         ctx.fillRect(x + 10, y + 13, 4, 1);
+        return;
+    }
+    if (tile === 'Y') {   // しおれた ひまわりの 壁 (開くと 消える)
+        if (open) return drawTile(ctx, '.', x, y, false, theme);
+        ctx.fillStyle = '#4a4420';
+        ctx.fillRect(x, y, TILE, TILE);
+        ctx.fillStyle = '#7a6a2a';
+        for (let i = 1; i < TILE; i += 5) ctx.fillRect(x + i, y + 2, 2, 14);
+        ctx.fillStyle = '#a07a30';
+        ctx.fillRect(x + 2, y + 4, 4, 3);
+        ctx.fillRect(x + 9, y + 7, 4, 3);
         return;
     }
     if (tile === 'M') {
@@ -160,7 +172,7 @@ export function drawField(ctx, state, walk, time, actors = [], follower = null) 
         if (map.real) drawRealTile(ctx, tile, x * TILE, y * TILE, time);
         else {
             // 二重奏ホールは 左が 水 (ミオ)、右が トゲ (カナ)。左右の扉は それぞれの 合図で 開く
-            const open = tile === 'L' ? state.flags.gateL : tile === 'J' ? state.flags.gateR : state.flags.gateOpen;
+            const open = tile === 'L' ? state.flags.gateL : tile === 'J' ? state.flags.gateR : tile === 'Y' ? state.flags.rikuWall : state.flags.gateOpen;
             const theme = map.theme === 'duet' ? (x < map.split ? 'water' : 'tempo') : map.theme;
             drawTile(ctx, tile, x * TILE, y * TILE, open, theme);
         }

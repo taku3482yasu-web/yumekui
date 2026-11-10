@@ -313,6 +313,43 @@ const ART = {
         '................',
         '................'
     ],
+    // ヒマワリオン (たてがみが ひまわりの ライオン) と ナイトメア (大鎌の 影。顔に 女の子の 形の 穴)
+    himawarion: [
+        '....l..ll..l....',
+        '..l.lllllll.l...',
+        '..llrrrrrrrll...',
+        '.llraaaaaaarll..',
+        '.lraakaaakaarl..',
+        'llraaaaaaaaarll.',
+        '.lraaazzzaaarl..',
+        '.llraaaaaaarll..',
+        '..llrrrrrrrll...',
+        '...laaaaaaal....',
+        '...aaaaaaaaa....',
+        '..aaaaaaaaaaa...',
+        '..aa.aa.aa.aa...',
+        '..aa.aa.aa.aa...',
+        '..zz.zz.zz.zz...',
+        '................'
+    ],
+    nightmare: [
+        '..........hhhh..',
+        '....kkk..h....h.',
+        '...ktttk.h......',
+        '..kttwttkh......',
+        '..ktwwwtkh......',
+        '..kttwttkh......',
+        '...ktttkkh......',
+        '..kttttttkh.....',
+        '.kttttttttkh....',
+        '.kttttttttk.h...',
+        'kttttttttttk....',
+        'kttttttttttk....',
+        'kttttttttttk....',
+        '.kttttttttk.....',
+        '..kt.tt.tk......',
+        '..k..kk..k......'
+    ],
     // 心のかけら (淡く 光る 水色の かけら)
     heart: [
         '................',

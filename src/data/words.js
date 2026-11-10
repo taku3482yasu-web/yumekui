@@ -13,7 +13,10 @@ export const WORDS = {
     '相談して': { part: 'front', owner: 'kana' },
     'ほしかった': { part: 'back', owner: 'kana' },
     'くやしかった': { part: 'back', owner: 'kana' },
-    '勝ちたかった': { part: 'back', owner: 'kana' }      // まちがい (審査員カナが 落とす。企画書の 例)
+    '勝ちたかった': { part: 'back', owner: 'kana' },     // まちがい (審査員カナが 落とす。企画書の 例)
+    // リク (台本 4-2・4-3)。as: 文に つなぐときの 形
+    '引っ越し': { part: 'front', owner: 'riku', as: '引っ越しが決まってた。……ハルに、' },
+    '言えなかった': { part: 'back', owner: 'riku' }
 };
 
-export const OWNER_NAMES = { hal: 'ハル', mio: 'ミオ', kana: 'カナ' };
+export const OWNER_NAMES = { hal: 'ハル', mio: 'ミオ', kana: 'カナ', riku: 'リク' };

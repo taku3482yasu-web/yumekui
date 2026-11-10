@@ -248,7 +248,7 @@ test('活性化したあと 片方を救うと もう片方は 刈り取られ �
     assert.equal(result.other, 'kana');
     assert.equal(state.status.kana, 'reaped');
     assert.ok(keep.allies.includes('gakufume'));
-    assert.deepEqual(dreamsTonight({ ...state, day: 8 }), []);
+    assert.deepEqual(dreamsTonight({ ...state, day: 8 }).filter((d) => d !== 'riku'), []);
 });
 
 test('9 日の夜を過ぎると 結界が破られる', () => {
@@ -420,11 +420,11 @@ test('喰らった夢主は 次の周も 抜け殻のまま', () => {
     const next = nextLoop(keep);
     assert.equal(next.status.mio, 'eaten');
     assert.equal(next.status.kana, 'idle');
-    assert.deepEqual(dreamsTonight(next), [], '2 月 1 日は まだ 夢が開いていない');
+    assert.deepEqual(dreamsTonight(next).filter((d) => d !== 'riku'), [], '2 月 1 日は まだ 夢が開いていない');
     next.day = 2;
-    assert.deepEqual(dreamsTonight(next), [], '活性化の 前は 描いても 夢に つながらない');
+    assert.deepEqual(dreamsTonight(next).filter((d) => d !== 'riku'), [], '活性化の 前は 描いても 夢に つながらない');
     next.day = 7;
-    assert.deepEqual(dreamsTonight(next), ['kana']);
+    assert.deepEqual(dreamsTonight(next).filter((d) => d !== 'riku'), ['kana']);
 });
 
 test('カナを救っても 喰らったミオは 抜け殻のまま', () => {

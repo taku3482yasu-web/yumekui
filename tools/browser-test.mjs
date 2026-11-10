@@ -480,7 +480,28 @@ for (let day = 3; day < 7; day++) {
             await key('j');
             await sleep(400);
             await shot('13d-canvas');
-            await pick('描かずに寝る');
+            // 3 日の夜: リクの夢 (台本 4-1)。しおれた 壁を 調べると ナイトメアが 来るので、光る扉まで 逃げる
+            await pick('リクの夢');
+            await paintNight('18-canvas-riku');
+            await waitField();
+            await shot('18-riku-field');
+            await walkTo(9, 3);
+            await key('ArrowUp', 40);
+            await key('j');
+            for (let i = 0; i < 60 && !(await read('!!yumekui.state.chaser')); i++) {
+                if ((await state()).msg) await key('j');
+                await sleep(80);
+            }
+            await shot('18b-nightmare');
+            await walkTo(10, 8);
+            await key('ArrowDown', 40);
+            await sleep(300);
+            console.log('ナイトメア', await read('JSON.stringify(yumekui.state.chaser)'), 'モード', await read('yumekui.mode'));
+            for (let i = 0; i < 40 && (await read('yumekui.state.map')) === 'rikuField'; i++) {
+                if ((await state()).msg) await key('j');
+                await sleep(100);
+            }
+            console.log('リクの夢から', await read('yumekui.state.map'), '逃げた', await read('yumekui.keep.rikuChased'), 'リクの絵', await read('JSON.stringify(yumekui.keep.canvas)'));
         } else await night('描かずに寝る');
         await sleep(300);
     }
@@ -580,8 +601,8 @@ await skip();
 await walkTo(10, 8);
 await walkTo(10, 7);
 await descend([[9, 5], [18, 9], [9, 1]]);
-await walkTo(9, 3);
-await key('ArrowUp');
+console.log('カナの最深部', JSON.stringify(await read('({m:yumekui.mode,x:yumekui.state.x,y:yumekui.state.y,map:yumekui.state.map,active:yumekui.state.flags.active,day:yumekui.state.day,boss:window.__objects().some(o=>o.id==="kanaBoss")})')));
+await walkTo(9, 2);
 await sleep(300);
 await skip();
 await sleep(900);
@@ -595,6 +616,7 @@ for (let i = 0; i < 40; i++) {
 }
 const after = await state();
 const growth = await read('yumekui.keep.growth');
+console.log('カナ戦のあと', after.m, after.s.map, await read('document.getElementById("text").textContent'), JSON.stringify(await read('yumekui.state.levels')));
 console.log('成長', JSON.stringify(growth), '状態', JSON.stringify(after.s.status), '喰らった', JSON.stringify(await read('yumekui.keep.eaten')));
 console.log('エラー', errors.length ? errors : 'なし');
 await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });

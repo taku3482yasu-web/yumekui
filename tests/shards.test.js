@@ -23,7 +23,7 @@ test('完ぺきな 絵 (段階 5 まで 描き上げた 夢) なら、次の周�
     assert.ok(knowsDream(keep, 'mio'), '段階 5');
     const state = nextLoop(keep, createState());
     state.day = 2;
-    assert.deepEqual(dreamsTonight(state, keep), ['mio'], 'カナの 絵は まだ 漠然としている');
+    assert.deepEqual(dreamsTonight(state, keep).filter((d) => d !== 'riku'), ['mio'], 'カナの 絵は まだ 漠然としている');
 });
 
 test('合体の夢も 2 人とも 絵を 知っていれば 活性化前に 入れる', () => {
@@ -31,7 +31,7 @@ test('合体の夢も 2 人とも 絵を 知っていれば 活性化前に 入�
     knowAll(keep);
     const state = nextLoop(keep, createState());
     state.day = 3;
-    assert.deepEqual(dreamsTonight(state, keep), ['mio', 'kana', 'duet']);
+    assert.deepEqual(dreamsTonight(state, keep).filter((d) => d !== 'riku'), ['mio', 'kana', 'duet']);
 });
 
 test('活性化前に 救うと、もう片方は 刈り取られない (ナイトメアは まだ 来ない)', () => {

@@ -23,6 +23,9 @@ export const REBORN = {
         怒: { label: '燃える大合奏', power: 170, foeDefDown: 0.15 },
         喜: { label: 'さくらのソロ', kokoroUp: 1, kokoroRate: 2 }
     },
+    himawarion: {
+        哀: { label: 'よるのひまわり', healAll: 0.5 }
+    },
     togemetoro: {
         哀: { label: 'ラルゴ', slow: 3 },
         楽: { label: 'スウィング', power: 70, hits: 3 }
@@ -33,7 +36,8 @@ export const REBORN = {
 export const SUBLIME = {
     bak: { name: 'ヨミバク', label: '夢先案内', partyAtkUp: 0.2, partyDefUp: 0.2 },
     gakufume: { name: 'フィナーレ', label: '最終楽章', power: 200, sleep: true },
-    togemetoro: { name: 'プレスト', label: 'ダブルテンポ', rushTurns: 3 }
+    togemetoro: { name: 'プレスト', label: 'ダブルテンポ', rushTurns: 3 },
+    himawarion: { name: 'ソレイユオン', label: '満開', healAll: 0.5, partyAtkUp: 0.2 }
 };
 export const SUBLIME_RATE = 1.15;
 
@@ -41,7 +45,8 @@ export const SUBLIME_RATE = 1.15;
 export const YUMEUTSUTSU = {
     bak: { label: '千夜の夢喰い', power: 300, stealBuffs: true },
     gakufume: { label: '終わらない協奏曲', power: 280, partyAtkUp: 0.3 },
-    togemetoro: { label: '無限拍子', power: 60, hits: 6 }
+    togemetoro: { label: '無限拍子', power: 60, hits: 6 },
+    himawarion: { label: '太陽のひまわり畑', power: 240, healAll: 0.3 }
 };
 
 // たまり方

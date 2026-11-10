@@ -137,7 +137,107 @@ const stage26 = [
     W26
 ];
 
+// ---- リクの夢『ひまわり畑』 (台本 4-1・4-3)。Y = しおれた ひまわりの 壁 (3 周目に 開く) -------------
+
+const rikuField = [
+    W20,
+    'wwwwwwww..s.wwwwwwww',
+    'wwwwwwwYYYYYYwwwwwww',
+    'wwww............wwww',
+    'www..............www',
+    'ww................ww',
+    'ww................ww',
+    'www..............www',
+    'wwww............wwww',
+    'wwwwwwww....wwwwwwww',
+    W20
+];
+
+const riku2 = [
+    W20,
+    'w.......wwwwwwwwwwww',
+    'w.......wwwwwwwwwwww',
+    'w..................w',
+    'w..................w',
+    'wwwwwwwwwwww.......w',
+    'wwwwwwwwwwww......sw',
+    W20
+];
+
+const riku3 = [
+    W20,
+    'wwwwwwww..s.wwwwwwww',
+    'wwwwwwww....wwwwwwww',
+    'w.....ww....ww.....w',
+    'w..................w',
+    'w.....ww....ww.....w',
+    'wwwwwwww....wwwwwwww',
+    'wwwwwwww....wwwwwwww',
+    W20
+];
+
 export const LAYER_MAPS = {
+    rikuField: {
+        id: 'rikuField', name: 'ひまわり畑', dream: 'ひまわり畑', tiles: rikuField, start: { x: 9, y: 9 }, theme: 'sun', layer: 1,
+        rooms: [
+            { name: 'しおれた壁', x: [0, 19], y: [0, 2] },
+            { name: 'まぶしい畑', x: [0, 19], y: [3, 8] },
+            { name: '畑の入口', x: [0, 19], y: [9, 10] }
+        ],
+        objects: [
+            ...entrance('rk1', [10, 9], [8, 9]),
+            resident('rk1Doll', 5, 5, 'hal-down', 'doll'),
+            foe('rk1Nanashi', 14, 6, 'nanashi'),
+            foe('rk1Suima', 4, 7, 'suima'),
+            // しおれた 壁: 調べると バクが 話す (1 周目の 最初は ナイトメアが 来る)
+            { id: 'rikuWall1', kind: 'talk', x: 9, y: 2, script: 'rikuWall', hideIf: 'rikuWall' },
+            { id: 'rikuWall2', kind: 'talk', x: 10, y: 2, script: 'rikuWall', hideIf: 'rikuWall' },
+            stairs('rk1', 10, 1, 'riku2', { x: 2, y: 2 })
+        ]
+    },
+    riku2: {
+        id: 'riku2', name: 'うつむく畑', dream: 'ひまわり畑', tiles: riku2, start: { x: 2, y: 2 }, theme: 'sun', layer: 2,
+        rooms: [
+            { name: '入口の畑', x: [0, 7], y: [0, 2] },
+            { name: '長いあぜ道', x: [0, 19], y: [3, 4] },
+            { name: '奥の畑', x: [12, 19], y: [5, 7] }
+        ],
+        objects: [
+            ...entrance('rk2', [1, 1], [2, 1]),
+            foe('rk2Nanashi', 5, 3, 'nanashi'),
+            foe('rk2Omote', 12, 4, 'omote-喜'),
+            foe('rk2Suima', 15, 5, 'suima'),
+            stairs('rk2', 18, 6, 'riku3', { x: 9, y: 7 })
+        ]
+    },
+    riku3: {
+        id: 'riku3', name: '日に焼けた道', dream: 'ひまわり畑', tiles: riku3, start: { x: 9, y: 7 }, theme: 'sun', layer: 3,
+        rooms: [
+            { name: '写真の部屋', x: [0, 7], y: [0, 8] },
+            { name: '迷いの畑', x: [12, 19], y: [0, 8] },
+            { name: '日に焼けた道', x: [8, 11], y: [0, 8] }
+        ],
+        objects: [
+            ...entrance('rk3', [10, 7], [8, 7]),
+            // 日に焼けた 写真 (小学生の ハルと リク)。裏に 吹き出し
+            { id: 'rikuPhoto', kind: 'word', x: 1, y: 3, word: '言えなかった', sprite: 'word' },
+            foe('rk3Omote', 3, 5, 'omote-喜'),
+            foe('rk3Nanashi', 17, 3, 'nanashi'),
+            foe('rk3Suima', 10, 4, 'suima'),
+            stairs('rk3', 10, 1, 'riku4', { x: 9, y: 7 })
+        ]
+    },
+    riku4: {
+        id: 'riku4', name: '畑の真ん中', dream: 'ひまわり畑', tiles: stage20, start: { x: 9, y: 7 }, theme: 'sun', layer: 4, deepest: true,
+        rooms: [
+            { name: '畑の真ん中', x: [0, 19], y: [0, 5] },
+            { name: 'ひまわりの道', x: [0, 19], y: [6, 8] }
+        ],
+        objects: [
+            ...entrance('rk4', [10, 7], [8, 7]),
+            { id: 'rikuBoss', kind: 'foe', x: 9, y: 2, foe: 'himawarion', script: 'rikuBoss' }
+        ]
+    },
     mizuzoko2: {
         id: 'mizuzoko2', name: '泡の廊下', dream: '水底の音楽室', tiles: mizuzoko2, start: { x: 2, y: 8 }, theme: 'water', layer: 2,
         rooms: [
@@ -307,5 +407,6 @@ export const LAYER_MAPS = {
 export const DREAM_LAYERS = {
     mio: ['mizuzoko', 'mizuzoko2', 'mizuzoko3', 'mizuzoko4'],
     kana: ['renshu', 'renshu2', 'renshu3', 'renshu4'],
-    duet: ['duet', 'duet2', 'duet3', 'duet4', 'duet5']
+    duet: ['duet', 'duet2', 'duet3', 'duet4', 'duet5'],
+    riku: ['rikuField', 'riku2', 'riku3', 'riku4']
 };

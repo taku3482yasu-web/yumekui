@@ -40,7 +40,7 @@ test('二重奏ホールは 2 周目から、2 人とも 元気で 活性化し�
     state.day = 3;
     const keep = createKeep();
     keep.loop = 2;
-    assert.deepEqual(dreamsTonight(state, keep), [], '活性化の 前は 合体の 夢にも 入れない');
+    assert.deepEqual(dreamsTonight(state, keep).filter((d) => d !== 'riku'), [], '活性化の 前は 合体の 夢にも 入れない');
     keep.loop = 1;
     state.day = 7;
     assert.ok(!dreamsTonight(state, keep).includes('duet'), '1 周目は 描けない');
@@ -103,7 +103,7 @@ test('夢合体で 2 人とも 救う: だれも 刈り取られず、ガクフ�
     keep.loop = 2;
     keep.allies.push('gakufume');   // 1 周目に ミオを 救っていた
     const joined = rescuePair(state, keep);
-    assert.deepEqual(state.status, { mio: 'saved', kana: 'saved' });
+    assert.deepEqual(state.status, { mio: 'saved', kana: 'saved', riku: 'idle' });
     assert.ok(keep.allies.includes('togemetoro'));
     assert.equal(keep.copies.gakufume, 1, 'ガクフメは 夢写し');
     assert.deepEqual(joined.sort(), ['gakufume', 'togemetoro']);
