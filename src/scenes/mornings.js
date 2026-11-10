@@ -2,7 +2,7 @@
 // ハルが 家の前から 坂道を 校門まで 歩く様子を 自動で 流す。途中の 3 か所 (stop) で 立ち止まり、その日の 出来事が起きる。
 // 出来事は 日付・周・夢主の状態 (救った / 喰らった / 刈り取られた) で 選ぶ。上から順に 条件に 合う 最初の 1 つ。
 // once: その周で 1 回だけ (見たら state.flags に 残す)。セリフは 口調を キャラクター設定資料集に 合わせた案
-import { PAIR, isWeekend } from '../core/days.js';
+import { PAIR } from '../core/days.js';
 
 const N = '';
 const HAL = 'ハル';
@@ -12,11 +12,8 @@ const BOY = '男子生徒';
 const NAME = { mio: 'ミオ', kana: 'カナ' };
 const other = (id) => PAIR.find((item) => item !== id);
 
-// ハルの 歩く道 (坂道と商店街の 地図の マス)。平日は 校門まで、土日は 商店街まで
-const ROUTE = {
-    weekday: [{ walk: [9, 17] }, { walk: [9, 13] }, { stop: 1 }, { walk: [9, 7] }, { stop: 2 }, { walk: [11, 3] }, { stop: 3 }, { walk: [11, 2] }],
-    weekend: [{ walk: [9, 17] }, { walk: [9, 13] }, { stop: 1 }, { walk: [9, 8] }, { stop: 2 }]
-};
+// ハルの 歩く道 (坂道と商店街の 地図の マス)。家の前から 校門まで (朝が あるのは 平日だけ。土日は 朝が 飛んで 昼から)
+const ROUTE = [{ walk: [9, 17] }, { walk: [9, 13] }, { stop: 1 }, { walk: [9, 7] }, { stop: 2 }, { walk: [11, 3] }, { stop: 3 }, { walk: [11, 2] }];
 
 // 出来事の 登場人物の 立ち位置 (stop ごと。ハルの 道の となり)
 const SPOT = {
@@ -100,10 +97,9 @@ export const MORNING_EVENTS = [
     {
         id: 'tome', stop: 2,
         when: () => true,
-        cast: (c) => cast(2, 'tome', ...(c.weekend ? ['ken'] : [])),
+        cast: () => cast(2, 'tome'),
         lines: (c) => {
             const d = c.state.day;
-            if (c.weekend) return [['トメ', 'あら、ハルちゃん。休みの日に早いねぇ。'], ['ケン', 'なあなあ、店番のバイト、ハル兄ちゃんもやる？']];
             if (d < 3) return [['トメ', 'おはよう、ハルちゃん。いってらっしゃい。車に気をつけるんだよぉ。']];
             if (d < 7) return [['トメ', 'リクちゃん、まだ目を覚まさないんだってねぇ……。'], ['トメ', 'あの子の笑い声が聞こえないと、坂が静かでいけないよ。']];
             return [['トメ', 'このごろ、眠ったまま起きない子が増えてねぇ。'], ['トメ', 'ハルちゃんも、ちゃんと寝るんだよぉ。……ちゃんと、起きるんだよぉ。']];
@@ -138,7 +134,7 @@ export const MORNING_EVENTS = [
 
 // その朝の 出来事を 選ぶ (stop ごとに 1 つ)
 export function pickMorningEvents(state, keep) {
-    const c = { state, keep, loop: keep.loop, weekend: isWeekend(state.day) };
+    const c = { state, keep, loop: keep.loop };
     const chosen = {};
     for (const event of MORNING_EVENTS) {
         if (chosen[event.stop]) continue;
@@ -151,9 +147,8 @@ export function pickMorningEvents(state, keep) {
 // ムービーの 手順 ({ walk } / { cast, say, event }) にする。出来事は 見たことにする (once)
 export function morningMovie(state, keep) {
     const { c, chosen } = pickMorningEvents(state, keep);
-    const route = c.weekend ? ROUTE.weekend : ROUTE.weekday;
     const steps = [];
-    for (const step of route) {
+    for (const step of ROUTE) {
         if (!step.stop) {
             steps.push(step);
             continue;

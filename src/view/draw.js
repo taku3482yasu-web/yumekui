@@ -42,6 +42,14 @@ const FLOORS = {
 
 function drawTile(ctx, tile, x, y, open, theme) {
     if (tile === 'w') return;
+    if (tile === 'C') {   // 崩れた階段 (夢筆で 描き直せる): 欠けた段と、すき間から 見える 空
+        ctx.fillStyle = '#3a3a78';
+        ctx.fillRect(x, y + 10, TILE, 6);
+        ctx.fillStyle = '#8895cf';
+        ctx.fillRect(x + 2, y + 12, 5, 2);
+        ctx.fillRect(x + 10, y + 13, 4, 1);
+        return;
+    }
     if (tile === 'M') {
         ctx.fillStyle = '#231f4c';
         ctx.fillRect(x, y, TILE, TILE);
@@ -125,7 +133,8 @@ function drawRealTile(ctx, tile, x, y, time) {
 const TINT = { morning: 'rgba(255, 236, 200, 0.14)', evening: 'rgba(240, 120, 60, 0.22)', night: 'rgba(16, 20, 70, 0.5)' };
 
 // actors: ムービーに 出ている 人 ({ who, x, y }。朝の 通学路など)
-export function drawField(ctx, state, walk, time, actors = []) {
+// follower: 夢の中で ハルの後ろを ついてくる バク ({ sprite, x, y, fromX, fromY })
+export function drawField(ctx, state, walk, time, actors = [], follower = null) {
     const map = MAPS[state.map];
     const rows = map.tiles.length;
     const cols = map.tiles[0].length;
@@ -148,7 +157,10 @@ export function drawField(ctx, state, walk, time, actors = []) {
     }));
     for (const object of objectsOf(state)) drawObject(ctx, object, time);
     for (const actor of actors) drawObject(ctx, { kind: 'person', x: actor.x, y: actor.y, sprite: actor.who }, time);
+    const behind = follower && follower.y <= state.y;   // バクが 上 (奥) にいるときは ハルより 先に 描く
+    if (behind) drawFollower(ctx, follower, walk, time);
     drawHal(ctx, state, px, py, walk);
+    if (follower && !behind) drawFollower(ctx, follower, walk, time);
     ctx.restore();
     const tint = map.real && (state.phase === 'night' ? TINT.night : state.phase === 'morning' ? TINT.morning : state.time === 'evening' ? TINT.evening : null);
     if (tint) {
@@ -167,6 +179,14 @@ function drawObject(ctx, object, time) {
     const bob = STILL.includes(object.kind) ? 0 : Math.round(Math.sin(time / 300 + object.x) * 1.5);
     const x = object.x * TILE + (TILE - image.width) / 2;
     const y = object.y * TILE + TILE - image.height + bob;
+    ctx.drawImage(image, Math.round(x), Math.round(y));
+}
+
+// バクは ハルが 前に いた マスへ、ハルと 同じ 速さで ついてくる
+function drawFollower(ctx, f, walk, time) {
+    const image = sprite(f.sprite);
+    const x = (f.x - (f.x - f.fromX) * walk.left) * TILE + (TILE - image.width) / 2;
+    const y = (f.y - (f.y - f.fromY) * walk.left) * TILE + TILE - image.height + Math.round(Math.sin(time / 260) * 1);
     ctx.drawImage(image, Math.round(x), Math.round(y));
 }
 

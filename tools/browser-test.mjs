@@ -96,7 +96,7 @@ async function walkTo(x, y, avoid = true, near = false) {
 const routeCode = `(tx,ty)=>{const s=yumekui.state;const t=window.__tiles(s.map);const key=(x,y)=>x+','+y;
 const prev=new Map([[key(s.x,s.y),null]]);const q=[[s.x,s.y]];const D=[['ArrowUp',0,-1],['ArrowDown',0,1],['ArrowLeft',-1,0],['ArrowRight',1,0]];
 while(q.length){const [x,y]=q.shift();if(x===tx&&y===ty){let c=key(x,y),step=null;while(prev.get(c)){step=prev.get(c)[1];c=prev.get(c)[0];}return step;}
-for(const [n,dx,dy] of D){const nx=x+dx,ny=y+dy,k=key(nx,ny);if(prev.has(k))continue;const ch=t[ny]?.[nx];if(!ch||window.__blocked(nx,ny))continue;
+for(const [n,dx,dy] of D){const nx=x+dx,ny=y+dy,k=key(nx,ny);if(prev.has(k))continue;const ch=t[ny]?.[nx];if(!ch||(window.__blocked(nx,ny)&&!(nx===tx&&ny===ty)))continue;
 const hit=window.__objects().find(o=>o.x===nx&&o.y===ny);if(hit&&!(nx===tx&&ny===ty)&&hit.kind!=='exit')continue;prev.set(k,[key(x,y),n]);q.push([nx,ny]);}}return null;}`;
 
 // 戦闘に入る 演出 (夢ごとの エフェクト) が 終わるまで 待つ。地図ごとに 1 枚 撮る
@@ -193,6 +193,13 @@ await sleep(900);
 await shot('04-battle');
 await battle(false);
 await skip();
+// 夢筆を 手に入れて、崩れた階段に 階段を 描く
+await walkTo(9, 1);
+await sleep(300);
+await shot('04b-brush-menu');
+await pick('階段');
+await skip();
+await shot('04c-stairs-painted');
 await walkTo(9, 1);
 await sleep(700);
 await skip();
@@ -228,7 +235,7 @@ await battle(true);
 await sleep(300);
 
 // 結末から 2 月 2 日へ
-const pick = async (text) => {
+async function pick(text) {
     for (let i = 0; i < 200; i++) {
         const now = await state();
         const labels = await read('[...document.querySelectorAll("#menu button")].map(b=>b.textContent)');
@@ -244,7 +251,7 @@ const pick = async (text) => {
         else await sleep(80);
     }
     throw new Error('メニューが出ない ' + text);
-};
+}
 const waitField = async () => {
     for (let i = 0; i < 200; i++) {
         const now = await state();
@@ -299,6 +306,11 @@ const goHome = async (label = '家に帰る') => {
     await waitField();
     if ((await state()).s.map === 'school') {
         await walkTo(1, 8);
+        await sleep(400);
+        await waitField();
+    }
+    if ((await state()).s.map === 'home') {   // 土日は 自分の部屋から 玄関へ
+        await walkTo(3, 8);
         await sleep(400);
         await waitField();
     }

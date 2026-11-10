@@ -15,6 +15,8 @@ import { drawBattle, drawField, drawMorning, drawShadow, drawSky } from './view/
 import { drawCalendar, drawLapse } from './view/time.js';
 import { drawEncounter, encounterTheme } from './view/encounter.js';
 import { morningMovie } from './scenes/mornings.js';
+import { canUseBrush, hasImageFor, learnImage, paint } from './core/brush.js';
+import { IMAGES, TILE_IMAGES } from './data/brush.js';
 
 const WALK_MS = 150;
 const NOTE_MS = 650;
@@ -39,6 +41,18 @@ let calendarView = null;   // カレンダーが はがれる演出
 let skipTear = false;      // チュートリアルの 結末で もう カレンダーを 見せた
 let encounter = null;      // 戦闘に入るときの 演出
 let actors = [];           // ムービーに 出ている 人 (朝の 通学路)
+const follow = { x: 0, y: 0, fromX: 0, fromY: 0 };   // 夢の中で ハルに ついてくる バクの 位置
+
+// バクを ハルの いる マスに 置き直す (夢に入ったとき・地図を 移ったとき)
+function resetFollow() {
+    Object.assign(follow, { x: state.x, y: state.y, fromX: state.x, fromY: state.y });
+}
+
+// 夢の中で、バクと 出会ったあとだけ ついてくる (現実では 姿を見せない)
+function followerView() {
+    if (MAPS[state.map].real || !state.flags.bak || mode === 'battle') return null;
+    return { ...follow, sprite: keep.growth.eaten > 0 ? 'bak-mini-wild' : 'bak-mini' };
+}
 const walk = { dx: 0, dy: 0, left: 0 };
 
 async function talk(lines) {
@@ -90,7 +104,22 @@ const SCRIPTS = {
     bak: async () => {
         await talk(LINES.bak);
         state.flags.bak = true;
+        resetFollow();
     },
+    // 夢筆で 描いたあと
+    stairsPainted: () => talk(LINES.stairsPainted),
+    pianoPainted: () => talk(LINES.pianoPainted),
+    pianoRest: async () => {
+        hp = {};
+        await talk(LINES.pianoRest);
+    },
+    metronomePainted: async () => {
+        for (const object of MAPS[state.map].objects) {
+            if (object.foe === 'hari') state.gone[object.id] = true;   // テンポが 落ちて ナナシ・ハリが 動けなくなる
+        }
+        await talk(LINES.metronomePainted);
+    },
+    metronomeLook: () => talk(LINES.metronomeLook),
     // 町
     tomeShop: () => talk(LINES.tomeShop),
     portSign: () => talk(LINES.portSign),
@@ -147,6 +176,8 @@ async function homeDoor() {
 async function touch(object) {
     if (object.kind === 'talk' || object.kind === 'door' || object.kind === 'block') await SCRIPTS[object.script]();
     if (object.kind === 'person') await talkTo(object.who);
+    if (object.kind === 'brushSpot') await useBrushAt(object);
+    if (object.kind === 'look') await lookAt(object.image);
     if (object.kind === 'canvas') await useCanvas();
     if (object.kind === 'bed') await useBed();
     if (object.kind === 'foe') await fight(object);
@@ -164,10 +195,48 @@ async function touch(object) {
     }
 }
 
+// ---- 夢筆 ----------------------------------------------------------------
+
+// 描ける場所で 夢筆を使う。現実で 見た物 (イメージ) から選ぶ。夢に 合わない物は 描けない
+async function useBrushAt(spot) {
+    if (!keep.brush) {
+        await talk(LINES.brushNone);
+        return;
+    }
+    if (!hasImageFor(keep, spot)) await talk(LINES[spot.hint]);
+    const items = keep.images.map((id) => ({ id, label: IMAGES[id].label }));
+    items.push({ id: 'cancel', label: LINES.brushCancel });
+    const id = await ui.menu(items, { head: LINES.brushHead });
+    if (id === 'cancel') return;
+    const label = IMAGES[id].label;
+    const result = paint(state, keep, spot, id);
+    if (result === 'unfit') await talk(LINES.brushUnfit(label, MAPS[state.map].dream));
+    else if (result === 'useless') await talk(LINES.brushUseless(label));
+    else {
+        await talk(LINES.brushDone(label));
+        await SCRIPTS[spot.done]();
+    }
+}
+
+// 現実で 物を 見る。初めて 見た物は、夢筆で 描けるようになる
+async function lookAt(imageId) {
+    const label = IMAGES[imageId].label;
+    await talk(learnImage(keep, imageId) ? LINES.learnImage(label) : LINES.lookAgain(label));
+}
+
+// 現実の地図で 正面の タイルを 見る (ピアノ・階段・イーゼル・手すり・坂道から 見える 海)
+function tileImage() {
+    const [dx, dy] = DIRS[state.dir];
+    const tile = tileAt(state, state.x + dx, state.y + dy);
+    if (state.map === 'saka' && tile === '=' && state.y >= 11) return 'sea';
+    return TILE_IMAGES[tile] ?? null;
+}
+
 async function enter(exit) {
     await ui.fade(true);
     const goingOut = state.phase === 'night' && state.map === 'home' && exit.to !== 'home';
     warp(state, exit);
+    resetFollow();
     hp = {};
     walk.left = 0;
     showHud();
@@ -187,7 +256,9 @@ function updateField(delta) {
     }
     const dir = input.direction();
     if (!dir) return;
+    const from = { x: state.x, y: state.y };
     const result = step(state, dir);
+    if (result.type === 'moved') Object.assign(follow, { fromX: follow.x, fromY: follow.y, x: from.x, y: from.y });
     if (result.type === 'moved' || result.type === 'exit') {
         [walk.dx, walk.dy] = DIRS[dir];
         walk.left = 1;
@@ -209,6 +280,7 @@ input.onPress((key) => {
     if (key !== 'a') return;
     const object = facing(state);
     if (object && object.kind !== 'exit') scene(() => touch(object));
+    else if (MAPS[state.map].real && tileImage()) scene(() => lookAt(tileImage()));
 });
 
 // ---- バトル ------------------------------------------------------------
@@ -335,6 +407,8 @@ async function finish(battle, object, foe) {
         state.gone.nanashi2 = true;
         state.flags.firstBattle = true;
         await talk(LINES.firstWin);
+        keep.brush = true;   // バクが 筆に 姿を変える (最初の夢で 手に入る)
+        await talk(LINES.getBrush);
     }
     if (foe.drop) {
         state.shards += foe.drop;
@@ -399,6 +473,7 @@ function explore() {
 function dream(map) {
     hp = {};
     Object.assign(state, { map, x: MAPS[map].start.x, y: MAPS[map].start.y, dir: 'up' });
+    resetFollow();
     return explore();
 }
 
@@ -530,6 +605,10 @@ async function nightPhase() {
 
 // キャンバス: だれの夢を描くか選ぶ (描く画面は 段階2 で作る)
 async function useCanvas() {
+    if (state.phase !== 'night') {
+        await talk(LINES.canvas);
+        return;
+    }
     if (state.nightOut) {
         await talk(LINES.canvasOut);
         return;
@@ -555,6 +634,10 @@ async function useCanvas() {
 }
 
 async function useBed() {
+    if (state.phase !== 'night') {
+        await talk(LINES.bed);
+        return;
+    }
     const id = await ui.menu([{ id: 'yes', label: LINES.bedYes }, { id: 'no', label: LINES.bedNo }], { head: LINES.bedHead });
     if (id !== 'yes') return;
     await talk(LINES.slept);
@@ -590,7 +673,7 @@ async function campaign() {
             if (keep.loop === 1) await talk(LINES.nextPlan);
             state = nextLoop(keep);
             await ui.fade(true);
-        } else if (next === 'morning' && !skipTear) await playCalendar(before, state.day);
+        } else if (state.day !== before && !skipTear) await playCalendar(before, state.day);   // 土日は 朝が 飛んで 昼へ
         skipTear = false;
         if (state.phase === 'morning') await morningPhase();
         else if (state.phase === 'day') await dayPhase();
@@ -602,9 +685,11 @@ async function campaign() {
 
 async function fieldMenu() {
     const items = [{ id: 'bak', label: 'バクの成長' }, { id: 'keys', label: 'ボタン設定' }, { id: 'close', label: 'とじる' }];
+    if (keep.brush) items.unshift({ id: 'brush', label: '夢筆' });
     if (keep.tutorial && MAPS[state.map].dream) items.unshift({ id: 'wake', label: '夢から覚める' });
     const id = await ui.menu(items);
     if (id === 'keys') await settings();
+    if (id === 'brush') await talk(canUseBrush(state, keep) ? LINES.brushInfo(keep.images.map((i) => IMAGES[i].label).join('、')) : LINES.brushReal);
     if (id === 'wake') wakeUp();
     if (id === 'bak') await talk(LINES.growthInfo(keep.growth, bakSkills(keep.growth).map((skill) => skill.label)));
 }
@@ -672,7 +757,7 @@ function frame(now) {
             calendarView.done();
         }
     } else if (mode === 'encounter' && encounter) {
-        drawField(ctx, state, walk, now);
+        drawField(ctx, state, walk, now, [], followerView());
         if (drawEncounter(ctx, encounter, now) && !encounter.finished) {
             encounter.finished = true;   // 真っ白の まま 止めておく (次の フェードまで)
             encounter.done();
@@ -681,7 +766,7 @@ function frame(now) {
     else if (mode === 'shadow') drawShadow(ctx, now);
     else if (mode === 'morning') drawMorning(ctx);
     else if (mode === 'title' || mode === 'opening') drawSky(ctx, now);
-    else drawField(ctx, state, walk, now, actors);
+    else drawField(ctx, state, walk, now, actors, followerView());
     requestAnimationFrame(frame);
 }
 

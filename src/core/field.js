@@ -1,13 +1,14 @@
 import { MAPS } from '../data/maps.js';
 import { present } from './town.js';
+import { paintedTile } from './brush.js';
 
 export const DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 
-// 通れない タイル。夢: 空に浮かぶ海・お面の壁 / 現実: 壁・黒板・窓・机・ピアノ・イーゼル・手すり・校庭・木・建物・屋根・のれん・柵・テーブル
-const SOLID = new Set(['w', 'M', '#', 'b', 'k', 'd', 'p', 'e', 'f', 'x', 'T', 'h', 'R', 'n', '=', 't']);
+// 通れない タイル。夢: 空に浮かぶ海・お面の壁・崩れた所 (C。夢筆で 描くと 通れる) / 現実: 壁・黒板・窓・机・ピアノ・イーゼル・手すり・校庭・木・建物・屋根・のれん・柵・テーブル
+const SOLID = new Set(['w', 'M', 'C', '#', 'b', 'k', 'd', 'p', 'e', 'f', 'x', 'T', 'h', 'R', 'n', '=', 't']);
 
 // ぶつかると 何かが起きる 物 (人・キャンバス・ベッド・看板は 調べると 起きる)
-const BUMP = ['foe', 'word', 'wake', 'door', 'block'];
+const BUMP = ['foe', 'word', 'wake', 'door', 'block', 'brushSpot'];
 
 export function createState() {
     const start = MAPS.odoriba.start;
@@ -45,7 +46,7 @@ export function placeName(state) {
 }
 
 export function tileAt(state, x, y) {
-    return MAPS[state.map].tiles[y]?.[x] ?? 'w';
+    return paintedTile(state, x, y) ?? MAPS[state.map].tiles[y]?.[x] ?? 'w';
 }
 
 export function isBlocked(state, x, y) {

@@ -20,8 +20,8 @@ function morningOf(day, setup = () => {}) {
 
 const eventsOf = (state, keep) => Object.values(pickMorningEvents(state, keep).chosen).map((e) => e.id);
 
-test('朝の ムービー: 平日は 家の前から 校門まで、土日は 商店街まで 歩く。通る道は ぜんぶ 通れる', () => {
-    for (const day of [2, 6]) {
+test('朝の ムービー: 家の前から 校門まで 歩く。通る道は ぜんぶ 通れる', () => {
+    for (const day of [2, 9]) {
         const { state, keep } = morningOf(day);
         const steps = morningMovie(state, keep);
         let { x, y } = MORNING_START;
@@ -33,8 +33,8 @@ test('朝の ムービー: 平日は 家の前から 校門まで、土日は �
                 assert.ok(!isBlocked(state, x, y), `${day} 日: ${x},${y} は 通れない`);
             }
         }
-        assert.deepEqual([x, y], day === 6 ? [9, 8] : [11, 2], day === 6 ? '土日は 商店街まで' : '平日は 校門まで');
-        assert.equal(steps.filter((s) => s.say).length, day === 6 ? 2 : 3);
+        assert.deepEqual([x, y], [11, 2], '校門まで');
+        assert.equal(steps.filter((s) => s.say).length, 3);
     }
 });
 
@@ -52,7 +52,7 @@ test('出来事の 人は ハルの 歩く道に 立っていない', () => {
         }
     }
     for (const event of MORNING_EVENTS) {
-        const c = { state, keep, loop: 1, weekend: false };
+        const c = { state, keep, loop: 1 };
         for (const a of event.cast(c).filter((a) => a.who)) {
             assert.ok(!path.has(`${a.x},${a.y}`), `${event.id} の ${a.who}`);
             assert.ok(!isBlocked({ ...state, map: 'saka' }, a.x, a.y), `${event.id} の ${a.who} が 壁の中`);
@@ -105,7 +105,7 @@ test('相性の ヒント: ガクフメだけ 仲間なら カナ (怒) は 喜�
 test('どの出来事にも セリフと 登場人物の 絵がある', () => {
     const { state, keep } = morningOf(4);
     for (const event of MORNING_EVENTS) {
-        const c = { state, keep, loop: 2, weekend: false };
+        const c = { state, keep, loop: 2 };
         assert.ok(event.lines(c).length > 0, event.id);
     }
     assert.ok(Array.isArray(LINES.enterSchool));
@@ -116,7 +116,7 @@ test('出来事に 出る人には みんな ドット絵がある', async () =>
     const { state, keep } = morningOf(4, (s) => { s.status.kana = 'eaten'; });
     for (const event of MORNING_EVENTS) {
         for (const loop of [1, 2]) {
-            for (const a of event.cast({ state, keep, loop, weekend: true }).filter((a) => a.who)) {
+            for (const a of event.cast({ state, keep, loop }).filter((a) => a.who)) {
                 assert.ok(PERSON_IDS.includes(a.who), `${event.id} の ${a.who}`);
             }
         }

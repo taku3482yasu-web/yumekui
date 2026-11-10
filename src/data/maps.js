@@ -1,9 +1,9 @@
 import { TOWN_MAPS } from './town.js';
 
-// ハルの夢『顔色の坂道』。w = 空に浮かぶ海 / M = お面の壁 / . = 坂 / s = 階段 / G = 閉じた門
+// ハルの夢『顔色の坂道』。w = 空に浮かぶ海 / M = お面の壁 / . = 坂 / s = 階段 / G = 閉じた門 / C = 崩れた所 (夢筆で 描ける)
 const odoriba = [
     'wwwwwwwwwwwwwwwwwwww',
-    'wwwwwwwwwsswwwwwwwww',
+    'wwwwwwwwwCCwwwwwwwww',
     'wwwwwwww....wwwwwwww',
     'wwwww..........wwwww',
     'wwww............wwww',
@@ -79,6 +79,9 @@ export const MAPS = {
             { id: 'blanket', kind: 'talk', x: 9, y: 4, sprite: 'blanket', script: 'bak', hideIf: 'bak' },
             { id: 'nanashi1', kind: 'foe', x: 9, y: 2, foe: 'nanashi', needs: 'bak', script: 'firstBattle' },
             { id: 'nanashi2', kind: 'foe', x: 10, y: 2, foe: 'nanashi', needs: 'bak', script: 'firstBattle' },
+            // 崩れた階段: 夢筆で 階段を 描くと 上れる (夢筆の 使い方を 覚える場所)
+            { id: 'stairSpot1', kind: 'brushSpot', group: 'odoribaStairs', x: 9, y: 1, sprite: 'brushMark', accepts: ['stairs'], paint: [[9, 1, 's'], [10, 1, 's']], hideIf: 'painted_odoribaStairs', done: 'stairsPainted', hint: 'brushHintStairs' },
+            { id: 'stairSpot2', kind: 'brushSpot', group: 'odoribaStairs', x: 10, y: 1, sprite: 'brushMark', accepts: ['stairs'], paint: [[9, 1, 's'], [10, 1, 's']], hideIf: 'painted_odoribaStairs', done: 'stairsPainted', hint: 'brushHintStairs' },
             { id: 'toOmen', kind: 'exit', x: 9, y: 1, to: 'omen', at: { x: 2, y: 5 } },
             { id: 'toOmen2', kind: 'exit', x: 10, y: 1, to: 'omen', at: { x: 2, y: 5 } }
         ]
@@ -112,6 +115,9 @@ export const MAPS = {
         id: 'mizuzoko', name: '水底の音楽室', dream: '水底の音楽室', tiles: mizuzoko, start: { x: 9, y: 9 }, theme: 'water',
         objects: [
             { id: 'mioWake', kind: 'wake', x: 10, y: 9, sprite: 'wakeDoor' },
+            // 夢筆で ピアノを 描くと、弾いて 体力が 回復する
+            { id: 'pianoSpot', kind: 'brushSpot', x: 8, y: 9, sprite: 'brushMark', accepts: ['piano'], hideIf: 'painted_pianoSpot', done: 'pianoPainted', hint: 'brushHintPiano' },
+            { id: 'dreamPiano', kind: 'talk', x: 8, y: 9, sprite: 'piano', script: 'pianoRest', needs: 'painted_pianoSpot' },
             { id: 'mioOnpu1', kind: 'foe', x: 9, y: 7, foe: 'onpu' },
             { id: 'mioSuima', kind: 'foe', x: 15, y: 4, foe: 'suima' },
             { id: 'mioOnpu2', kind: 'foe', x: 4, y: 4, foe: 'onpu' },
@@ -123,6 +129,9 @@ export const MAPS = {
         id: 'renshu', name: '止まらない練習室', dream: '止まらない練習室', tiles: renshu, start: { x: 2, y: 8 }, theme: 'tempo',
         objects: [
             { id: 'kanaWake', kind: 'wake', x: 3, y: 9, sprite: 'wakeDoor' },
+            // 夢筆で メトロノームを 描くと、テンポが ゆっくりになり ナナシ・ハリが 動けなくなる
+            { id: 'metronomeSpot', kind: 'brushSpot', x: 2, y: 9, sprite: 'brushMark', accepts: ['metronome'], hideIf: 'painted_metronomeSpot', done: 'metronomePainted', hint: 'brushHintMetronome' },
+            { id: 'dreamMetronome', kind: 'talk', x: 2, y: 9, sprite: 'metronome', script: 'metronomeLook', needs: 'painted_metronomeSpot' },
             { id: 'kanaHari1', kind: 'foe', x: 6, y: 8, foe: 'hari' },
             { id: 'kanaHari2', kind: 'foe', x: 4, y: 5, foe: 'hari' },
             { id: 'kanaSuima', kind: 'foe', x: 17, y: 5, foe: 'suima' },

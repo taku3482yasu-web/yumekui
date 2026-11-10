@@ -93,6 +93,7 @@ export const TOWN_MAPS = {
             person('aki', 'aki', 10, 8),
             person('student', 'student', 20, 9),
             person('mio', 'mio', 18, 4),
+            { id: 'metronome', kind: 'look', x: 20, y: 3, sprite: 'metronome', image: 'metronome' },
             person('sora', 'sora', 27, 4),
             person('kana', 'kana', 42, 8)
         ]

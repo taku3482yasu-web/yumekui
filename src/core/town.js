@@ -43,7 +43,7 @@ export function timeLabel(state) {
     return isWeekend(state.day) ? '昼' : '放課後';
 }
 
-// 放課後 (土日は 昼) の はじまり。平日は 教室から、土日は 家の前から
+// 放課後 (土日は 昼) の はじまり。平日は 教室から、土日は 自分の部屋から
 export function startDay(state) {
     state.time = 'day';
     state.talkedToday = false;
@@ -51,7 +51,7 @@ export function startDay(state) {
     Object.assign(state, { map: at.map, x: at.x, y: at.y, dir: at.dir });
 }
 
-// 朝の はじまり: 家の前。ここから 通学路の ムービー (平日は 校門まで、土日は 商店街まで) が 流れる
+// 朝の はじまり (平日だけ): 家の前。ここから 通学路の ムービーで 校門まで 歩く
 export function startMorning(state) {
     state.time = 'day';
     Object.assign(state, MORNING_START);
@@ -72,7 +72,7 @@ export function timesBetween(from, to, weekend = false) {
 
 export const TOWN_START = {
     weekday: { map: 'school', x: 3, y: 6, dir: 'down' },
-    weekend: { map: 'saka', x: 6, y: 17, dir: 'up' }
+    weekend: { map: 'home', x: 12, y: 5, dir: 'down' }   // 土日は 昼に 自分の部屋から。玄関から 外へ
 };
 
 // 夜 (キャンバスの前)

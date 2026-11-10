@@ -77,10 +77,15 @@ test('放課後: 教室から 学校・商店街の 人と 家の玄関に 歩�
     }
 });
 
-test('土日は 家の前から始まり、学校の ミオにも 届く', () => {
-    const state = dayState(6);
+test('土日は 朝が 飛んで 昼に 自分の部屋から 始まり、玄関から出て 学校の ミオにも 届く', async () => {
+    const { advance } = await import('../src/core/calendar.js');
+    const state = dayState(5);
+    state.phase = 'night';
+    assert.equal(advance(state), 'day', '金曜の夜の 次は 土曜の 昼');
+    assert.equal(state.day, 6);
     startDay(state);
-    assert.equal(state.map, 'saka');
+    assert.equal(state.map, 'home');
+    assert.equal(placeName(state), 'ハルの部屋');
     assert.equal(timeLabel(state), '昼');
     const seen = reachable(state, TOWN_START.weekend);
     state.map = 'school';

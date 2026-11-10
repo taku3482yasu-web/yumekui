@@ -208,6 +208,76 @@ const ART = {
         '................',
         '................'
     ],
+    // フィールドで ハルに ついて歩く 小さな バク (手のひらサイズ)
+    'bak-mini': [
+        '......bbb...',
+        '....bbcbbkk.',
+        '...bbbbbkmmk',
+        '..bbybbbkmek',
+        '..bbbbbkmmmk',
+        '..kmmbbkmmpk',
+        '.kmmmmkmmppk',
+        '.kmmmmmmmkk.',
+        '..kmkkkmk...',
+        '..kk...kk...'
+    ],
+    // 夢筆で 描ける場所: ぼんやり光る 筆あと
+    brushMark: [
+        '................',
+        '................',
+        '.......c........',
+        '......ccc.......',
+        '.....cfyfc......',
+        '....cfyyyfc.....',
+        '...cfyyfyyfc....',
+        '....cfyyyfc.....',
+        '.....cfyfc......',
+        '......ccc.......',
+        '.......c........',
+        '..c..........c..',
+        '................',
+        '.....c....c.....',
+        '................',
+        '................'
+    ],
+    // 夢筆で 描いた ピアノ (夢の色)
+    piano: [
+        '................',
+        '................',
+        '..kkkkkkkkkkkk..',
+        '..kbbbbbbbbbbk..',
+        '..kbbbbbbbbbbk..',
+        '.kkkkkkkkkkkkkk.',
+        '.kffkffkffkffk..',
+        '.kffkffkffkffk..',
+        '.kffffffffffffk.',
+        '.kkkkkkkkkkkkkk.',
+        '..kb........bk..',
+        '..kb........bk..',
+        '..kb........bk..',
+        '..kk........kk..',
+        '................',
+        '................'
+    ],
+    // メトロノーム (現実の 音楽室にも、描いた夢の中にも)
+    metronome: [
+        '................',
+        '.......kk.......',
+        '.......kk.......',
+        '......kaak......',
+        '......kalk......',
+        '.....kaakak.....',
+        '.....kaakaak....',
+        '....kaaakaak....',
+        '....kaaalaak....',
+        '...kaaaakaaak...',
+        '...kaaaakaaak...',
+        '..kaaaaaaaaaak..',
+        '..kzzzzzzzzzzk..',
+        '..kkkkkkkkkkkk..',
+        '................',
+        '................'
+    ],
     sign: [
         '................',
         '................',
@@ -486,8 +556,8 @@ function schoolArt(size) {
 }
 
 // 喰らうほど 毛布は黒ずみ、目が赤くなる
-function wildRows() {
-    return ART.bak.map((row) => row.replaceAll('b', 'k').replaceAll('c', 'g').replaceAll('y', 'r').replaceAll('e', 'r'));
+function wildRows(rows = ART.bak) {
+    return rows.map((row) => row.replaceAll('b', 'k').replaceAll('c', 'g').replaceAll('y', 'r').replaceAll('e', 'r'));
 }
 
 export function sprite(name) {
@@ -497,6 +567,7 @@ export function sprite(name) {
     else if (name === 'muresuima') canvas = schoolArt(64);
     else if (name === 'muresuima-map') canvas = schoolArt(32);
     else if (name === 'bak-wild') canvas = paint(wildRows());
+    else if (name === 'bak-mini-wild') canvas = paint(wildRows(ART['bak-mini']));
     else if (PEOPLE[name]) canvas = personArt(name);
     else if (ROOM_ART[name]) canvas = paint(ROOM_ART[name]);
     else canvas = paint(ART[name]);

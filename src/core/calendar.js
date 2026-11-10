@@ -1,13 +1,14 @@
 import { createState } from './field.js';
+import { FIRST_IMAGES } from '../data/brush.js';
 import { grow } from './growth.js';
 
-import { ACTIVE_DAY, LAST_DAY, LAST_RESCUE_DAY, OPEN_DAY, PAIR } from './days.js';
+import { ACTIVE_DAY, LAST_DAY, LAST_RESCUE_DAY, OPEN_DAY, PAIR, isWeekend } from './days.js';
 
 export { ACTIVE_DAY, LAST_DAY, LAST_RESCUE_DAY, OPEN_DAY, PAIR, dateLabel } from './days.js';
 
 // ループしても残るもの
 export function createKeep() {
-    return { loop: 1, allies: ['bak'], solved: [], copies: {}, tutorial: false, growth: { saved: 0, eaten: 0 }, eaten: [], canvasTold: false };
+    return { loop: 1, allies: ['bak'], solved: [], copies: {}, tutorial: false, growth: { saved: 0, eaten: 0 }, eaten: [], canvasTold: false, brush: false, images: [...FIRST_IMAGES] };
 }
 
 export function canTalk(state, id) {
@@ -41,7 +42,7 @@ export function devour(state, keep, id) {
     return { other };
 }
 
-// 1 日は 朝 → 放課後 (土日は昼) → 夜。夜が明けると 次の日の朝
+// 1 日は 朝 → 放課後 → 夜。夜が明けると 次の日の朝。土日は 朝が 飛んで 昼 (家にいる) から
 export function advance(state) {
     if (state.phase === 'morning') {
         state.phase = 'day';
@@ -57,9 +58,9 @@ export function advance(state) {
         }
     }
     state.day++;
-    state.phase = 'morning';
+    state.phase = isWeekend(state.day) ? 'day' : 'morning';
     if (state.day >= ACTIVE_DAY) state.flags.active = true;
-    return state.day > LAST_DAY ? 'loop' : 'morning';
+    return state.day > LAST_DAY ? 'loop' : state.phase;
 }
 
 // 2 月 1 日の朝 (自分のベッドで目を覚ます) へ戻る。プロローグとハルの夢は くり返さない (仕様書「ループで残るもの・消えるもの」)
