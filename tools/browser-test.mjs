@@ -99,7 +99,20 @@ while(q.length){const [x,y]=q.shift();if(x===tx&&y===ty){let c=key(x,y),step=nul
 for(const [n,dx,dy] of D){const nx=x+dx,ny=y+dy,k=key(nx,ny);if(prev.has(k))continue;const ch=t[ny]?.[nx];if(!ch||window.__blocked(nx,ny))continue;
 const hit=window.__objects().find(o=>o.x===nx&&o.y===ny);if(hit&&!(nx===tx&&ny===ty)&&hit.kind!=='exit')continue;prev.set(k,[key(x,y),n]);q.push([nx,ny]);}}return null;}`;
 
+// 戦闘に入る 演出 (夢ごとの エフェクト) が 終わるまで 待つ。地図ごとに 1 枚 撮る
+const encounterShots = new Set();
 async function battle(useShake, eat = false) {
+    for (let i = 0; i < 100; i++) {
+        const now = await state();
+        if (now.m === 'battle') break;
+        if (now.m === 'encounter' && !encounterShots.has(now.s.map)) {
+            encounterShots.add(now.s.map);
+            await sleep(450);
+            await shot(`09-encounter-${now.s.map}`);
+        }
+        if (now.msg) await key('j');
+        await sleep(60);
+    }
     let turn = 0;
     for (let i = 0; i < 400; i++) {
         const now = await state();
@@ -254,13 +267,16 @@ const night = async (label) => {
     await sleep(200);
     await pick(label);
 };
-// 朝: 通学路を 校門まで歩く (土日は 部屋から 玄関へ)。時間の演出が 終わって 放課後に なるまで 待つ
+// 朝: 通学路の ムービーを 送る (会話だけ 進める)。時間の演出が 終わって 放課後に なるまで 待つ
 const morning = async () => {
-    await waitField();
-    const now = await state();
-    if (now.s.phase !== 'morning') return;
-    await walkTo(...(now.s.map === 'home' ? [3, 8] : [11, 1]));
-    for (let i = 0; i < 300; i++) {
+    for (let i = 0; i < 200; i++) {
+        const now = await state();
+        if (now.s.phase === 'morning' || (now.m === 'field' && !now.msg)) break;
+        if (now.msg) await key('j');
+        else await sleep(80);
+    }
+    if ((await state()).s.phase !== 'morning') return;
+    for (let i = 0; i < 600; i++) {
         const next = await state();
         if (next.s.phase === 'day' && next.m === 'field' && !next.msg) return;
         if (next.msg) await key('j');
@@ -307,15 +323,22 @@ for (let i = 0; i < 200 && (await read('yumekui.mode')) !== 'calendar'; i++) {
 }
 await sleep(1100);
 await shot('11b-calendar');
-// 朝の 通学路: 生徒の 会話 (ヒント) を聞いて、校門へ
-await waitField();
-await shot('11c-commute');
-await walkTo(13, 5, true, true);
-await key('j');
-await sleep(900);
-await shot('11d-commute-hint');
-await skip();
-await walkTo(11, 1);
+// 朝の 通学路の ムービー: 歩く様子と、途中の 出来事 (リクと歩く・生徒の 会話)
+for (let i = 0; i < 200 && (await read('yumekui.mode')) !== 'movie'; i++) {
+    if ((await state()).msg) await key('j');
+    else await sleep(60);
+}
+await sleep(600);
+await shot('11c-movie-walk');
+for (let n = 1; n <= 3; n++) {
+    for (let i = 0; i < 200 && !(await state()).msg; i++) await sleep(60);
+    await sleep(500);
+    await shot(`11d-movie-event${n}`);
+    for (let i = 0; i < 100 && (await state()).msg; i++) {
+        await key('j');
+        await sleep(80);
+    }
+}
 for (let i = 0; i < 200 && (await read('yumekui.mode')) !== 'lapse'; i++) {
     if ((await state()).msg) await key('j');
     else await sleep(60);
@@ -385,7 +408,7 @@ console.log('ボス戦のあと: 解決', JSON.stringify(await read('yumekui.kee
 await shot('14-after-rescue');
 const rescued = await state();
 console.log('仲間', JSON.stringify(await read('yumekui.keep.allies')), '状態', JSON.stringify(rescued.s.status));
-for (let i = 0; i < 120; i++) {
+for (let i = 0; i < 600; i++) {
     const now = await state();
     if ((await read('yumekui.keep.loop')) === 2) break;
     const labels = await read('[...document.querySelectorAll("#menu button")].map(b=>b.textContent)');

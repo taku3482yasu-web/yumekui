@@ -124,7 +124,8 @@ function drawRealTile(ctx, tile, x, y, time) {
 // 時間帯の色: 朝は 淡い光、夕方は 橙、夜は 紺 (町は 暖かい色のまま、上から 重ねる)
 const TINT = { morning: 'rgba(255, 236, 200, 0.14)', evening: 'rgba(240, 120, 60, 0.22)', night: 'rgba(16, 20, 70, 0.5)' };
 
-export function drawField(ctx, state, walk, time) {
+// actors: ムービーに 出ている 人 ({ who, x, y }。朝の 通学路など)
+export function drawField(ctx, state, walk, time, actors = []) {
     const map = MAPS[state.map];
     const rows = map.tiles.length;
     const cols = map.tiles[0].length;
@@ -146,6 +147,7 @@ export function drawField(ctx, state, walk, time) {
         else drawTile(ctx, tile, x * TILE, y * TILE, state.flags.gateOpen, map.theme);
     }));
     for (const object of objectsOf(state)) drawObject(ctx, object, time);
+    for (const actor of actors) drawObject(ctx, { kind: 'person', x: actor.x, y: actor.y, sprite: actor.who }, time);
     drawHal(ctx, state, px, py, walk);
     ctx.restore();
     const tint = map.real && (state.phase === 'night' ? TINT.night : state.phase === 'morning' ? TINT.morning : state.time === 'evening' ? TINT.evening : null);

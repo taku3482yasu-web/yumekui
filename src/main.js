@@ -13,6 +13,8 @@ import { createInput } from './view/input.js';
 import { createUi } from './view/ui.js';
 import { drawBattle, drawField, drawMorning, drawShadow, drawSky } from './view/draw.js';
 import { drawCalendar, drawLapse } from './view/time.js';
+import { drawEncounter, encounterTheme } from './view/encounter.js';
+import { morningMovie } from './scenes/mornings.js';
 
 const WALK_MS = 150;
 const NOTE_MS = 650;
@@ -35,6 +37,8 @@ let battleView = null;
 let lapse = null;          // 時間が過ぎていく演出
 let calendarView = null;   // カレンダーが はがれる演出
 let skipTear = false;      // チュートリアルの 結末で もう カレンダーを 見せた
+let encounter = null;      // 戦闘に入るときの 演出
+let actors = [];           // ムービーに 出ている 人 (朝の 通学路)
 const walk = { dx: 0, dy: 0, left: 0 };
 
 async function talk(lines) {
@@ -93,11 +97,6 @@ const SCRIPTS = {
     rikuRoad: () => talk(LINES.rikuRoad(state)),
     rikuDoor: () => talk(LINES.rikuDoor),
     schoolClosed: () => talk(LINES.schoolClosed),
-    enterSchool: async () => {
-        await talk(LINES.enterSchool);
-        wakeUp('school');
-    },
-    leaveHome: async () => wakeUp('out'),
     goHome: homeDoor
 };
 
@@ -132,10 +131,6 @@ async function deepTalkTo(who) {
 
 // 家の玄関: 入ると その日は おしまい (夜になる)。夜の町からは 帰って寝る
 async function homeDoor() {
-    if (state.phase === 'morning') {
-        await talk(LINES.morningHome);
-        return;
-    }
     if (state.phase === 'night') {
         const id = await ui.menu([{ id: 'yes', label: LINES.nightHomeYes }, { id: 'no', label: LINES.nightHomeNo }], { head: LINES.nightHomeHead });
         if (id === 'yes') wakeUp('sleep');
@@ -225,6 +220,7 @@ async function fight(object) {
 
     const foe = FOES[object.foe];
     const battle = createBattle(partyUnits(), foe);
+    await playEncounter(encounterTheme(MAPS[state.map]), Boolean(foe.truth));
     await ui.fade(true);
     mode = 'battle';
     battleView = { foe: foe.sprite, ally: battle.ally.sprite, foeHit: 0, allyHit: 0, pops: [] };
@@ -433,25 +429,63 @@ async function playCalendar(from, to) {
     await ui.fade(true);
 }
 
-// 朝: 平日は 家の前から 通学路 (坂道) を 校門まで歩く。通学路では 生徒の 会話から ヒントが 聞ける。
-//   校門に入ると 朝の ホームルームの 出来事 → 時間が 放課後まで 進む。土日は 部屋から 出かけると 昼になる
+// 戦闘に入るときの 演出 (その夢に 合わせた エフェクト)
+function playEncounter(theme, boss) {
+    ui.hideMsg();
+    return new Promise((resolve) => {
+        encounter = { theme, boss, start: performance.now(), done: resolve };
+        mode = 'encounter';
+    });
+}
+
+// ---- 朝の 通学路の ムービー ------------------------------------------------
+
+const MOVIE_STEP_MS = 190;
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// ハルを 1 マスずつ 自動で 歩かせる (横に そろえてから 縦)
+async function autoWalk([tx, ty]) {
+    while (state.x !== tx || state.y !== ty) {
+        const dx = Math.sign(tx - state.x);
+        const dy = dx ? 0 : Math.sign(ty - state.y);
+        state.dir = dx > 0 ? 'right' : dx < 0 ? 'left' : dy > 0 ? 'down' : 'up';
+        state.x += dx;
+        state.y += dy;
+        [walk.dx, walk.dy] = [dx, dy];
+        walk.left = 1;
+        showHud();
+        await sleep(MOVIE_STEP_MS);
+    }
+}
+
+// 手順 ({ walk: [x, y] } / { cast, say }) を 順に 流す。出来事の 人は 話し終わると 去る
+async function playMovie(steps) {
+    mode = 'movie';
+    for (const step of steps) {
+        if (step.walk) await autoWalk(step.walk);
+        if (step.say) {
+            actors = step.cast;
+            await sleep(250);
+            await talk(step.say);
+            actors = [];
+        }
+    }
+}
+
+// 朝: ハルが 通学路 (坂道) を 歩く様子を ムービーで 流す。出てくる人と 話 (ヒント) は 日付・周・救った人で 変わる。
+//   平日は 校門まで 歩いて 朝の ホームルームの 出来事 → 時間が 放課後まで 進む。土日は 商店街まで 歩くと 昼になる
 async function morningPhase() {
     startMorning(state);
     const weekend = isWeekend(state.day);
-    const done = explore();
-    mode = 'scene';
+    mode = 'movie';
+    showHud();
     await ui.fade(false);
-    await scene(async () => {
-        if (LINES.morningEvent[state.day] && !state.flags[`morning${state.day}`]) {
-            state.flags[`morning${state.day}`] = true;
-            await talk(LINES.morningEvent[state.day]);
-        }
-        if (!weekend && !keep.commuteTold) {
-            keep.commuteTold = true;
-            await talk(LINES.morningHint);
-        }
-    });
-    await done;
+    if (LINES.morningEvent[state.day] && !state.flags[`morning${state.day}`]) {
+        state.flags[`morning${state.day}`] = true;
+        await talk(LINES.morningEvent[state.day]);
+    }
+    await playMovie(morningMovie(state, keep));
+    if (!weekend) await talk(LINES.enterSchool);
     if (!weekend && LINES.homeroom[state.day] && !state.flags[`homeroom${state.day}`]) {
         state.flags[`homeroom${state.day}`] = true;
         await ui.fade(true);
@@ -637,11 +671,17 @@ function frame(now) {
             calendarView.finished = true;
             calendarView.done();
         }
+    } else if (mode === 'encounter' && encounter) {
+        drawField(ctx, state, walk, now);
+        if (drawEncounter(ctx, encounter, now) && !encounter.finished) {
+            encounter.finished = true;   // 真っ白の まま 止めておく (次の フェードまで)
+            encounter.done();
+        }
     } else if (mode === 'battle' && battleView) drawBattle(ctx, battleView, now);
     else if (mode === 'shadow') drawShadow(ctx, now);
     else if (mode === 'morning') drawMorning(ctx);
     else if (mode === 'title' || mode === 'opening') drawSky(ctx, now);
-    else drawField(ctx, state, walk, now);
+    else drawField(ctx, state, walk, now, actors);
     requestAnimationFrame(frame);
 }
 

@@ -105,14 +105,6 @@ export const TOWN_MAPS = {
             { name: '坂道', x: [0, 23], y: [10, 18] }
         ],
         objects: [
-            // 朝: 校門に入ると 学校へ (時間が 放課後まで 進む)。通学路で 生徒の 2 人組が 話している
-            { id: 'schoolGate1', kind: 'door', x: 11, y: 1, script: 'enterSchool', phase: 'morning' },
-            { id: 'schoolGate2', kind: 'door', x: 12, y: 1, script: 'enterSchool', phase: 'morning' },
-            { ...person('commuterA', 'commuterA', 10, 12), phase: 'morning', pair: 'gossip' },
-            { ...person('commuterB', 'commuterB', 11, 12), phase: 'morning', pair: 'gossip' },
-            { ...person('commuterC', 'commuterC', 13, 5), phase: 'morning', pair: 'hint' },
-            { ...person('commuterD', 'commuterD', 14, 5), phase: 'morning', pair: 'hint' },
-            { ...person('rikuMorning', 'riku', 8, 16), phase: 'morning' },
             { id: 'schoolClosed1', kind: 'block', x: 11, y: 1, script: 'schoolClosed', night: true },
             { id: 'schoolClosed2', kind: 'block', x: 12, y: 1, script: 'schoolClosed', night: true },
             { id: 'toSchool1', kind: 'exit', x: 11, y: 1, to: 'school', at: { x: 2, y: 8 } },
@@ -144,7 +136,6 @@ export const TOWN_MAPS = {
             { name: 'ハルの部屋', x: [7, 15], y: [0, 8] }
         ],
         objects: [
-            { id: 'leaveHome', kind: 'door', x: 3, y: 8, script: 'leaveHome', phase: 'morning' },
             { id: 'toTown', kind: 'exit', x: 3, y: 8, to: 'saka', at: { x: 4, y: 17 } },
             person('father', 'father', 4, 3),
             { id: 'canvas', kind: 'canvas', x: 13, y: 3, sprite: 'canvas' },

@@ -5,12 +5,10 @@
 import { ACTIVE_DAY, PAIR, RIKU_DOWN_DAY, isWeekend } from './days.js';
 
 // その人が 今 町にいるか。夜の町には 人がいない (父は 家にいる)。
-//   朝の 通学路には 通学する生徒と リク (2 日まで)・店を開ける トメだけ。学校の人は 放課後に 学校にいる
-const MORNING = ['tome', 'father', 'riku', 'commuterA', 'commuterB', 'commuterC', 'commuterD'];
-
+//   朝は 通学路の ムービー (scenes/mornings.js) で その日の 人だけを 出すので、地図の 人は 出さない
 export function present(state, who) {
     if (state.phase === 'night') return who === 'father';
-    if (state.phase === 'morning' && !MORNING.includes(who)) return false;
+    if (state.phase === 'morning') return false;
     if (who === 'riku') return state.day < RIKU_DOWN_DAY;                    // 3 日の朝から 目を覚まさない
     if (PAIR.includes(who)) {
         const status = state.status[who];
@@ -53,17 +51,13 @@ export function startDay(state) {
     Object.assign(state, { map: at.map, x: at.x, y: at.y, dir: at.dir });
 }
 
-// 朝の はじまり。平日は 家の前から 通学路 (坂道) を 校門まで 歩く。土日は 自分の部屋から
+// 朝の はじまり: 家の前。ここから 通学路の ムービー (平日は 校門まで、土日は 商店街まで) が 流れる
 export function startMorning(state) {
     state.time = 'day';
-    const at = isWeekend(state.day) ? MORNING_START.weekend : MORNING_START.weekday;
-    Object.assign(state, { map: at.map, x: at.x, y: at.y, dir: at.dir });
+    Object.assign(state, MORNING_START);
 }
 
-export const MORNING_START = {
-    weekday: { map: 'saka', x: 4, y: 17, dir: 'right' },
-    weekend: { map: 'home', x: 12, y: 5, dir: 'down' }
-};
+export const MORNING_START = { map: 'saka', x: 4, y: 17, dir: 'right' };
 
 // 1 日の 時間の流れ (時間が過ぎていく演出で 見せる 順番)
 export const TIMES = ['朝', '昼', '放課後', '夕方', '夜'];
