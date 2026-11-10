@@ -21,7 +21,7 @@ export const ALLIES = {
 
 const mask = (attr, label) => ({
     id: `omote-${attr}`, name: `ナナシ・オモテ（${label}）`, attr, sprite: `omote-${attr}`,
-    hp: 26, maxHp: 26, atk: 10, def: 4, spd: 6
+    hp: 26, maxHp: 26, atk: 10, def: 4, spd: 6, exp: 9
 });
 
 // 夢主の 本音 (単独の夢の ボスと、二重奏ホールの デュエットで 同じ)
@@ -40,24 +40,25 @@ const TRUTH = {
     }
 };
 
+// exp: 倒したときの 経験値 (仕様書「経験値とレベル」。合体ボス デュエットは 2 羽で 250)
 export const FOES = {
-    nanashi: { id: 'nanashi', name: 'ナナシ', attr: '喜', sprite: 'nanashi', hp: 20, maxHp: 20, atk: 8, def: 4, spd: 6 },
+    nanashi: { id: 'nanashi', name: 'ナナシ', attr: '喜', sprite: 'nanashi', hp: 20, maxHp: 20, atk: 8, def: 4, spd: 6, exp: 6 },
     'omote-喜': mask('喜', '笑い顔'),
     'omote-怒': mask('怒', '怒り顔'),
     'omote-哀': mask('哀', '泣き顔'),
     'omote-楽': mask('楽', 'ゆるみ顔'),
-    onpu: { id: 'onpu', name: 'ナナシ・オンプ', attr: '哀', sprite: 'onpu', hp: 24, maxHp: 24, atk: 9, def: 4, spd: 7 },
-    hari: { id: 'hari', name: 'ナナシ・ハリ', attr: '怒', sprite: 'hari', hp: 24, maxHp: 24, atk: 10, def: 4, spd: 7 },
+    onpu: { id: 'onpu', name: 'ナナシ・オンプ', attr: '哀', sprite: 'onpu', hp: 24, maxHp: 24, atk: 9, def: 4, spd: 7, exp: 9 },
+    hari: { id: 'hari', name: 'ナナシ・ハリ', attr: '怒', sprite: 'hari', hp: 24, maxHp: 24, atk: 10, def: 4, spd: 7, exp: 9 },
     gakufume: {
         id: 'gakufume', name: 'ガクフメ', attr: '哀', sprite: 'gakufume', dream: 'mio', ally: 'gakufume',
-        hp: 110, maxHp: 110, atk: 11, def: 6, spd: 9,
+        hp: 110, maxHp: 110, atk: 11, def: 6, spd: 9, exp: 120,
         pattern: ['tackle', 'tackle', 'charge', 'swirl'],
         chargeText: 'ガクフメが 高い音を ためている……！', bigMove: '止まらないソロ',
         truth: TRUTH.mio
     },
     togemetoro: {
         id: 'togemetoro', name: 'トゲメトロ', attr: '怒', sprite: 'togemetoro', dream: 'kana', ally: 'togemetoro',
-        hp: 110, maxHp: 110, atk: 13, def: 6, spd: 10,
+        hp: 110, maxHp: 110, atk: 13, def: 6, spd: 10, exp: 120,
         pattern: ['tackle', 'tackle', 'charge', 'swirl'],
         chargeText: 'トゲメトロの テンポが 速くなっていく……！', bigMove: 'せかすリズム',
         truth: TRUTH.kana
@@ -65,7 +66,7 @@ export const FOES = {
     // 二重奏ホール (ミオ×カナの 夢合体)。中ボスの ムレスイマは 行動のたびに 哀 ↔ 怒
     duetSuima: {
         id: 'duetSuima', name: 'ムレスイマ', attr: '哀', sprite: 'muresuima', attrCycle: ['哀', '怒'],
-        hp: 90, maxHp: 90, atk: 12, def: 5, spd: 8, drop: 1,
+        hp: 90, maxHp: 90, atk: 12, def: 5, spd: 8, drop: 1, exp: 80,
         pattern: ['tackle', 'tackle', 'charge', 'swirl'], chargeText: 'ムレスイマが、ふたつの音で うずを巻きはじめた……！'
     },
     // 合体ボス「デュエット」: 1 本の楽譜の上で 背中合わせの 2 羽。片方が 倒れると もう片方が 怒る。
@@ -73,7 +74,7 @@ export const FOES = {
     duetDo: {
         id: 'duetDo', name: '怒りの鳥', attr: '怒', sprite: 'bird-do', partnerRage: true, solvedAs: 'togemetoro',
         rageText: '怒りの鳥が、羽を逆立てた！', truthHead: 'カナの本音は？',
-        hp: 90, maxHp: 90, atk: 12, def: 6, spd: 10,
+        hp: 90, maxHp: 90, atk: 12, def: 6, spd: 10, exp: 125,
         pattern: ['tackle', 'charge', 'swirl', 'tackle'], chargeText: '怒りの鳥の テンポが 速くなっていく……！', bigMove: 'せかすリズム',
         truth: { ...TRUTH.kana }
     },
@@ -81,14 +82,14 @@ export const FOES = {
         id: 'duetAi', name: '哀しみの鳥', attr: '哀', sprite: 'bird-ai', partnerRage: true, solvedAs: 'gakufume',
         rageText: '哀しみの鳥が、高く鳴いた！', truthHead: 'ミオの本音は？', after: 'duetDo',
         waitText: '哀しみの鳥は、背中を向けたままだ。……先に、トゲのほうだ。',
-        hp: 90, maxHp: 90, atk: 11, def: 6, spd: 9,
+        hp: 90, maxHp: 90, atk: 11, def: 6, spd: 9, exp: 125,
         pattern: ['tackle', 'tackle', 'charge', 'swirl'], chargeText: '哀しみの鳥が 高い音を ためている……！', bigMove: '止まらないソロ',
         truth: { ...TRUTH.mio }
     },
-    suima: { id: 'suima', name: 'スイマ', attr: '哀', sprite: 'suima', hp: 18, maxHp: 18, atk: 9, def: 3, spd: 8, drop: 1 },
+    suima: { id: 'suima', name: 'スイマ', attr: '哀', sprite: 'suima', hp: 18, maxHp: 18, atk: 9, def: 3, spd: 8, drop: 1, exp: 5 },
     muresuima: {
         id: 'muresuima', name: 'ムレスイマ', attr: '怒', sprite: 'muresuima',
-        hp: 120, maxHp: 120, atk: 13, def: 6, spd: 8,
+        hp: 120, maxHp: 120, atk: 13, def: 6, spd: 8, exp: 80,
         pattern: ['tackle', 'tackle', 'charge', 'swirl'],
         truth: {
             owner: 'hal',

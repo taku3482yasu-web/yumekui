@@ -2,6 +2,8 @@ import { act, aliveFoes, answer, bench, chanceFoe, commands, createBattle, needs
 import { ACTIONS, keyName } from './core/keys.js';
 import { advance, createKeep, dateLabel, devour, dreamsTonight, nextLoop, rescue, rescuePair, ACTIVE_DAY, LAST_DAY, PAIR } from './core/calendar.js';
 import { bakSkills, bakUnit, grow } from './core/growth.js';
+import { battleExp, gainExp, growUnit, ypLeft } from './core/level.js';
+import { openGrow } from './view/grow.js';
 import { createState, facing, isBlocked, objectAt, pickWord, placeName, step, tileAt, warp, DIRS } from './core/field.js';
 import { deepTalk, startDay, startMorning, timeLabel, timesBetween, NIGHT_START, PROLOGUE_START, RIKU_BRANCH_Y, TOWN_START } from './core/town.js';
 import { isWeekend } from './core/days.js';
@@ -90,10 +92,20 @@ function wakeUp(value) {
     done(value);
 }
 
+// 今の 仲間の ユニット (レベル・ユメポイント・夢写しを のせる)
+function grownUnits() {
+    return keep.allies.map((id) => {
+        const base = growUnit(id === 'bak' ? bakUnit(keep) : ALLIES[id], keep, state);
+        const rate = 1 + (keep.copies[id] ?? 0) * COPY_BONUS;
+        const maxHp = Math.round(base.maxHp * rate);
+        return { ...base, maxHp, hp: maxHp, atk: Math.round(base.atk * rate), def: Math.round(base.def * rate) };
+    });
+}
+
 // 控えを含む、今の仲間。夢写しの回数だけ 強くなる
 function partyUnits() {
     return keep.allies.slice(0, PARTY_SIZE).map((id) => {
-        const base = id === 'bak' ? bakUnit(keep) : ALLIES[id];
+        const base = growUnit(id === 'bak' ? bakUnit(keep) : ALLIES[id], keep, state);
         const rate = 1 + (keep.copies[id] ?? 0) * COPY_BONUS;
         const maxHp = Math.round(base.maxHp * rate);
         return { ...base, maxHp, hp: Math.min(hp[id] ?? maxHp, maxHp), atk: Math.round(base.atk * rate), def: Math.round(base.def * rate) };
@@ -106,6 +118,9 @@ const SCRIPTS = {
     rest: async () => {
         hp = {};
         await talk(LINES.rest);
+        if (ypLeft(keep) <= 0) return;
+        const id = await ui.menu([{ id: 'yes', label: LINES.ypRestYes }, { id: 'no', label: LINES.ypRestNo }], { head: LINES.ypRestHead });
+        if (id === 'yes') await growScreen(true);
     },
     bak: async () => {
         await talk(LINES.bak);
@@ -463,6 +478,7 @@ async function finish(battle, object, foe) {
         state.y = start.y;
         return;
     }
+    await awardExp(battle);
     if (battle.over === 'truth' && object.script === 'duetBoss') {
         // 夢合体: 2 人とも 目を覚まし、ガクフメと トゲメトロが 仲間に。夢双「ふたりのアンサンブル」の 相性
         const before = bakSkills(keep.growth);
@@ -521,6 +537,33 @@ async function finish(battle, object, foe) {
             await talk(LINES.firstSuima);
         }
     }
+}
+
+// 経験値: 倒した 敵 (本音を 届けた・喰らった 敵も) の 合計を、パーティは そのまま、控えは 半分
+async function awardExp(battle) {
+    const amount = battleExp(battle.foes.map((f) => ({ exp: (f.exp ?? 0) * (f.expRate ?? 1) })));
+    if (!amount) return;
+    const hadYp = (keep.ypTotal ?? 0) > 0;
+    const events = gainExp(state, keep, { party: keep.allies.slice(0, PARTY_SIZE), reserve: keep.allies.slice(PARTY_SIZE) }, amount);
+    await ui.say('', LINES.expGot(amount), { wait: NOTE_MS });
+    for (const event of events) {
+        const name = ALLIES[event.id].name;
+        await ui.say('', LINES.levelUp(name, event.lv), { wait: NOTE_MS });
+        if (event.yp) await ui.say('', LINES.ypGot(event.yp), { wait: NOTE_MS });
+        for (const label of event.moves) await ui.say('', LINES.moveLearned(name, label), { wait: NOTE_MS });
+    }
+    ui.hideMsg();
+    if (!hadYp && (keep.ypTotal ?? 0) > 0) await talk(LINES.ypFirst);
+}
+
+// 育成画面。ユメポイントは 夢の毛布と 夜の ハルの部屋で 使える (仕様書「ユメポイント」)
+function canSpendYp() {
+    return state.map === 'home' && state.phase === 'night' && state.x >= 7;
+}
+
+async function growScreen(canSpend = canSpendYp()) {
+    const head = MAPS[state.map].dream ? MAPS[state.map].dream : `${dateLabel(state.day)} ・ ${keep.loop}周目`;
+    await openGrow({ input, units: grownUnits(), keep, state, head, canSpend, refresh: grownUnits });
 }
 
 async function ending() {
@@ -850,12 +893,13 @@ async function weaveWords() {
 // ---- 設定 --------------------------------------------------------------
 
 async function fieldMenu() {
-    const items = [{ id: 'bak', label: 'バクの成長' }, { id: 'keys', label: 'ボタン設定' }, { id: 'close', label: 'とじる' }];
+    const items = [{ id: 'grow', label: 'なかま' }, { id: 'bak', label: 'バクの成長' }, { id: 'keys', label: 'ボタン設定' }, { id: 'close', label: 'とじる' }];
     if (keep.tutorial) items.unshift({ id: 'weave', label: '夢合わせ' });
     if (keep.brush) items.unshift({ id: 'brush', label: '夢筆' });
     if (keep.tutorial && MAPS[state.map].dream) items.unshift({ id: 'wake', label: '夢から覚める' });
     const id = await ui.menu(items);
     if (id === 'keys') await settings();
+    if (id === 'grow') await growScreen();
     if (id === 'weave') await weaveWords();
     if (id === 'brush') await talk(canUseBrush(state, keep) ? LINES.brushInfo(keep.images.map((i) => IMAGES[i].label).join('、')) : LINES.brushReal);
     if (id === 'wake') wakeUp();
@@ -1064,7 +1108,7 @@ function frame(now) {
 }
 
 // ブラウザのテストが 状態を読むための窓口
-window.yumekui = { get state() { return state; }, get mode() { return mode; }, get keep() { return keep; } };
+window.yumekui = { get state() { return state; }, get mode() { return mode; }, get keep() { return keep; }, growScreen };
 
 requestAnimationFrame(frame);
 start();

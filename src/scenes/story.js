@@ -253,6 +253,19 @@ export const LINES = {
     grewSaved: [[N, 'バクの体力と防御が上がり、ココロ攻撃が強くなった！']],
     grewEaten: [[N, 'バクの攻撃力が上がった。毛布が、少し黒ずんだ気がする。']],
     learned: (label) => [[N, `バクは「${label}」を覚えた！`]],
+    // レベルと ユメポイント
+    expGot: (amount) => `経験値を ${amount} もらった！`,
+    levelUp: (name, lv) => `${name}は レベル${lv}に 上がった！`,
+    ypGot: (yp) => `バクは ユメポイントを ${yp} もらった！`,
+    moveLearned: (name, label) => `${name}は「${label}」を 覚えた！`,
+    ypFirst: [
+        [BAK, 'お、ユメポイントがたまったな。'],
+        [BAK, '夢の毛布か、夜のおまえの部屋で、オレの力をのばしたり技を覚えたりできる。メニューの「なかま」からだ。'],
+        [BAK, 'レベルはループで戻っちまうが、ユメポイントで覚えたものは残るぜ。']
+    ],
+    ypRestHead: 'ユメポイントを 使う？',
+    ypRestYes: 'なかまを そだてる',
+    ypRestNo: 'やめる',
     growthInfo: ({ saved, eaten }, skills) => [
         [N, `バクの成長　救った夢 ${saved}　喰らった夢 ${eaten}`],
         [N, skills.length ? `覚えたスキル：${skills.join('、')}` : 'まだ特別なスキルはない。']

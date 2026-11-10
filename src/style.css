@@ -274,3 +274,48 @@ canvas {
 #foe-status .foe.down {
     opacity: 0.35;
 }
+
+/* 育成画面「そだてる」(デザイン「ユメクイ 育成画面」) */
+#grow {
+    position: absolute;
+    inset: 0;
+    background: #05061a;
+    padding: 2.5% 3%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4em;
+    font-size: 0.62em;
+    line-height: 1.35;
+}
+#grow .g-head, #grow .g-row, #grow .g-title, #grow .g-name, #grow .g-level { display: flex; justify-content: space-between; align-items: baseline; gap: 0.6em; }
+#grow .g-title b { font-size: 1.6em; letter-spacing: 0.1em; }
+#grow .g-tabs { display: flex; gap: 0.3em; }
+#grow .g-tabs span { border: 2px solid #3c3f8a; border-radius: 5px; padding: 0.15em 0.6em; color: var(--dim); }
+#grow .g-tabs span.on { background: #3c3fa8; border-color: var(--line); color: var(--ink); }
+#grow .g-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 30% 1fr; gap: 0.6em; }
+#grow .g-body.g-bak { grid-template-columns: 27% 1fr 1fr; }
+#grow .g-col { display: flex; flex-direction: column; gap: 0.6em; min-height: 0; }
+#grow .g-card { background: var(--panel); border: 2px solid var(--line); border-radius: 8px; padding: 0.6em 0.7em; display: flex; flex-direction: column; gap: 0.35em; min-height: 0; overflow: hidden; }
+#grow .g-pic { width: 52%; align-self: center; image-rendering: pixelated; background: #0a0c2a; border-radius: 6px; }
+#grow .g-name b { font-size: 1.5em; }
+#grow .g-level b { font-size: 1.25em; }
+#grow .g-attr { color: #0d1030; border-radius: 4px; padding: 0 0.5em; font-weight: 700; }
+#grow .a-喜 { background: #ffd84a; } #grow .a-怒 { background: #ff7a6b; } #grow .a-哀 { background: #7fb2ff; } #grow .a-楽 { background: #7fe0a8; }
+#grow .g-bar { height: 0.5em; background: #2a2c5e; border-radius: 4px; overflow: hidden; }
+#grow .g-bar i { display: block; height: 100%; background: var(--line); }
+#grow .g-dim { color: var(--dim); }
+#grow .g-sub { color: var(--kokoro); font-size: 1.05em; }
+#grow .g-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 0.3em 1.2em; }
+#grow .g-stats div { display: flex; justify-content: space-between; border-bottom: 1px solid #2a2c5e; }
+#grow .g-move, #grow .g-up { background: #141850; border-radius: 5px; padding: 0.3em 0.5em; border: 1px solid transparent; }
+#grow .g-move.on, #grow .g-up.on { border-color: var(--kokoro); }
+#grow .g-lock { background: transparent; border: 1px dashed #4a4d9a; color: #8a8eb8; }
+#grow .g-ok { color: var(--hp); }
+#grow .g-yp { margin-top: auto; border: 2px solid var(--kokoro); border-radius: 8px; background: #141850; padding: 0.4em; display: flex; flex-direction: column; align-items: center; }
+#grow .g-yp b { font-size: 1.8em; color: var(--kokoro); }
+#grow .g-seg { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; }
+#grow .g-seg i { height: 0.45em; background: #2a2c5e; border-radius: 2px; }
+#grow .g-seg i.on { background: var(--hp); }
+#grow .g-moves { overflow-y: auto; }
+#grow .g-foot { display: flex; justify-content: flex-end; gap: 1.4em; color: var(--dim); }
+#grow .g-note { margin-right: auto; color: var(--kokoro); }
