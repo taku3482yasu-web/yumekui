@@ -15,6 +15,7 @@ import { drawBattle, drawField, drawMorning, drawShadow, drawSky } from './view/
 import { drawCalendar, drawLapse } from './view/time.js';
 import { drawEncounter, encounterTheme } from './view/encounter.js';
 import { createPainting, drawPainting, finishPainting, updatePainting } from './view/painting.js';
+import { drawIntro } from './view/intro.js';
 import { morningMovie } from './scenes/mornings.js';
 import { canUseBrush, hasImageFor, learnImage, paint } from './core/brush.js';
 import { IMAGES, TILE_IMAGES } from './data/brush.js';
@@ -44,6 +45,7 @@ let encounter = null;      // 戦闘に入るときの 演出
 let actors = [];           // ムービーに 出ている 人 (朝の 通学路)
 const follow = { x: 0, y: 0, fromX: 0, fromY: 0 };   // ハルに ついてくる 仲間の 位置 (夢の中の バク・プロローグの リク)
 let painting = null;       // プロローグで キャンバスに 描く 画面
+let intro = null;          // はじまりの 夢 (砂浜 → 大きな目「おきろ」)
 
 // バクを ハルの いる マスに 置き直す (夢に入ったとき・地図を 移ったとき)
 function resetFollow() {
@@ -52,7 +54,7 @@ function resetFollow() {
 
 // 夢の中で、バクと 出会ったあとだけ ついてくる (現実では 姿を見せない)。プロローグでは リクが いっしょに 坂を下る
 function followerView() {
-    if (state.flags.rikuWalk && state.map === 'saka') return { ...follow, sprite: 'riku' };
+    if (state.flags.rikuWalk && (state.map === 'saka' || state.map === 'school')) return { ...follow, sprite: 'riku' };
     if (MAPS[state.map].real || !state.flags.bak || mode === 'battle') return null;
     return { ...follow, sprite: keep.growth.eaten > 0 ? 'bak-mini-wild' : 'bak-mini' };
 }
@@ -849,6 +851,20 @@ async function prologueCanvas() {
     showHud();
 }
 
+// はじまりの 夢: 青い海の 砂浜に ハルが 一人。ゆがんで 暗くなり、大きな目と「おきろ」。チャイムで 目が覚める (A で 飛ばせる)
+async function playIntro() {
+    ui.hideHud();
+    await new Promise((resolve) => {
+        const off = input.onPress((key) => { if (key === 'a') intro.skip = true; });
+        intro = { start: performance.now() + 420, done: () => { off(); resolve(); } };
+        mode = 'intro';
+        ui.fade(false);
+    });
+    mode = 'black';
+    await talk(LINES.introWake);
+    await ui.fade(true);
+}
+
 // ---- 全体 --------------------------------------------------------------
 
 async function start() {
@@ -864,6 +880,7 @@ async function start() {
     }
     ui.title(false);
     await ui.fade(true);
+    await playIntro();
     await prologue();
     await ui.fade(true);
     ui.hideHud();
@@ -881,7 +898,15 @@ function frame(now) {
     last = now;
     if (mode === 'field') updateField(delta);
     if (walk.left > 0 && mode !== 'field') walk.left = Math.max(0, walk.left - delta / WALK_MS);
-    if (mode === 'painting' && painting) {
+    if (mode === 'intro' && intro) {
+        if (drawIntro(ctx, intro, now) && !intro.finished) {
+            intro.finished = true;
+            intro.done();
+        }
+    } else if (mode === 'black') {
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, 320, 240);
+    } else if (mode === 'painting' && painting) {
         updatePainting(painting, input.direction(), delta, now);
         if (drawPainting(ctx, painting, now) && !painting.finished) {
             painting.finished = true;

@@ -8,6 +8,7 @@ import { ACTIVE_DAY, PAIR, RIKU_DOWN_DAY, isWeekend } from './days.js';
 //   朝は 通学路の ムービー (scenes/mornings.js) で その日の 人だけを 出すので、地図の 人は 出さない
 export function present(state, who) {
     if (state.phase === 'night') return who === 'father';
+    if (state.flags.prologue && ['riku', 'mio', 'kana'].includes(who)) return false;   // プロローグ: リクは いっしょに歩く。ミオとカナは 部活
     if (state.phase === 'morning') return false;
     if (who === 'riku') return state.day < RIKU_DOWN_DAY;                    // 3 日の朝から 目を覚まさない
     if (PAIR.includes(who)) {
@@ -75,8 +76,8 @@ export const TOWN_START = {
     weekend: { map: 'home', x: 12, y: 5, dir: 'down' }   // 土日は 昼に 自分の部屋から。玄関から 外へ
 };
 
-// プロローグ (2月1日の放課後): 校門の前から、リクと 坂道を 下って 家に帰る
-export const PROLOGUE_START = { map: 'saka', x: 11, y: 2, dir: 'down' };
+// プロローグ (2月1日の放課後): 授業が 終わって 教室で 目が覚める。リクと 学校を出て、坂道を 下って 家に帰る
+export const PROLOGUE_START = { map: 'school', x: 3, y: 6, dir: 'down' };
 export const RIKU_BRANCH_Y = 9;   // ここまで 下ると 坂の分かれ道で リクと 別れる
 
 // 夜 (キャンバスの前)

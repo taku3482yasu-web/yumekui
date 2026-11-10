@@ -172,9 +172,21 @@ await key('j');
 await sleep(700);
 await read(`(async()=>{const m=await import('/src/data/maps.js');const f=await import('/src/core/field.js');window.__tiles=(id)=>m.MAPS[id].tiles;window.__objects=()=>f.objectsOf(yumekui.state);window.__blocked=(x,y)=>f.isBlocked(yumekui.state,x,y);})()`);
 
-// プロローグ (2月1日の放課後): リクと 坂道を下る → 分かれ道で 別れる → 家で 父 → 机 → キャンバスに 描く → 眠る
+// はじまりの 夢: 砂浜 → ゆがんで 暗くなる → 大きな目「おきろ」
+await sleep(1800);
+await shot('01b2-intro-beach');
+await sleep(3800);
+await shot('01b3-intro-warp');
+await sleep(3300);
+await shot('01b4-intro-eye');
+for (let i = 0; i < 100 && !(await state()).msg; i++) await sleep(80);
+
+// プロローグ (2月1日の放課後): 教室で 目が覚める → リクと 学校を出る → 坂道を下る → 分かれ道で 別れる → 家で 父 → 机 → キャンバスに 描く → 眠る
 await skip();
-await shot('01c-prologue-gate');
+await shot('01c-prologue-classroom');
+await walkTo(1, 8);
+await sleep(500);
+await waitField();
 await walkTo(10, 6);
 await shot('01d-prologue-riku');
 await walkTo(10, 9);
@@ -293,7 +305,7 @@ async function pick(text) {
     }
     throw new Error('メニューが出ない ' + text);
 }
-const waitField = async () => {
+async function waitField() {
     for (let i = 0; i < 200; i++) {
         const now = await state();
         if (now.m === 'field' && !now.msg) return;
@@ -302,7 +314,7 @@ const waitField = async () => {
     }
     const now = await state();
     throw new Error(`歩ける画面に ならない: ${now.m} ${now.s.phase} ${now.s.map} 文=${now.msg} メニュー=${now.menu} ${await read('document.getElementById("text").textContent')}`);
-};
+}
 // 夜: ハルの部屋で キャンバスを調べて 選ぶ (夜は キャンバスの方を向いて 始まる)
 const night = async (label) => {
     for (let i = 0; i < 200; i++) {
