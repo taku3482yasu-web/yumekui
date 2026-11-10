@@ -21,6 +21,7 @@ export function isVisible(object, state) {
     if (state.gone[object.id]) return false;
     if (object.hideIf && state.flags[object.hideIf]) return false;
     if (object.needs && !state.flags[object.needs]) return false;
+    if (object.night && state.phase !== 'night') return false;   // 夜だけの物 (閉まった校門 など)
     if (object.who && !present(state, object.who)) return false;
     return true;
 }

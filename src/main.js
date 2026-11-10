@@ -54,10 +54,11 @@ async function scene(work) {
     mode = 'field';
 }
 
-function wakeUp() {
+// 歩き回るのを 終える (夢から覚める・家に帰る・キャンバスに描く・眠る)。value は 終わり方
+function wakeUp(value) {
     const done = wake;
     wake = null;
-    done();
+    done(value);
 }
 
 // 控えを含む、今の仲間。夢写しの回数だけ 強くなる
@@ -86,6 +87,7 @@ const SCRIPTS = {
     portSign: () => talk(LINES.portSign),
     rikuRoad: () => talk(LINES.rikuRoad(state)),
     rikuDoor: () => talk(LINES.rikuDoor),
+    schoolClosed: () => talk(LINES.schoolClosed),
     goHome: homeDoor
 };
 
@@ -118,8 +120,13 @@ async function deepTalkTo(who) {
     wakeUp();
 }
 
-// 家の玄関: 入ると その日は おしまい (夜になる)
+// 家の玄関: 入ると その日は おしまい (夜になる)。夜の町からは 帰って寝る
 async function homeDoor() {
+    if (state.phase === 'night') {
+        const id = await ui.menu([{ id: 'yes', label: LINES.nightHomeYes }, { id: 'no', label: LINES.nightHomeNo }], { head: LINES.nightHomeHead });
+        if (id === 'yes') wakeUp('sleep');
+        return;
+    }
     const items = [{ id: 'yes', label: LINES.goHomeYes }];
     if (state.day >= ACTIVE_DAY + 3 && state.day < LAST_DAY) items.push({ id: 'skip', label: LINES.goHomeSkip });
     items.push({ id: 'no', label: LINES.goHomeNo });
@@ -131,8 +138,8 @@ async function homeDoor() {
 async function touch(object) {
     if (object.kind === 'talk' || object.kind === 'door' || object.kind === 'block') await SCRIPTS[object.script]();
     if (object.kind === 'person') await talkTo(object.who);
-    if (object.kind === 'canvas') await talk(LINES.canvas);
-    if (object.kind === 'bed') await talk(LINES.bed);
+    if (object.kind === 'canvas') await useCanvas();
+    if (object.kind === 'bed') await useBed();
     if (object.kind === 'foe') await fight(object);
     if (object.kind === 'word') {
         const opened = pickWord(state, object);
@@ -150,6 +157,7 @@ async function touch(object) {
 
 async function enter(exit) {
     await ui.fade(true);
+    const goingOut = state.phase === 'night' && state.map === 'home' && exit.to !== 'home';
     warp(state, exit);
     hp = {};
     walk.left = 0;
@@ -157,6 +165,10 @@ async function enter(exit) {
     await ui.fade(false);
     if (exit.to === 'omen') await talk(LINES.enterOmen);
     if (exit.to === 'hiroba') await talk(LINES.enterHiroba);
+    if (goingOut && !state.nightOut) {
+        state.nightOut = true;
+        await talk(LINES.nightOut);
+    }
 }
 
 function updateField(delta) {
@@ -394,33 +406,63 @@ async function dayPhase() {
     await done;
 }
 
-// 夜: ハルの部屋で、今夜 入る夢を選ぶ (キャンバスを調べて描く形は 次に作る)
-function toRoom() {
+// 夜: ハルの部屋を歩く。キャンバスに描いた夢にだけ入れる。描かずに ベッドで寝るか、
+//   玄関から 夜の町へ出て 帰って寝ると、夢に入らずに 朝になる (仕様書「1日の流れ」)
+async function nightPhase() {
     Object.assign(state, NIGHT_START);
-    walk.left = 0;
+    state.nightOut = false;
+    const done = explore();
     mode = 'scene';
-    showHud();
+    await ui.fade(false);
+    await scene(async () => {});
+    const ending = await done;
+    if (ending?.dream) await enterDream(ending.dream);
 }
 
-async function nightPhase() {
-    toRoom();
-    await ui.fade(false);
-    const items = dreamsTonight(state).map((id) => ({ id, label: LINES.dreamNames[id] }));
+// キャンバス: だれの夢を描くか選ぶ (描く画面は 段階2 で作る)
+async function useCanvas() {
+    if (state.nightOut) {
+        await talk(LINES.canvasOut);
+        return;
+    }
+    const dreams = dreamsTonight(state);
+    if (dreams.length && !keep.canvasTold) {
+        keep.canvasTold = true;
+        await talk(LINES.firstCanvas);
+    }
+    if (!dreams.length) await talk(LINES.noDreamYet);
+    const items = dreams.map((id) => ({ id, label: LINES.dreamNames[id] }));
     items.push({ id: 'rest', label: LINES.dreamNames.rest });
-    const id = await ui.menu(items, { head: LINES.nightHead, wide: true });
-    if (id === 'rest') return;
+    items.push({ id: 'cancel', label: LINES.canvasCancel });
+    const id = await ui.menu(items, { head: LINES.canvasHead, wide: true });
+    if (id === 'cancel') return;
+    if (id === 'rest') {
+        await talk(LINES.slept);
+        wakeUp('sleep');
+        return;
+    }
+    await talk(LINES.drew(NAMES[id]));
+    wakeUp({ dream: id });
+}
+
+async function useBed() {
+    const id = await ui.menu([{ id: 'yes', label: LINES.bedYes }, { id: 'no', label: LINES.bedNo }], { head: LINES.bedHead });
+    if (id !== 'yes') return;
+    await talk(LINES.slept);
+    wakeUp('sleep');
+}
+
+async function enterDream(id) {
     const map = DREAM_MAPS[id];
     await ui.fade(true);
     const entered = dream(map);
+    mode = 'scene';   // 夢に入る セリフが 終わるまで 歩けない (フェードの あいだに 敵に ぶつからない)
     await ui.fade(false);
     await scene(async () => {
         await talk(LINES.enterDream[map]);
         if (!state.flags.active) await talk(LINES.noBoss);
     });
     await entered;
-    await ui.fade(true);
-    toRoom();
-    await ui.fade(false);
 }
 
 async function campaign() {

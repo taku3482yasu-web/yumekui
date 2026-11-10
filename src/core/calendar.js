@@ -7,7 +7,7 @@ export { ACTIVE_DAY, LAST_DAY, LAST_RESCUE_DAY, OPEN_DAY, PAIR, dateLabel } from
 
 // ループしても残るもの
 export function createKeep() {
-    return { loop: 1, allies: ['bak'], solved: [], copies: {}, tutorial: false, growth: { saved: 0, eaten: 0 }, eaten: [] };
+    return { loop: 1, allies: ['bak'], solved: [], copies: {}, tutorial: false, growth: { saved: 0, eaten: 0 }, eaten: [], canvasTold: false };
 }
 
 export function canTalk(state, id) {
@@ -57,11 +57,11 @@ export function advance(state) {
     return state.day > LAST_DAY ? 'loop' : 'day';
 }
 
-// 2 月 1 日へ戻る。チュートリアルは くり返さない
+// 2 月 1 日の朝、自分のベッドへ戻る。プロローグとハルの夢は くり返さない (仕様書「ループで残るもの・消えるもの」)
 export function nextLoop(keep) {
     keep.loop++;
     const state = createState();
-    state.day = OPEN_DAY;
+    state.day = 1;
     state.phase = 'day';
     state.flags.bak = true;
     for (const id of keep.eaten) state.status[id] = 'eaten';

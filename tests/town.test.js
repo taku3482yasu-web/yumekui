@@ -164,3 +164,30 @@ test('町の 人には みんな セリフがある', () => {
         }
     }
 });
+
+test('夜の町には 人がいない (父は 家にいる)。校門は 閉まっている', () => {
+    const state = dayState(2);
+    state.phase = 'night';
+    assert.ok(!present(state, 'tome'));
+    assert.ok(!present(state, 'mio'));
+    assert.ok(present(state, 'father'));
+    Object.assign(state, { map: 'saka', x: 11, y: 2 });
+    const gate = step(state, 'up');
+    assert.equal(gate.type, 'bump');
+    assert.equal(gate.object.script, 'schoolClosed');
+    state.phase = 'day';
+    assert.equal(step(state, 'up').type, 'exit', '昼は 学校に入れる');
+});
+
+test('ループした 2 月 1 日は 放課後から始まり、ミオとカナは まだ元気', async () => {
+    const { createKeep, nextLoop } = await import('../src/core/calendar.js');
+    const keep = createKeep();
+    keep.tutorial = true;
+    const state = nextLoop(keep);
+    startDay(state);
+    assert.equal(state.day, 1);
+    assert.equal(timeLabel(state), '放課後');
+    assert.equal(state.map, 'school');
+    assert.ok(present(state, 'riku') && present(state, 'mio'));
+    assert.ok(LINES.day[1].length > 0);
+});

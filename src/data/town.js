@@ -105,6 +105,8 @@ export const TOWN_MAPS = {
             { name: '坂道', x: [0, 23], y: [10, 18] }
         ],
         objects: [
+            { id: 'schoolClosed1', kind: 'block', x: 11, y: 1, script: 'schoolClosed', night: true },
+            { id: 'schoolClosed2', kind: 'block', x: 12, y: 1, script: 'schoolClosed', night: true },
             { id: 'toSchool1', kind: 'exit', x: 11, y: 1, to: 'school', at: { x: 2, y: 8 } },
             { id: 'toSchool2', kind: 'exit', x: 12, y: 1, to: 'school', at: { x: 2, y: 9 } },
             { id: 'tomeShop', kind: 'door', x: 4, y: 6, script: 'tomeShop' },

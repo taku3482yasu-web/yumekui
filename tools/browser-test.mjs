@@ -241,6 +241,18 @@ const waitField = async () => {
     }
     throw new Error('夢に入れない');
 };
+// 夜: ハルの部屋で キャンバスを調べて 選ぶ (夜は キャンバスの方を向いて 始まる)
+const night = async (label) => {
+    for (let i = 0; i < 200; i++) {
+        const now = await state();
+        if (now.m === 'field' && !now.msg && now.s.phase === 'night' && now.s.map === 'home') break;
+        if (now.msg) await key('j');
+        else await sleep(80);
+    }
+    await key('j');
+    await sleep(200);
+    await pick(label);
+};
 // 町: 人の となりまで歩いて、向いて 話しかける
 const talkTo = async (x, y) => {
     await waitField();
@@ -275,7 +287,7 @@ await shot('12-classroom');
 await talkTo(18, 4);
 await shot('12b-music-room');
 await pick('じっくり話す');
-await pick('ミオの夢');
+await night('ミオの夢');
 await sleep(900);
 await waitField();
 await shot('13-mio-dream');
@@ -296,8 +308,11 @@ for (let day = 3; day < 7; day++) {
         if (day === 4) {
             for (let i = 0; i < 100 && !(await state()).menu; i++) await sleep(80);
             await shot('13c-night-room');
-        }
-        await pick('今夜は休む');
+            await key('j');
+            await sleep(400);
+            await shot('13d-canvas');
+            await pick('描かずに寝る');
+        } else await night('描かずに寝る');
         await sleep(300);
     }
     if (day === 3) {
@@ -310,30 +325,30 @@ for (let day = 3; day < 7; day++) {
     await goHome();
     await sleep(300);
 }
-await pick('今夜は休む');
+await night('描かずに寝る');
 await sleep(300);
 await goHome();
 await sleep(300);
 const seven = await state();
 console.log('今の日', seven.s.day, seven.s.phase, '活性化', seven.s.flags.active);
-await pick('ミオの夢');
+await night('ミオの夢');
 await sleep(900);
 await waitField();
 await fightAt(9, 4, true);
 await sleep(500);
 console.log('ボス戦のあと: 解決', JSON.stringify(await read('yumekui.keep.solved')), '画面', (await state()).m, '文', await read('document.getElementById("text").textContent'));
 await shot('14-after-rescue');
-await pick('今夜は休む').catch(() => {});
 const rescued = await state();
 console.log('仲間', JSON.stringify(await read('yumekui.keep.allies')), '状態', JSON.stringify(rescued.s.status));
 for (let i = 0; i < 120; i++) {
     const now = await state();
     if ((await read('yumekui.keep.loop')) === 2) break;
     const labels = await read('[...document.querySelectorAll("#menu button")].map(b=>b.textContent)');
-    if (now.menu && labels.some((l) => l.includes('休む'))) await pick('今夜は休む');
+    if (now.menu && labels.some((l) => l.includes('描かずに寝る'))) await pick('描かずに寝る');
     else if (now.menu) await key('j');
     else if (now.msg) await key('j');
     else if (now.m === 'field' && now.s.phase === 'day') await goHome('14日まで');
+    else if (now.m === 'field' && now.s.phase === 'night' && now.s.map === 'home') await night('描かずに寝る');
     await sleep(300);
 }
 for (let i = 0; i < 30 && (await read('yumekui.keep.loop')) !== 2; i++) {
@@ -350,15 +365,15 @@ const allies = await read('yumekui.keep.allies');
 console.log('周', loop, '日', looped.s.day, '仲間', JSON.stringify(allies), '状態', JSON.stringify(looped.s.status));
 
 // 2 周目: 2/7 まで進めて カナのユメクイを喰らう
-for (let day = 2; day < 7; day++) {
+for (let day = 1; day < 7; day++) {
     await goHome();
     await sleep(300);
-    await pick('今夜は休む');
+    await night('描かずに寝る');
     await sleep(300);
 }
 await goHome();
 await sleep(300);
-await pick('カナの夢');
+await night('カナの夢');
 await sleep(900);
 await waitField();
 await walkTo(6, 8);

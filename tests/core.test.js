@@ -276,6 +276,8 @@ test('14 日の夜の次は ループする。仲間は残り 周の状態は消
     assert.equal(advance(state), 'loop');
     const next = nextLoop(keep);
     assert.equal(keep.loop, 2);
+    assert.equal(next.day, 1, '2 月 1 日へ戻る');
+    assert.equal(next.phase, 'day');
     assert.equal(next.status.mio, 'idle');
     assert.deepEqual(next.words, []);
     assert.ok(keep.allies.includes('gakufume'));
@@ -416,6 +418,8 @@ test('喰らった夢主は 次の周も 抜け殻のまま', () => {
     const next = nextLoop(keep);
     assert.equal(next.status.mio, 'eaten');
     assert.equal(next.status.kana, 'idle');
+    assert.deepEqual(dreamsTonight(next), [], '2 月 1 日は まだ 夢が開いていない');
+    next.day = 2;
     assert.deepEqual(dreamsTonight(next), ['kana']);
 });
 

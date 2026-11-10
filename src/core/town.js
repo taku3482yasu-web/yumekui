@@ -4,8 +4,9 @@
 //   - 立ち話は 何回でも
 import { ACTIVE_DAY, PAIR, RIKU_DOWN_DAY, isWeekend } from './days.js';
 
-// その人が 今日 町にいるか
+// その人が 今 町にいるか。夜の町には 人がいない (父は 家にいる)
 export function present(state, who) {
+    if (state.phase === 'night') return who === 'father';
     if (who === 'riku') return state.day < RIKU_DOWN_DAY;                    // 3 日の朝から 目を覚まさない
     if (PAIR.includes(who)) {
         const status = state.status[who];
