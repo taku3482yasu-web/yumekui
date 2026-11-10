@@ -22,6 +22,7 @@ export function canTalk(state, id) {
 //   ただし 完ぺきな 絵 (夢を 知っている) なら、活性化の 前でも 入れる (earlyDreams)
 //   リクは 3 日に 倒れる (ユメクイが もう 活性化している) ので、3 日から 14 日まで 入れる
 export function dreamsTonight(state, keep = null) {
+    if (state.flags.dreamsClosed) return [];   // 1 周目: ナイトメアに 負けたあとは 夢が 閉じかけている
     const riku = state.day >= RIKU_DOWN_DAY && state.day <= LAST_DAY && state.status.riku === 'idle' ? ['riku'] : [];
     if (state.day < OPEN_DAY || state.day > LAST_RESCUE_DAY) return riku;
     const list = PAIR.filter((id) => state.status[id] === 'idle');
@@ -71,6 +72,17 @@ export function devour(state, keep, id) {
     if (!keep.eaten.includes(id)) keep.eaten.push(id);
     grow(keep, 'eaten');
     return { other };
+}
+
+// 1 周目: ナイトメアに 負けて 眠る。12 日に 病院で 目を覚まし、残りは 準備の 期間 (夢には 入れない)
+export function sleepAfterNightmare(state, wakeDay) {
+    for (const id of PAIR) if (state.status[id] === 'idle') state.status[id] = 'broken';
+    state.day = wakeDay - 1;   // 夜が 明けると wakeDay の 朝 (病院)
+    state.phase = 'night';
+    state.flags.active = true;
+    state.flags.dreamsClosed = true;
+    state.flags.nightmareDone = true;
+    state.flags.hospitalNext = true;
 }
 
 // 1 日は 朝 → 放課後 → 夜。夜が明けると 次の日の朝。土日は 朝が 飛んで 昼 (家にいる) から

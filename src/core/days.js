@@ -4,6 +4,7 @@ export const RIKU_DOWN_DAY = 3;
 export const ACTIVE_DAY = 7;
 export const LAST_RESCUE_DAY = 9;
 export const LAST_DAY = 14;
+export const WAKE_DAY = 12;          // 1 周目: ナイトメアに 負けて 病院で 目を覚ます 日 (あと 3 日。本編は 2 週間 眠る)
 export const PAIR = ['mio', 'kana'];
 
 const WEEK = ['月', '火', '水', '木', '金', '土', '日'];

@@ -1,6 +1,6 @@
 import { act, aliveFoes, answer, bench, chanceFoe, commands, createBattle, needsTarget, setTarget, TARGETED, TOP_COMMANDS } from './core/battle.js';
 import { ACTIONS, keyName } from './core/keys.js';
-import { advance, createKeep, dateLabel, devour, dreamsTonight, isEarly, nextLoop, rescue, rescuePair, ACTIVE_DAY, LAST_DAY, PAIR } from './core/calendar.js';
+import { advance, createKeep, dateLabel, devour, dreamsTonight, isEarly, nextLoop, sleepAfterNightmare, rescue, rescuePair, ACTIVE_DAY, LAST_DAY, PAIR } from './core/calendar.js';
 import { bakSkills, bakUnit, grow } from './core/growth.js';
 import { battleExp, gainExp, growUnit, layerFoe, reachLayer, ypLeft } from './core/level.js';
 import { openGrow } from './view/grow.js';
@@ -10,7 +10,7 @@ import { dreamShardOf, giveHeart, heartsOf, isDormant, pickHeart, setDormant, te
 import { HEARTS } from './data/hearts.js';
 import { chaseStep, createState, facing, isBlocked, objectAt, pickWord, placeName, step, tileAt, warp, DIRS } from './core/field.js';
 import { deepTalk, startDay, startMorning, timeLabel, timesBetween, NIGHT_START, PROLOGUE_START, RIKU_BRANCH_Y, TOWN_START } from './core/town.js';
-import { isWeekend } from './core/days.js';
+import { isWeekend, LAST_RESCUE_DAY, WAKE_DAY } from './core/days.js';
 import { frontChoices, makeSentence, nextChoices, sentenceChoices } from './core/sentence.js';
 import { OWNER_NAMES, WORDS } from './data/words.js';
 import { DREAM_LAYERS, MAPS } from './data/maps.js';
@@ -100,7 +100,7 @@ async function scene(work) {
 function wakeUp(value) {
     const done = wake;
     wake = null;
-    done(value);
+    done?.(value);
 }
 
 // 今の 仲間の ユニット (レベル・ユメポイント・夢写しを のせる)
@@ -447,7 +447,7 @@ async function fight(object) {
     const sleepy = (f) => state.flags.early && f.truth ? { ...f, maxHp: Math.round(f.maxHp * DORMANT_FOE_RATE), hp: Math.round(f.maxHp * DORMANT_FOE_RATE), atk: Math.round(f.atk * DORMANT_FOE_RATE) } : f;   // 活性化前の ユメクイは 弱い
     const foeList = (object.foes ?? [object.foe]).map((id) => sleepy(layerFoe(FOES[id], layer))).map((f) => nightmare === 1 ? f : { ...f, maxHp: Math.round(f.maxHp * nightmare), hp: Math.round(f.maxHp * nightmare), atk: Math.round(f.atk * nightmare) });
     const foe = foeList.find((f) => f.truth) ?? foeList[0];
-    const battle = createBattle(partyUnits(), foeList, { noEscape: object.script === 'firstBattle', musou: keep.musou });
+    const battle = createBattle(partyUnits(), foeList, { noEscape: ['firstBattle', 'nightmare'].includes(object.script), musou: keep.musou });
     await playEncounter(encounterTheme(MAPS[state.map], state.x), foeList.some((f) => f.truth));
     await ui.fade(true);
     mode = 'battle';
@@ -564,6 +564,10 @@ async function finish(battle, object, foe) {
         await talk(LINES.fled);
         return;
     }
+    if (battle.over === 'lose' && object.script === 'nightmare') {
+        await nightmareLoss();
+        return;
+    }
     if (battle.over === 'lose') {
         hp = {};
         if (keep.tutorial) {
@@ -583,6 +587,7 @@ async function finish(battle, object, foe) {
         const before = bakSkills(keep.growth);
         const joined = rescuePair(state, keep);
         await talk(LINES.duetSaved);
+        await talk(LINES.overcome.duet);
         for (const ally of joined) await talk(keep.copies[ally] ? LINES.copied(ALLIES[ally].name) : LINES.joined(ALLIES[ally].name));
         await talk(LINES.musouGot);
         await talk(LINES.grewSaved);
@@ -602,6 +607,7 @@ async function finish(battle, object, foe) {
             await ending();
         } else {
             await saved(foe, before);
+            if (await nightmareAfter(foe)) return;
         }
         wakeUp();
         return;
@@ -613,6 +619,7 @@ async function finish(battle, object, foe) {
         await talk(LINES.grewEaten);
         await announceSkills(before);
         await tellReaped(result.other);
+        if (await nightmareAfter(foe)) return;
         wakeUp();
         return;
     }
@@ -667,6 +674,45 @@ async function growScreen(canSpend = canSpendYp()) {
     await openGrow({ input, units: grownUnits(), keep, state, head, canSpend, refresh: grownUnits });
 }
 
+// ---- 1 周目の 終わり方 (台本 2-5・2-5b) ---------------------------------
+//   1 周目だけ: ミオか カナの ユメクイを 倒した夜、光る扉の前で ナイトメア戦 (必ず 負ける)。
+//   どちらも 倒さないまま 救える 最後の夜 (9 日) が 来たら、ナイトメアの ほうから 来る。
+//   負けると 12 日まで 眠り、病院で 目を覚ます。残りの日は 準備の 期間 (夢には 入れない)
+async function nightmareAfter(foe) {
+    if (keep.loop !== 1 || !PAIR.includes(foe.dream) || state.flags.nightmareDone) return false;
+    const other = PAIR.find((id) => id !== foe.dream);
+    await talk(LINES.nightmareAfter(NAMES[other]));
+    await fight({ script: 'nightmare', foe: 'nightmare' });
+    return true;
+}
+
+async function nightmareLoss() {
+    hp = {};
+    mode = 'scare';   // 真っ黒な 画面に 赤い「に が さ な い」
+    ui.hideHud();
+    const screen = document.getElementById('screen');
+    screen.classList.remove('shake');
+    void screen.offsetWidth;
+    screen.classList.add('shake');
+    await new Promise((resolve) => setTimeout(resolve, 1800));
+    const from = state.day;
+    sleepAfterNightmare(state, WAKE_DAY);
+    state.nightFailed = true;
+    await ui.fade(true);
+    await playCalendar(from, WAKE_DAY);   // カレンダーが 1 枚ずつ めくれていく
+    await talk(LINES.girlVoice);
+    skipTear = true;
+    wakeUp();
+}
+
+async function hospitalScene() {
+    mode = 'black';
+    await ui.fade(false);
+    await talk(LINES.hospital);
+    await talk(LINES.prepTalk);
+    await ui.fade(true);
+}
+
 async function ending() {
     await ui.fade(true);
     ui.hideHud();
@@ -692,6 +738,7 @@ async function announceSkills(before) {
 async function saved(foe, before) {
     const result = rescue(state, keep, foe.dream, foe.ally);
     await talk(LINES.rescued[foe.dream]);
+    await talk(LINES.overcome[foe.dream]);   // 夢主が 自分の ユメクイと 話し、夢を 乗り越える
     const name = ALLIES[foe.ally].name;
     await talk(result.copied ? LINES.copied(name) : LINES.joined(name));
     await talk(LINES.grewSaved);
@@ -905,6 +952,14 @@ async function dayPhase() {
     mode = 'scene';   // 日の始めの 出来事を 見せるまで 歩けない
     await ui.fade(false);
     await scene(async () => {
+        if (state.flags.prepDay) {
+            state.flags.prepDay = false;
+            await talk(LINES.prepTown);
+        }
+        if (state.day === 14 && state.flags.dreamsClosed && !state.flags.lastSky) {
+            state.flags.lastSky = true;
+            await talk(LINES.lastDaySky);
+        }
         if (LINES.day[state.day] && !state.flags[`day${state.day}`]) {
             state.flags[`day${state.day}`] = true;
             await talk(LINES.day[state.day]);
@@ -924,6 +979,13 @@ async function dayPhase() {
 //   玄関から 夜の町へ出て 帰って寝ると、夢に入らずに 朝になる (仕様書「1日の流れ」)
 async function nightPhase() {
     Object.assign(state, NIGHT_START);
+    if (keep.loop === 1 && state.day === LAST_RESCUE_DAY && !state.flags.nightmareDone && PAIR.every((id) => state.status[id] === 'idle')) {
+        mode = 'scene';
+        await ui.fade(false);
+        await talk(LINES.nightmareVisit);
+        await fight({ script: 'nightmare', foe: 'nightmare' });
+        return;
+    }
     // リクを 救った 次の夜 (3 周目): 迷い (台本 4-4)
     const doubt = keep.loop >= 3 && state.status.riku === 'saved' && state.flags.rikuSavedDay && state.day > state.flags.rikuSavedDay && !state.flags.rikuDoubt;
     if (doubt) state.flags.rikuDoubt = true;
@@ -961,7 +1023,8 @@ async function useCanvas() {
         keep.earlyTold = true;
         await talk(LINES.perfectCanvas);
     }
-    if (!dreams.length && state.day < ACTIVE_DAY) {
+    if (state.flags.dreamsClosed) await talk(LINES.canvasClosed);
+    else if (!dreams.length && state.day < ACTIVE_DAY) {
         // 活性化の 前: 描いても 絵が 漠然としていて、夢の チャンネルに 引っかからない
         await talk(keep.channelTold ? LINES.notActiveAgain : LINES.notActive);
         keep.channelTold = true;
@@ -1105,7 +1168,6 @@ async function campaign() {
             ui.hideHud();
             await ui.fade(false);
             await talk(LINES.loop);
-            if (keep.loop === 1) await talk(LINES.nextPlan);
             state = nextLoop(keep, state);
             await ui.fade(true);
         } else if (state.day !== before && !skipTear) {
@@ -1117,6 +1179,13 @@ async function campaign() {
             }
         }
         skipTear = false;
+        if (state.flags.hospitalNext) {
+            // 病院で 目を覚まし、そのまま 町へ (準備の 期間)
+            state.flags.hospitalNext = false;
+            await hospitalScene();
+            state.phase = 'day';
+            state.flags.prepDay = true;
+        }
         if (state.phase === 'morning') await morningPhase();
         else if (state.phase === 'day') await dayPhase();
         else await nightPhase();

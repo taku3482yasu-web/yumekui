@@ -105,6 +105,13 @@ export const FOES = {
         chargeText: 'ヒマワリオンが「だいじょうぶ！」と 叫びながら 力を ためている……！', bigMove: 'から元気',
         truth: TRUTH.riku
     },
+    // ナイトメア (台本 2-5)。1 周目だけ。こちらの 攻撃は「1」しか 入らず (防御が とても 高い)、本音の 選択肢も 出ない。数ターンで 必ず 負ける
+    nightmare: {
+        id: 'nightmare', name: 'ナイトメア', attr: '哀', sprite: 'nightmare',
+        hp: 9999, maxHp: 9999, atk: 70, def: 99999, spd: 20, exp: 0,
+        pattern: ['tackle', 'charge', 'swirl'], chargeText: 'ナイトメアが 大鎌を ふりかぶった……！', bigMove: '大鎌',
+        runText: '足が 動かない……！'
+    },
     suima: { id: 'suima', name: 'スイマ', attr: '哀', sprite: 'suima', hp: 18, maxHp: 18, atk: 9, def: 3, spd: 8, drop: 1, exp: 5 },
     muresuima: {
         id: 'muresuima', name: 'ムレスイマ', attr: '怒', sprite: 'muresuima',

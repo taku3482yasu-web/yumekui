@@ -115,6 +115,7 @@ export function drawEncounter(ctx, enc, now) {
 // 地図の 見た目 (theme) から 演出を 決める。ハルの夢は テーマなし = お面。
 // 二重奏ホールは 左半分 (水) なら 泡、右半分 (トゲ) なら メトロノーム
 export function encounterTheme(map, x = 0) {
+    if (map.real) return 'mask';
     if (map.theme === 'duet') return x < map.split ? 'water' : 'tempo';
     return map.theme === 'water' ? 'water' : map.theme === 'tempo' ? 'tempo' : 'mask';
 }

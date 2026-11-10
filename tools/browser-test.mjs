@@ -396,11 +396,14 @@ const goHome = async (label = '家に帰る') => {
 const descend = async (points) => {
     for (const [x, y] of points) {
         const from = (await state()).s.map;
-        await walkTo(x, y);
-        for (let i = 0; i < 200; i++) {
+        for (let i = 0; i < 400; i++) {
             const now = await state();
-            if (now.s.map !== from && now.m === 'field' && !now.msg) break;
-            if (now.msg) await key('j');
+            if (now.s.map !== from && now.m === 'field' && !now.msg && !now.menu) break;
+            if (now.menu) {
+                await key('ArrowUp');   // 心のかけらなどの メニューは いちばん下 (あとで) を 選ぶ
+                await key('j');
+            } else if (now.msg) await key('j');
+            else if (now.m === 'field' && now.s.map === from) await walkTo(x, y);
             else await sleep(80);
         }
         await shot(`16-layer-${(await state()).s.map}`);
@@ -486,11 +489,11 @@ for (let day = 3; day < 7; day++) {
             await waitField();
             await shot('18-riku-field');
             await walkTo(9, 3);
+            await sleep(300);   // 歩き終わるまで 待つ (歩いている 間の A は 効かない)
             await key('ArrowUp', 40);
-            await key('j');
-            for (let i = 0; i < 60 && !(await read('!!yumekui.state.chaser')); i++) {
-                if ((await state()).msg) await key('j');
-                await sleep(80);
+            for (let i = 0; i < 80 && !(await read('!!yumekui.state.chaser')); i++) {
+                await key('j');   // 壁を 調べる / セリフを 送る
+                await sleep(150);
             }
             await shot('18b-nightmare');
             await walkTo(10, 8);
@@ -553,6 +556,21 @@ await fightAt(9, 2, true);
 await sleep(500);
 console.log('ボス戦のあと: 解決', JSON.stringify(await read('yumekui.keep.solved')), '画面', (await state()).m, '文', await read('document.getElementById("text").textContent'));
 await shot('14-after-rescue');
+// 1 周目: ミオを 救った 夜、光る扉の前で ナイトメア戦 (必ず 負ける) → 12 日に 病院で 目を覚ます
+for (let i = 0; i < 300 && (await read('yumekui.mode')) !== 'scare'; i++) {
+    const now = await state();
+    if (now.menu) await key('j');
+    else if (now.msg) await key('j');
+    else await sleep(80);
+}
+await shot('14b-nigasanai');
+for (let i = 0; i < 300 && !(await read('yumekui.state.flags.prepDay === false || (yumekui.state.day === 12 && yumekui.mode === "field")')); i++) {
+    const now = await state();
+    if (now.msg || now.menu) await key('j');
+    else await sleep(80);
+}
+console.log('ナイトメアのあと', await read('yumekui.state.day'), JSON.stringify(await read('yumekui.state.status')), '夢が閉じた', await read('yumekui.state.flags.dreamsClosed'));
+await shot('14c-prep');
 const rescued = await state();
 console.log('仲間', JSON.stringify(await read('yumekui.keep.allies')), '状態', JSON.stringify(rescued.s.status));
 for (let i = 0; i < 600; i++) {

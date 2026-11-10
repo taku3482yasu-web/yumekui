@@ -251,7 +251,7 @@ function shake(b, events, rate = 1) {
 function run(b, events) {
     events.push({ t: 'say', text: 'ハルたちは にげだした！' });
     if (!canRun(b)) {
-        events.push({ t: 'say', text: 'しかし、にげられない！' });
+        events.push({ t: 'say', text: b.foes.find((f) => f.runText)?.runText ?? 'しかし、にげられない！' });
         return;
     }
     if (b.rng() < RUN_RATE) {
