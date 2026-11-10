@@ -2,14 +2,14 @@ import { act, aliveFoes, answer, bench, chanceFoe, commands, createBattle, needs
 import { ACTIONS, keyName } from './core/keys.js';
 import { advance, createKeep, dateLabel, devour, dreamsTonight, nextLoop, rescue, rescuePair, ACTIVE_DAY, LAST_DAY, PAIR } from './core/calendar.js';
 import { bakSkills, bakUnit, grow } from './core/growth.js';
-import { battleExp, gainExp, growUnit, ypLeft } from './core/level.js';
+import { battleExp, gainExp, growUnit, layerFoe, reachLayer, reachedLayer, ypLeft } from './core/level.js';
 import { openGrow } from './view/grow.js';
 import { createState, facing, isBlocked, objectAt, pickWord, placeName, step, tileAt, warp, DIRS } from './core/field.js';
 import { deepTalk, startDay, startMorning, timeLabel, timesBetween, NIGHT_START, PROLOGUE_START, RIKU_BRANCH_Y, TOWN_START } from './core/town.js';
 import { isWeekend } from './core/days.js';
 import { frontChoices, makeSentence, nextChoices, sentenceChoices } from './core/sentence.js';
 import { OWNER_NAMES, WORDS } from './data/words.js';
-import { MAPS } from './data/maps.js';
+import { DREAM_LAYERS, MAPS } from './data/maps.js';
 import { ALLIES, FOES } from './data/units.js';
 import { LINES } from './scenes/story.js';
 import { createInput } from './view/input.js';
@@ -28,7 +28,14 @@ const NOTE_MS = 650;
 const WIN_HEAL = 15;
 const PARTY_SIZE = 3;
 const COPY_BONUS = 0.1;
-const DREAM_MAPS = { mio: 'mizuzoko', kana: 'renshu', duet: 'duet' };
+// 今いる 地図が どの夢の 何階層目か (階層の ない 地図は null)
+function layerOf(mapId = state.map) {
+    for (const [dream, list] of Object.entries(DREAM_LAYERS)) {
+        const index = list.indexOf(mapId);
+        if (index >= 0) return { dream, layer: index + 1, deepest: index === list.length - 1 };
+    }
+    return null;
+}
 
 const ctx = document.getElementById('game').getContext('2d');
 ctx.imageSmoothingEnabled = false;
@@ -290,10 +297,14 @@ async function enter(exit) {
     const goingOut = state.phase === 'night' && state.map === 'home' && exit.to !== 'home';
     warp(state, exit);
     resetFollow();
-    hp = {};
+    const here = layerOf();
+    if (!here) hp = {};   // 夢の 階層を 下りるときは 体力は そのまま (毛布で 回復する)
+    if (here) reachLayer(state, here.dream, here.layer);
     walk.left = 0;
     showHud();
     await ui.fade(false);
+    if (here && here.layer > 1) await talk(LINES.layerEnter(layerLabel(here.dream, here.layer)));
+    if (here?.deepest && !state.flags.active) await talk(LINES.noBossDeep);
     if (exit.to === 'omen') await talk(LINES.enterOmen);
     if (exit.to === 'hiroba') await talk(LINES.enterHiroba);
     if (goingOut && !state.nightOut) {
@@ -348,7 +359,8 @@ async function fight(object) {
     if (object.script === 'duetBoss') await talk(LINES.duetBoss);
 
     // 敵は 1 体 (foe) か 複数 (foes)。本音を持つ 敵 (なければ 1 体目) が この戦いの 主
-    const foeList = (object.foes ?? [object.foe]).map((id) => FOES[id]);
+    const layer = layerOf()?.layer ?? 1;   // 下の 階層ほど 敵が 強い
+    const foeList = (object.foes ?? [object.foe]).map((id) => layerFoe(FOES[id], layer));
     const foe = foeList.find((f) => f.truth) ?? foeList[0];
     const battle = createBattle(partyUnits(), foeList, { noEscape: object.script === 'firstBattle', musou: keep.musou });
     await playEncounter(encounterTheme(MAPS[state.map], state.x), foeList.some((f) => f.truth));
@@ -541,7 +553,7 @@ async function finish(battle, object, foe) {
 
 // 経験値: 倒した 敵 (本音を 届けた・喰らった 敵も) の 合計を、パーティは そのまま、控えは 半分
 async function awardExp(battle) {
-    const amount = battleExp(battle.foes.map((f) => ({ exp: (f.exp ?? 0) * (f.expRate ?? 1) })));
+    const amount = battleExp(battle.foes.map((f) => ({ exp: (f.exp ?? 0) * (f.expRate ?? 1) })), layerOf()?.layer ?? 1);
     if (!amount) return;
     const hadYp = (keep.ypTotal ?? 0) > 0;
     const events = gainExp(state, keep, { party: keep.allies.slice(0, PARTY_SIZE), reserve: keep.allies.slice(PARTY_SIZE) }, amount);
@@ -810,15 +822,30 @@ async function useBed() {
     wakeUp('sleep');
 }
 
+function layerLabel(dreamId, layer) {
+    const list = DREAM_LAYERS[dreamId];
+    const name = MAPS[list[layer - 1]].name;
+    return layer === list.length ? LINES.deepestLabel(name) : LINES.layerLabel(layer, name);
+}
+
 async function enterDream(id) {
-    const map = DREAM_MAPS[id];
+    // たどり着いた 階層が あれば、どこから 始めるか 選ぶ (その周の あいだ)
+    let layer = 1;
+    const reached = reachedLayer(state, id);
+    if (reached > 1) {
+        const items = Array.from({ length: reached }, (_, i) => ({ id: String(i + 1), label: layerLabel(id, i + 1) }));
+        layer = Number(await ui.menu(items, { head: LINES.layerHead, wide: true }));
+    }
+    const map = DREAM_LAYERS[id][layer - 1];
     await ui.fade(true);
     const entered = dream(map);
     mode = 'scene';   // 夢に入る セリフが 終わるまで 歩けない (フェードの あいだに 敵に ぶつからない)
     await ui.fade(false);
     await scene(async () => {
-        await talk(map === 'duet' ? LINES.duetEnter : LINES.enterDream[map]);
-        if (!state.flags.active) await talk(LINES.noBoss);
+        if (layer === 1) {
+            await talk(map === 'duet' ? LINES.duetEnter : LINES.enterDream[map]);
+            if (!state.flags.active) await talk(LINES.noBoss);
+        } else await talk(LINES.layerEnter(layerLabel(id, layer)));
     });
     await entered;
 }

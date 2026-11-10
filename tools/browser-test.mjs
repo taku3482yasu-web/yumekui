@@ -377,6 +377,21 @@ const goHome = async (label = '家に帰る') => {
     const labels = await read('[...document.querySelectorAll("#menu button")].map(b=>b.textContent)');
     await pick(labels.some((l) => l.includes(label)) ? label : '家に帰る');
 };
+// 夢の 階層を 下りる: 階段を 順に 踏む (着いたら セリフを 送って 歩けるまで 待つ)
+const descend = async (points) => {
+    for (const [x, y] of points) {
+        const from = (await state()).s.map;
+        await walkTo(x, y);
+        for (let i = 0; i < 200; i++) {
+            const now = await state();
+            if (now.s.map !== from && now.m === 'field' && !now.msg) break;
+            if (now.msg) await key('j');
+            else await sleep(80);
+        }
+        await shot(`16-layer-${(await state()).s.map}`);
+    }
+};
+
 const fightAt = async (x, y, shake = false) => {
     await walkTo(x, y);
     await sleep(300);
@@ -488,7 +503,10 @@ console.log('作った文', JSON.stringify((await state()).s.sentences));
 await night('ミオの夢');
 await sleep(900);
 await waitField();
-await fightAt(9, 4, true);
+// 第 1 層の 階段 → 第 2 層 → 第 3 層 → 最深部の ボス
+await descend([[9, 4], [18, 1], [18, 8]]);
+console.log('最深部', (await state()).s.map, '覚えた階層', JSON.stringify((await state()).s.reached));
+await fightAt(9, 2, true);
 await sleep(500);
 console.log('ボス戦のあと: 解決', JSON.stringify(await read('yumekui.keep.solved')), '画面', (await state()).m, '文', await read('document.getElementById("text").textContent'));
 await shot('14-after-rescue');
@@ -539,7 +557,9 @@ await battle(false);
 await skip();
 await walkTo(10, 8);
 await walkTo(10, 7);
-await walkTo(9, 5);
+await descend([[9, 5], [18, 9], [9, 1]]);
+await walkTo(9, 3);
+await key('ArrowUp');
 await sleep(300);
 await skip();
 await sleep(900);

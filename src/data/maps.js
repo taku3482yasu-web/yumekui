@@ -1,4 +1,5 @@
 import { TOWN_MAPS } from './town.js';
+import { LAYER_MAPS } from './layers.js';
 
 // ハルの夢『顔色の坂道』。w = 空に浮かぶ海 / M = お面の壁 / . = 坂 / s = 階段 / G = 閉じた門 / C = 崩れた所 (夢筆で 描ける)
 const odoriba = [
@@ -48,7 +49,7 @@ const mizuzoko = [
     'wwww............wwww',
     'wwww.wwww..wwww.wwww',
     'wwww.w........w.wwww',
-    'wwww.w........w.wwww',
+    'wwww.w...s....w.wwww',
     'wwww.w........w.wwww',
     'wwww.wwww..wwww.wwww',
     'wwww............wwww',
@@ -63,7 +64,7 @@ const renshu = [
     'ww.wwwwwwwwwwwwww.ww',
     'ww.w............w.ww',
     'ww.w.wwwwwwwwww.w.ww',
-    'ww.w.w........w.w.ww',
+    'ww.w.w...s....w.w.ww',
     'ww.w.w........w.w.ww',
     'ww.w.wwwww.wwww.w.ww',
     'ww.............ww.ww',
@@ -75,7 +76,7 @@ const renshu = [
 //   L / J = 左右の 扉 (反対側の 音の石を 鳴らすと 開く。R は 現実の 屋根なので 使わない)。部屋の幅: 左の部屋 x1〜4 / 左の広間 x6〜11 / まん中 x12〜13 / 右の広間 x14〜19 / 右の部屋 x21〜24
 const duet = [
     'w'.repeat(26),
-    'wwwwwwwwww......wwwwwwwwww',
+    'wwwwwwwwww..s...wwwwwwwwww',
     'wwwwwwwwww......wwwwwwwwww',
     'wwwwwwwwwwww.wwwwwwwwwwwww',
     'w....wwwwwww..wwwwwww....w',
@@ -130,9 +131,15 @@ export const MAPS = {
         ]
     },
     mizuzoko: {
-        id: 'mizuzoko', name: '水底の音楽室', dream: '水底の音楽室', tiles: mizuzoko, start: { x: 9, y: 9 }, theme: 'water',
+        id: 'mizuzoko', name: '水底の音楽室', dream: '水底の音楽室', tiles: mizuzoko, start: { x: 9, y: 9 }, theme: 'water', layer: 1,
+        rooms: [
+            { name: '沈んだ入口', x: [0, 19], y: [8, 10] },
+            { name: '水の回廊', x: [0, 19], y: [0, 7] },
+            { name: '譜面台の間', x: [6, 13], y: [3, 6] }
+        ],
         objects: [
             { id: 'mioWake', kind: 'wake', x: 10, y: 9, sprite: 'wakeDoor' },
+            { id: 'mioRest', kind: 'talk', x: 8, y: 8, sprite: 'blanket', script: 'rest' },
             // 夢筆で ピアノを 描くと、弾いて 体力が 回復する
             { id: 'pianoSpot', kind: 'brushSpot', x: 8, y: 9, sprite: 'brushMark', accepts: ['piano'], hideIf: 'painted_pianoSpot', done: 'pianoPainted', hint: 'brushHintPiano' },
             { id: 'dreamPiano', kind: 'talk', x: 8, y: 9, sprite: 'piano', script: 'pianoRest', needs: 'painted_pianoSpot' },
@@ -141,13 +148,19 @@ export const MAPS = {
             { id: 'mioOnpu2', kind: 'foe', x: 4, y: 4, foe: 'onpu' },
             { id: 'mioWord', kind: 'word', x: 15, y: 1, word: '吹きたかった', sprite: 'word' },
             { id: 'mioDecoy', kind: 'word', x: 4, y: 1, word: 'やめたかった', sprite: 'word' },   // まちがいの 言葉
-            { id: 'mioBoss', kind: 'foe', x: 9, y: 4, foe: 'gakufume', needs: 'active', script: 'pairBoss' }
+            { id: 'mioDown', kind: 'exit', x: 9, y: 4, to: 'mizuzoko2', at: { x: 2, y: 8 } }   // 第 2 層へ (ボスは 最深部)
         ]
     },
     renshu: {
-        id: 'renshu', name: '止まらない練習室', dream: '止まらない練習室', tiles: renshu, start: { x: 2, y: 8 }, theme: 'tempo',
+        id: 'renshu', name: '止まらない練習室', dream: '止まらない練習室', tiles: renshu, start: { x: 2, y: 8 }, theme: 'tempo', layer: 1,
+        rooms: [
+            { name: '練習室の入口', x: [0, 3], y: [8, 10] },
+            { name: '外周の廊下', x: [0, 19], y: [0, 10] },
+            { name: 'まん中の練習室', x: [5, 14], y: [4, 7] }
+        ],
         objects: [
             { id: 'kanaWake', kind: 'wake', x: 3, y: 9, sprite: 'wakeDoor' },
+            { id: 'kanaRest', kind: 'talk', x: 2, y: 7, sprite: 'blanket', script: 'rest' },
             // 夢筆で メトロノームを 描くと、テンポが ゆっくりになり ナナシ・ハリが 動けなくなる
             { id: 'metronomeSpot', kind: 'brushSpot', x: 2, y: 9, sprite: 'brushMark', accepts: ['metronome'], hideIf: 'painted_metronomeSpot', done: 'metronomePainted', hint: 'brushHintMetronome' },
             { id: 'dreamMetronome', kind: 'talk', x: 2, y: 9, sprite: 'metronome', script: 'metronomeLook', needs: 'painted_metronomeSpot' },
@@ -156,20 +169,20 @@ export const MAPS = {
             { id: 'kanaSuima', kind: 'foe', x: 17, y: 5, foe: 'suima' },
             { id: 'kanaWord', kind: 'word', x: 15, y: 3, word: 'ほしかった', sprite: 'word' },
             { id: 'kanaDecoy', kind: 'word', x: 17, y: 1, word: 'くやしかった', sprite: 'word' },   // まちがいの 言葉
-            { id: 'kanaBoss', kind: 'foe', x: 9, y: 5, foe: 'togemetoro', needs: 'active', script: 'pairBoss' }
+            { id: 'kanaDown', kind: 'exit', x: 9, y: 5, to: 'renshu2', at: { x: 1, y: 2 } }   // 第 2 層へ (ボスは 最深部)
         ]
     },
     duet: {
-        id: 'duet', name: '二重奏ホール', dream: '二重奏ホール', tiles: duet, start: { x: 12, y: 10 }, theme: 'duet', split: 13,
+        id: 'duet', name: '二重奏ホール', dream: '二重奏ホール', tiles: duet, start: { x: 12, y: 10 }, theme: 'duet', split: 13, layer: 1,
         rooms: [
             { name: '水に沈んだ音楽室', x: [0, 11], y: [3, 9] },
             { name: 'トゲの練習室', x: [14, 25], y: [3, 9] },
-            { name: '割れた舞台', x: [0, 25], y: [0, 2] },
+            { name: '舞台への階段', x: [0, 25], y: [0, 2] },
             { name: 'ホールの通路', x: [12, 13], y: [3, 11] }
         ],
         objects: [
             { id: 'duetWake', kind: 'wake', x: 13, y: 10, sprite: 'wakeDoor' },
-            { id: 'duetRest', kind: 'talk', x: 13, y: 8, sprite: 'blanket', script: 'rest' },
+            { id: 'duetRest', kind: 'talk', x: 13, y: 9, sprite: 'blanket', script: 'rest' },
             // 左の 音で 右の扉が、右の 音で 左の扉が 開く (台本 3-4)
             { id: 'mioNote', kind: 'talk', x: 7, y: 6, sprite: 'word', script: 'noteMio' },
             { id: 'kanaNote', kind: 'talk', x: 18, y: 6, sprite: 'word', script: 'noteKana' },
@@ -183,10 +196,13 @@ export const MAPS = {
             { id: 'duetWordKana', kind: 'word', x: 23, y: 7, word: 'ほしかった', sprite: 'word' },
             { id: 'duetDecoyMio', kind: 'word', x: 1, y: 8, word: 'やめたかった', sprite: 'word' },
             { id: 'duetDecoyKana', kind: 'word', x: 24, y: 8, word: 'くやしかった', sprite: 'word' },
-            // 舞台への 道を ふさぐ 中ボスと、舞台の デュエット (7 日から)
+            // 下の 階層への 道を ふさぐ 中ボス。舞台の デュエットは 最深部 (layers.js)
             { id: 'duetMid', kind: 'foe', x: 12, y: 3, foe: 'duetSuima', sprite: 'muresuima-map', script: 'duetMid' },
-            { id: 'duetBoss', kind: 'foe', x: 12, y: 1, foe: 'duetDo', foes: ['duetDo', 'duetAi'], sprite: 'duet', needs: 'active', script: 'duetBoss' }
+            { id: 'duetDown', kind: 'exit', x: 12, y: 1, to: 'duet2', at: { x: 12, y: 7 } }
         ]
     },
+    ...LAYER_MAPS,
     ...TOWN_MAPS
 };
+
+export { DREAM_LAYERS } from './layers.js';

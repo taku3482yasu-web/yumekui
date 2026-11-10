@@ -292,7 +292,7 @@ test('同じユメクイを また救うと 夢写しになる', () => {
     assert.equal(keep.allies.filter((id) => id === 'gakufume').length, 1);
 });
 
-test('ミオとカナの夢: 言葉とボスに 歩いて届く', () => {
+test('ミオとカナの夢 (第 1 層): 言葉と 下の階層への 階段に 歩いて届く', () => {
     for (const [map, word, boss] of [['mizuzoko', '15,1', '9,4'], ['renshu', '15,3', '9,5']]) {
         const state = createState();
         state.map = map;
@@ -301,7 +301,7 @@ test('ミオとカナの夢: 言葉とボスに 歩いて届く', () => {
         state.flags.active = true;
         const seen = reach(state);
         assert.ok(seen.has(word), map + ' の言葉');
-        assert.ok(seen.has(boss), map + ' のボス');
+        assert.ok(seen.has(boss), map + ' の 階段 (ボスは 最深部)');
     }
 });
 

@@ -162,3 +162,26 @@ export function applyYp(unit, keep, shakePower) {
         kokoro: Math.round(kokoroBase * rate('kokoro')) - shakePower
     };
 }
+
+// ---- 夢の 階層 -----------------------------------------------------------
+
+// 下の 階層ほど 敵が 強い。ふつうの 敵は 1 階層ごとに ＋15%、本音を持つ ボスは ＋10% (最初の案)
+export const LAYER_FOE_STEP = 0.15;
+export const LAYER_BOSS_STEP = 0.1;
+
+export function layerFoe(foe, layer = 1) {
+    if (layer <= 1) return foe;
+    const rate = 1 + (foe.truth ? LAYER_BOSS_STEP : LAYER_FOE_STEP) * (layer - 1);
+    const maxHp = Math.round(foe.maxHp * rate);
+    return { ...foe, maxHp, hp: maxHp, atk: Math.round(foe.atk * rate), def: Math.round(foe.def * rate) };
+}
+
+// たどり着いた 階層を 覚える (その周のあいだ。次の夜から そこで 始められる)
+export function reachLayer(state, dream, layer) {
+    state.reached ??= {};
+    state.reached[dream] = Math.max(state.reached[dream] ?? 1, layer);
+}
+
+export function reachedLayer(state, dream) {
+    return state.reached?.[dream] ?? 1;
+}

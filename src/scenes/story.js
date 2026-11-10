@@ -264,6 +264,12 @@ export const LINES = {
         [BAK, 'レベルはループで戻っちまうが、ユメポイントで覚えたものは残るぜ。']
     ],
     ypRestHead: 'ユメポイントを 使う？',
+    // 夢の 階層
+    layerLabel: (n, name) => `第${n}層『${name}』`,
+    deepestLabel: (name) => `最深部『${name}』`,
+    layerHead: 'どこから はじめる？',
+    layerEnter: (label) => [[N, `${label}へ 下りた。`]],
+    noBossDeep: [[BAK, '……ここが一番奥だ。でも、まだユメクイは眠ってる。'], [BAK, '活性化したら、ここで待ってるはずだ。']],
     ypRestYes: 'なかまを そだてる',
     ypRestNo: 'やめる',
     growthInfo: ({ saved, eaten }, skills) => [
