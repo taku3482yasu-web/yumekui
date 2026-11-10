@@ -4,6 +4,7 @@ import { advance, createKeep, dateLabel, devour, dreamsTonight, isEarly, nextLoo
 import { bakSkills, bakUnit, grow } from './core/growth.js';
 import { battleExp, gainExp, growUnit, layerFoe, reachLayer, ypLeft } from './core/level.js';
 import { openGrow } from './view/grow.js';
+import { absorbed, isFinalLoop, kizunaFriends, routeOf, ABSORB_RATE } from './core/ending.js';
 import { applyEmotion, declineReborn, gainEmotions, pendingReborn, reborn } from './core/emotion.js';
 import { growCanvas, isNightmare, knowsDream, sightOf, stageOf, startLayers, truthHelp, DORMANT_ALLY_RATE, DORMANT_FOE_RATE, NIGHTMARE_RATE, STAGES } from './core/canvas.js';
 import { dreamShardOf, giveHeart, heartsOf, isDormant, pickHeart, setDormant, teachHeart, useDreamShard } from './core/shards.js';
@@ -447,7 +448,8 @@ async function fight(object) {
     const sleepy = (f) => state.flags.early && f.truth ? { ...f, maxHp: Math.round(f.maxHp * DORMANT_FOE_RATE), hp: Math.round(f.maxHp * DORMANT_FOE_RATE), atk: Math.round(f.atk * DORMANT_FOE_RATE) } : f;   // 活性化前の ユメクイは 弱い
     const foeList = (object.foes ?? [object.foe]).map((id) => sleepy(layerFoe(FOES[id], layer))).map((f) => nightmare === 1 ? f : { ...f, maxHp: Math.round(f.maxHp * nightmare), hp: Math.round(f.maxHp * nightmare), atk: Math.round(f.atk * nightmare) });
     const foe = foeList.find((f) => f.truth) ?? foeList[0];
-    const battle = createBattle(partyUnits(), foeList, { noEscape: ['firstBattle', 'nightmare'].includes(object.script), musou: keep.musou });
+    const scaled = object.scale ? foeList.map((f) => ({ ...f, maxHp: Math.round(f.maxHp * object.scale), hp: Math.round(f.maxHp * object.scale), atk: Math.round(f.atk * object.scale) })) : foeList;
+    const battle = createBattle(partyUnits(), scaled, { noEscape: ['firstBattle', 'nightmare', 'final'].includes(object.script), musou: keep.musou, kizuna: object.kizuna ?? null, dreamEat: Boolean(object.dreamEat) });
     await playEncounter(encounterTheme(MAPS[state.map], state.x), foeList.some((f) => f.truth));
     await ui.fade(true);
     mode = 'battle';
@@ -477,6 +479,7 @@ async function fight(object) {
     showHud();
     await ui.fade(false);
     await finish(battle, object, foe);
+    return battle.over;
 }
 
 // 「たたかう」: 技を 選ぶ (もどると いちばん上の コマンドへ)
@@ -555,6 +558,7 @@ function pop(text, x, y, color) {
 
 async function finish(battle, object, foe) {
     for (const unit of battle.party) hp[unit.id] = unit.hp;
+    if (object.script === 'final') return;   // 終幕の 戦いは finale() が 進める
     if (battle.over === 'flee') {
         // 敵は その場に 残る。ハルは 1 歩 下がる (下がれる ときだけ)
         const [dx, dy] = DIRS[state.dir];
@@ -711,6 +715,58 @@ async function hospitalScene() {
     await talk(LINES.hospital);
     await talk(LINES.prepTalk);
     await ui.fade(true);
+}
+
+// ---- 終幕 (3 周目の 14 日の夜) ---------------------------------------------
+const RETRY_WEAKEN = 0.85;   // 終幕の 戦いで 負けるたび、相手が 15% 弱る (詰まらないように)
+async function finalBattle(foe, options = {}) {
+    let scale = options.scale ?? 1;
+    for (;;) {
+        hp = {};
+        const result = await fight({ script: 'final', foe, ...options, scale });
+        if (result === 'win' || result === 'eatBoss') return;
+        scale *= RETRY_WEAKEN;
+        mode = 'black';
+        await talk(LINES.finalRetry);   // 負けても 立ち上がって もう一度
+    }
+}
+
+async function finale() {
+    const route = routeOf(state, keep);
+    mode = 'black';
+    await talk(LINES.finaleCommon);
+    if (route === 'good') {
+        await talk(LINES.goodBefore);
+        await finalBattle('nemuriboshi', { kizuna: kizunaFriends(state) });   // キズナ攻撃で ラスボスに 挑む
+        mode = 'black';
+        await talk(LINES.goodAfter);
+    } else if (route === 'yumekui') {
+        await talk(LINES.yumekuiBefore);
+        await finalBattle('rikuNightmare');   // ナイトメアの 代わりに リク・ナイトメア
+        mode = 'black';
+        await talk(LINES.yumekuiBoss);
+        await finalBattle('nemuriboshi', { dreamEat: true });   // 夢喰いで ラスボスを 喰らう (実質 勝ちの イベント)
+        mode = 'black';
+        await talk(LINES.yumekuiAfter);
+    } else {
+        await talk(LINES.normalBefore);
+        await finalBattle('nightmareFinal', { kizuna: [] });   // キズナ攻撃は 使えず、倒すしか ない
+        const lost = absorbed(state);
+        mode = 'black';
+        await talk(LINES.normalSecond(lost.join('も、') || 'スイマたち'));
+        await finalBattle('nightmare2', { kizuna: [], scale: 1 + ABSORB_RATE * lost.length });
+        mode = 'black';
+        await talk(LINES.normalAfter);
+        if (state.status.riku === 'saved') await talk(LINES.normalRikuSaved);
+        else {
+            await talk(LINES.normalRikuLost);
+            const friends = kizunaFriends(state);
+            await talk(friends.includes('ミオ') ? LINES.normalRikuLostMio : friends.length ? [] : LINES.normalAlone);
+        }
+    }
+    await ui.say('', `${LINES.endTitles[route]}　……${LINES.endTail[route]}`);
+    await ui.menu([{ id: 'title', label: LINES.toTitle }], { center: true });
+    location.reload();
 }
 
 async function ending() {
@@ -1167,6 +1223,10 @@ async function campaign() {
             mode = 'opening';
             ui.hideHud();
             await ui.fade(false);
+            if (isFinalLoop(keep)) {
+                await finale();   // 3 周目の 14 日の 夜で 小規模版は 終わる
+                return;
+            }
             await talk(LINES.loop);
             state = nextLoop(keep, state);
             await ui.fade(true);
@@ -1456,7 +1516,7 @@ function frame(now) {
 }
 
 // ブラウザのテストが 状態を読むための窓口
-window.yumekui = { get state() { return state; }, get mode() { return mode; }, get keep() { return keep; }, growScreen };
+window.yumekui = { get state() { return state; }, get mode() { return mode; }, get keep() { return keep; }, growScreen, finale };
 
 requestAnimationFrame(frame);
 start();

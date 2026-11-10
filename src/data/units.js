@@ -112,6 +112,34 @@ export const FOES = {
         pattern: ['tackle', 'charge', 'swirl'], chargeText: 'ナイトメアが 大鎌を ふりかぶった……！', bigMove: '大鎌',
         runText: '足が 動かない……！'
     },
+    // ---- 小規模版の 終幕 (2026-11-11 ユーザー指定) ----
+    // ノーマル: ナイトメア戦 (キズナ攻撃は 使えず、倒すしかない)。倒すと 救えなかった人の ユメクイを 吸って 第 2 形態に なる
+    nightmareFinal: {
+        id: 'nightmareFinal', name: 'ナイトメア', attr: '哀', sprite: 'nightmare',
+        hp: 200, maxHp: 200, atk: 13, def: 8, spd: 14, exp: 0,
+        pattern: ['tackle', 'tackle', 'charge', 'swirl'], chargeText: 'ナイトメアが 大鎌を ふりかぶった……！', bigMove: '大鎌',
+        runText: '足が 動かない……！'
+    },
+    nightmare2: {
+        id: 'nightmare2', name: 'ナイトメア（第2形態）', attr: '哀', sprite: 'nightmare',
+        hp: 240, maxHp: 240, atk: 14, def: 8, spd: 14, exp: 0,
+        pattern: ['tackle', 'charge', 'swirl', 'tackle'], chargeText: '無数の 顔が、いっせいに 口を開けた……！', bigMove: '顔たちの 叫び',
+        runText: '足が 動かない……！'
+    },
+    // ユメクイ: ナイトメアの 代わりに リク・ナイトメア
+    rikuNightmare: {
+        id: 'rikuNightmare', name: 'リク・ナイトメア', attr: '喜', sprite: 'nightmare',
+        hp: 220, maxHp: 220, atk: 14, def: 8, spd: 13, exp: 0,
+        pattern: ['tackle', 'tackle', 'charge', 'swirl'], chargeText: 'しおれた ひまわりの 大鎌が、ゆっくりと 上がる……！', bigMove: 'だいじょうぶの 刃',
+        runText: '足が 動かない……！'
+    },
+    // ラスボス ネムリボシ (繰り返したい 姉)。ふつうの 攻撃は ほとんど 効かず、キズナ攻撃で 挑む (グッド)。ユメクイでは 夢喰いで 喰らう
+    nemuriboshi: {
+        id: 'nemuriboshi', name: 'ネムリボシ', attr: '楽', sprite: 'nemuriboshi', lastBoss: true,
+        hp: 400, maxHp: 400, atk: 15, def: 60, spd: 12, exp: 0,
+        pattern: ['tackle', 'charge', 'swirl', 'tackle'], chargeText: '望遠鏡の 目が、1 か月ぶんの 夜を 集めている……！', bigMove: 'まきもどし',
+        runText: '足が 動かない……！'
+    },
     suima: { id: 'suima', name: 'スイマ', attr: '哀', sprite: 'suima', hp: 18, maxHp: 18, atk: 9, def: 3, spd: 8, drop: 1, exp: 5 },
     muresuima: {
         id: 'muresuima', name: 'ムレスイマ', attr: '怒', sprite: 'muresuima',

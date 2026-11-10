@@ -350,6 +350,25 @@ const ART = {
         '..kt.tt.tk......',
         '..k..kk..k......'
     ],
+    // ネムリボシ (ラスボス。望遠鏡と 夜空のような 体)
+    nemuriboshi: [
+        '......hhhh......',
+        '.....hffffh.....',
+        '.....hfiifh.....',
+        '......hffh......',
+        '....ttttttttt...',
+        '..tttnntttnnttt.',
+        '.ttnyttttttnytt.',
+        '.tttttwttwttttt.',
+        '.ttnttttttttntt.',
+        '.tttttnyntttttt.',
+        '..ttyttttttytt..',
+        '...tttttttttt...',
+        '....ttnttntt....',
+        '.....tttttt.....',
+        '......tttt......',
+        '................'
+    ],
     // 心のかけら (淡く 光る 水色の かけら)
     heart: [
         '................',

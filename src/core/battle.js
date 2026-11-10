@@ -26,7 +26,9 @@ function makeFoe(foe, index) {
 }
 
 // noEscape: にげられない 戦い (チュートリアルの 最初の戦い など)。本音を持つ 敵 (ボス) からも にげられない
-export function createBattle(allies, foes, { rng = Math.random, noEscape = false, musou = [] } = {}) {
+// kizuna: キズナ攻撃で 呼べる 仲間 (救った 夢主の 名前)。null なら 出さない、[] なら 使えない (ノーマルの ナイトメア戦)
+// dreamEat: ユメクイエンドの ラスボス戦。バクの 専用の 技「夢喰い」で ラスボスを 喰らって 終わる
+export function createBattle(allies, foes, { rng = Math.random, noEscape = false, musou = [], kizuna = null, dreamEat = false } = {}) {
     const party = (Array.isArray(allies) ? allies : [allies]).map((unit) => ({ ...unit, wait: 0 }));
     const list = (Array.isArray(foes) ? foes : [foes]).map(makeFoe);
     return {
@@ -39,6 +41,8 @@ export function createBattle(allies, foes, { rng = Math.random, noEscape = false
         rush: false,
         noEscape,
         musou,
+        kizuna: kizuna ? [...kizuna] : null,
+        dreamEat,
         over: null,
         get chance() { return this.foe.chance; },
         set chance(value) { this.foe.chance = value; },
@@ -105,6 +109,8 @@ export function commands(b) {
         const ready = musouPair(b, id);
         if (ready) list.push({ id: `musou:${id}`, label: MUSOU[id].label, disabled: ready.some((u) => u.tired > 0) });
     }
+    if (b.kizuna) list.unshift({ id: 'kizuna', label: b.kizuna.length ? `キズナ攻撃（あと${b.kizuna.length}）` : 'キズナ攻撃（つながりが ない）', disabled: !b.kizuna.length });
+    if (b.dreamEat && b.ally.id === 'bak') list.unshift({ id: 'dreameat', label: '夢喰い' });
     if (bench(b).length) list.push({ id: 'swap', label: '交代' });
     if (aliveFoes(b).some((foe) => foe.exhausted && foe.dream)) list.unshift({ id: 'devour', label: 'バクに喰らわせる' });
     if (aliveFoes(b).some((foe) => foe.chance)) list.unshift({ id: 'truth', label: '本音を言い当てる' });
@@ -165,6 +171,15 @@ export function act(b, id, target = null) {
     if (id === 'bite') fierce(b, events, 170, 'bite');
     if (id === 'gorge') fierce(b, events, 120, 'gorge');
     if (GROWTH_MOVES[id]) GROWTH_MOVES[id](b, events);
+    if (id === 'kizuna') kizunaAttack(b, events);
+    if (id === 'dreameat') {
+        // 夢喰い: ラスボスを 喰らって 戦いが 終わる (実質 勝ちの イベント)
+        events.push({ t: 'say', text: `${b.ally.name}の 夢喰い！` });
+        events.push({ t: 'say', text: `${b.foe.name}の 夜空が、バクの 口の中へ 吸いこまれていく……。` });
+        b.foe.down = true;
+        b.over = 'eatBoss';
+        events.push({ t: 'end', result: 'eatBoss' });
+    }
     const generic = (b.ally.moves.extra ?? []).find((m) => m.id === id && m.effect);
     if (generic) runEffect(b, events, generic);
     if (id === 'devour') {
@@ -597,6 +612,19 @@ function act2(b, id, target, events) {
     if (id === 'attack') attack(b, events);
     else if (GROWTH_MOVES[id] && id !== 'release') GROWTH_MOVES[id](b, events);
     else if (id === 'shake') shake(b, events);
+}
+
+// キズナ攻撃: 救った 仲間の 気持ちを 借りる。守りを 無視して 最大体力の 34%。1 人に つき 1 回
+export const KIZUNA_RATE = 0.34;   // 3 人 そろえば ちょうど 倒せる
+function kizunaAttack(b, events) {
+    const friend = b.kizuna.shift();
+    if (!friend) return;
+    const foe = b.foe;
+    events.push({ t: 'say', text: `${friend}の 声が 聞こえる。「ハル！」` });
+    events.push({ t: 'say', text: `${b.ally.name}の キズナ攻撃！` });
+    const amount = Math.round(foe.maxHp * KIZUNA_RATE);
+    events.push({ t: 'hit', target: 'foe', index: foe.index, amount, aff: 1.5 });
+    hurtFoe(b, foe, amount, events);
 }
 
 // 属性 → その属性に 強い 属性 (弱点)
