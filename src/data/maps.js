@@ -71,6 +71,23 @@ const renshu = [
     'wwwwwwwwwwwwwwwwwwww'
 ];
 
+// ミオ×カナの夢『二重奏ホール』(夢合体)。左は 水 (ミオ)、右は トゲ (カナ)。上が 舞台。
+//   L / J = 左右の 扉 (反対側の 音の石を 鳴らすと 開く。R は 現実の 屋根なので 使わない)。部屋の幅: 左の部屋 x1〜4 / 左の広間 x6〜11 / まん中 x12〜13 / 右の広間 x14〜19 / 右の部屋 x21〜24
+const duet = [
+    'w'.repeat(26),
+    'wwwwwwwwww......wwwwwwwwww',
+    'wwwwwwwwww......wwwwwwwwww',
+    'wwwwwwwwwwww.wwwwwwwwwwwww',
+    'w....wwwwwww..wwwwwww....w',
+    'w....L........' + '......J....w',
+    'w....w......' + '..' + '......w....w',
+    'w....w......' + '..' + '......w....w',
+    'w....wwwwwww' + '..' + 'wwwwwww....w',
+    'wwwwwwwwwwww' + '..' + 'wwwwwwwwwwww',
+    'wwwwwwwwwwww' + '..' + 'wwwwwwwwwwww',
+    'w'.repeat(26)
+];
+
 export const MAPS = {
     odoriba: {
         id: 'odoriba', name: '目覚めの踊り場', dream: '顔色の坂道', tiles: odoriba, start: { x: 9, y: 7 },
@@ -138,6 +155,33 @@ export const MAPS = {
             { id: 'kanaSuima', kind: 'foe', x: 17, y: 5, foe: 'suima' },
             { id: 'kanaWord', kind: 'word', x: 15, y: 3, word: 'ほしかった', sprite: 'word' },
             { id: 'kanaBoss', kind: 'foe', x: 9, y: 5, foe: 'togemetoro', needs: 'active', script: 'pairBoss' }
+        ]
+    },
+    duet: {
+        id: 'duet', name: '二重奏ホール', dream: '二重奏ホール', tiles: duet, start: { x: 12, y: 10 }, theme: 'duet', split: 13,
+        rooms: [
+            { name: '水に沈んだ音楽室', x: [0, 11], y: [3, 9] },
+            { name: 'トゲの練習室', x: [14, 25], y: [3, 9] },
+            { name: '割れた舞台', x: [0, 25], y: [0, 2] },
+            { name: 'ホールの通路', x: [12, 13], y: [3, 11] }
+        ],
+        objects: [
+            { id: 'duetWake', kind: 'wake', x: 13, y: 10, sprite: 'wakeDoor' },
+            { id: 'duetRest', kind: 'talk', x: 13, y: 8, sprite: 'blanket', script: 'rest' },
+            // 左の 音で 右の扉が、右の 音で 左の扉が 開く (台本 3-4)
+            { id: 'mioNote', kind: 'talk', x: 7, y: 6, sprite: 'word', script: 'noteMio' },
+            { id: 'kanaNote', kind: 'talk', x: 18, y: 6, sprite: 'word', script: 'noteKana' },
+            { id: 'duetOnpu', kind: 'foe', x: 10, y: 7, foe: 'onpu' },
+            { id: 'duetHari', kind: 'foe', x: 15, y: 7, foe: 'hari' },
+            { id: 'duetSuimaL', kind: 'foe', x: 8, y: 5, foe: 'suima' },
+            // 扉の 奥: 夢の住人と、言えなかった 言葉
+            { id: 'queenMio', kind: 'talk', x: 3, y: 4, sprite: 'mio', script: 'queenMio' },
+            { id: 'judgeKana', kind: 'talk', x: 22, y: 4, sprite: 'kana', script: 'judgeKana' },
+            { id: 'duetWordMio', kind: 'word', x: 2, y: 7, word: '吹きたかった', sprite: 'word' },
+            { id: 'duetWordKana', kind: 'word', x: 23, y: 7, word: 'ほしかった', sprite: 'word' },
+            // 舞台への 道を ふさぐ 中ボスと、舞台の デュエット (7 日から)
+            { id: 'duetMid', kind: 'foe', x: 12, y: 3, foe: 'duetSuima', sprite: 'muresuima-map', script: 'duetMid' },
+            { id: 'duetBoss', kind: 'foe', x: 12, y: 1, foe: 'duetDo', foes: ['duetDo', 'duetAi'], sprite: 'gakufume', needs: 'active', script: 'duetBoss' }
         ]
     },
     ...TOWN_MAPS

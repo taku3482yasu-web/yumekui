@@ -8,16 +8,35 @@ export { ACTIVE_DAY, LAST_DAY, LAST_RESCUE_DAY, OPEN_DAY, PAIR, dateLabel } from
 
 // ループしても残るもの
 export function createKeep() {
-    return { loop: 1, allies: ['bak'], solved: [], copies: {}, tutorial: false, growth: { saved: 0, eaten: 0 }, eaten: [], canvasTold: false, brush: false, images: [...FIRST_IMAGES] };
+    return { loop: 1, allies: ['bak'], solved: [], copies: {}, tutorial: false, growth: { saved: 0, eaten: 0 }, eaten: [], canvasTold: false, brush: false, images: [...FIRST_IMAGES], musou: [] };
 }
 
 export function canTalk(state, id) {
     return state.day < ACTIVE_DAY && state.status[id] === 'idle';
 }
 
-export function dreamsTonight(state) {
+// 今夜 描ける夢。2 周目からは、2 人とも 元気なら ミオ×カナの夢 (夢合体『二重奏ホール』) も 描ける
+export function dreamsTonight(state, keep = null) {
     if (state.day < OPEN_DAY) return [];
-    return PAIR.filter((id) => state.status[id] === 'idle');
+    const list = PAIR.filter((id) => state.status[id] === 'idle');
+    if (keep && keep.loop >= 2 && list.length === 2) list.push('duet');
+    return list;
+}
+
+// 夢合体で 2 人とも 救う。だれも 刈り取られない。ガクフメと トゲメトロが 仲間に (いれば 夢写し)
+export function rescuePair(state, keep) {
+    const joined = [];
+    for (const [id, ally] of [['kana', 'togemetoro'], ['mio', 'gakufume']]) {
+        state.status[id] = 'saved';
+        grow(keep, 'saved');
+        if (keep.allies.includes(ally)) keep.copies[ally] = (keep.copies[ally] ?? 0) + 1;
+        else keep.allies.push(ally);
+        joined.push(ally);
+        if (!keep.solved.includes(ally)) keep.solved.push(ally);
+    }
+    if (!keep.musou.includes('duet')) keep.musou.push('duet');
+    state.flags.duetSaved = true;
+    return joined;
 }
 
 // 単独の夢で救う。もう片方は その夜 ナイトメアに刈り取られる

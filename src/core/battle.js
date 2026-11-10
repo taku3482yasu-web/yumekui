@@ -5,6 +5,8 @@ import { affinity, damage } from './rules.js';
 //   b.chance / b.exhausted / b.step / b.foeSleep は、ねらっている 敵の 値 (1 体のときは 前と 同じ)
 // 敵の 番では、立っている 敵が 順に 1 回ずつ 行動する。全員 倒すと 勝ち
 // partnerRage: その敵の 相方が 倒れる (本音の敵は 体力が尽きる) と、残った敵の 攻撃が rage 倍 (デュエット)
+// after: その敵の 本音は、after の敵に 本音が 届いてから でないと 言い当てられない (デュエット: カナ → ミオの 順)
+// attrCycle: 行動のたびに 属性が 入れ替わる (二重奏ホールの ムレスイマ: 哀 ↔ 怒)
 const SKILL_WAIT = 3;
 const SHAKE_HIT = 0.85;
 const SHAKE_POWER = 34;
@@ -138,6 +140,9 @@ export function answer(b, choice) {
             return events;
         }
         retarget(b);
+        for (const next of aliveFoes(b)) {
+            if (next.after === foe.id && (next.exhausted || next.kokoro >= 100)) openChance(b, next, events);
+        }
         foesTurn(b, events);
         return events;
     }
@@ -294,6 +299,11 @@ function retarget(b) {
 
 function openChance(b, foe, events) {
     if (foe.chance) return;
+    const first = foe.after && b.foes.find((f) => f.id === foe.after);
+    if (first && !first.solved) {
+        events.push({ t: 'say', text: foe.waitText ?? `${foe.name}の 気持ちは、まだ 届かない……。` });
+        return;
+    }
     foe.chance = true;
     events.push({ t: 'chance', index: foe.index, name: foe.name });
 }
@@ -313,6 +323,11 @@ function foeTurn(b, foe, events) {
     }
     const pattern = foe.pattern ?? ['tackle'];
     const move = pattern[foe.step % pattern.length];
+    if (foe.attrCycle) {
+        foe.attr = foe.attrCycle[foe.step % foe.attrCycle.length];
+        events.push({ t: 'attr', index: foe.index, attr: foe.attr });
+        events.push({ t: 'say', text: `${foe.name}の 色が 変わった！（${foe.attr}）` });
+    }
     foe.step++;
     if (move === 'charge') {
         events.push({ t: 'say', text: foe.chargeText ?? `${foe.name}が 大きく うずを巻きはじめた……！` });

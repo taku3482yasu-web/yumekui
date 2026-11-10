@@ -52,6 +52,8 @@ export function tileAt(state, x, y) {
 export function isBlocked(state, x, y) {
     const tile = tileAt(state, x, y);
     if (SOLID.has(tile)) return true;
+    if (tile === 'L') return !state.flags.gateL;   // 二重奏ホールの 左右の扉
+    if (tile === 'J') return !state.flags.gateR;
     return tile === 'G' && !state.flags.gateOpen;
 }
 

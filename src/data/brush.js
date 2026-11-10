@@ -4,10 +4,10 @@
 //   hal = ハルの夢『顔色の坂道』(空に 海が浮かぶ 坂) / water = ミオの夢『水底の音楽室』/ tempo = カナの夢『止まらない練習室』
 // see: 現実で どこを 調べると 覚えるか (説明用)
 export const IMAGES = {
-    stairs: { label: '階段', fits: ['hal', 'water', 'tempo'], see: '学校の階段 (毎日 見ているので 最初から 描ける)' },
-    bridge: { label: '橋', fits: ['hal', 'water', 'tempo'], see: '学校の 渡り廊下の 手すり' },
-    piano: { label: 'ピアノ', fits: ['water', 'tempo'], see: '音楽室の ピアノ' },
-    metronome: { label: 'メトロノーム', fits: ['water', 'tempo'], see: '音楽室の メトロノーム' },
+    stairs: { label: '階段', fits: ['hal', 'water', 'tempo', 'duet'], see: '学校の階段 (毎日 見ているので 最初から 描ける)' },
+    bridge: { label: '橋', fits: ['hal', 'water', 'tempo', 'duet'], see: '学校の 渡り廊下の 手すり' },
+    piano: { label: 'ピアノ', fits: ['water', 'tempo', 'duet'], see: '音楽室の ピアノ' },
+    metronome: { label: 'メトロノーム', fits: ['water', 'tempo', 'duet'], see: '音楽室の メトロノーム' },
     easel: { label: 'イーゼル', fits: ['hal'], see: '美術室の イーゼル' },
     sea: { label: '海', fits: ['hal'], see: '坂道から 見える 海' }
 };

@@ -24,6 +24,20 @@ const mask = (attr, label) => ({
     hp: 26, maxHp: 26, atk: 10, def: 4, spd: 6
 });
 
+// 夢主の 本音 (単独の夢の ボスと、二重奏ホールの デュエットで 同じ)
+const TRUTH = {
+    mio: {
+        words: ['一緒に', '吹きたかった'],
+        answer: '一緒に吹きたかった',
+        wrong: ['ソロなんて、やりたくなかった', '勝ちたかっただけ', 'カナなんて、もういらない', '一人のほうが、うまく吹ける']
+    },
+    kana: {
+        words: ['相談して', 'ほしかった'],
+        answer: '相談してほしかった',
+        wrong: ['ミオがソロなんて、ずるい', '本当は、吹奏楽が嫌いだった', '負けたのが、くやしかっただけ', 'もう、どうでもいい']
+    }
+};
+
 export const FOES = {
     nanashi: { id: 'nanashi', name: 'ナナシ', attr: '喜', sprite: 'nanashi', hp: 20, maxHp: 20, atk: 8, def: 4, spd: 6 },
     'omote-喜': mask('喜', '笑い顔'),
@@ -37,22 +51,37 @@ export const FOES = {
         hp: 110, maxHp: 110, atk: 11, def: 6, spd: 9,
         pattern: ['tackle', 'tackle', 'charge', 'swirl'],
         chargeText: 'ガクフメが 高い音を ためている……！', bigMove: '止まらないソロ',
-        truth: {
-            words: ['一緒に', '吹きたかった'],
-            answer: '一緒に吹きたかった',
-            wrong: ['ソロなんて、やりたくなかった', '勝ちたかっただけ', 'カナなんて、もういらない', '一人のほうが、うまく吹ける']
-        }
+        truth: TRUTH.mio
     },
     togemetoro: {
         id: 'togemetoro', name: 'トゲメトロ', attr: '怒', sprite: 'togemetoro', dream: 'kana', ally: 'togemetoro',
         hp: 110, maxHp: 110, atk: 13, def: 6, spd: 10,
         pattern: ['tackle', 'tackle', 'charge', 'swirl'],
         chargeText: 'トゲメトロの テンポが 速くなっていく……！', bigMove: 'せかすリズム',
-        truth: {
-            words: ['相談して', 'ほしかった'],
-            answer: '相談してほしかった',
-            wrong: ['ミオがソロなんて、ずるい', '本当は、吹奏楽が嫌いだった', '負けたのが、くやしかっただけ', 'もう、どうでもいい']
-        }
+        truth: TRUTH.kana
+    },
+    // 二重奏ホール (ミオ×カナの 夢合体)。中ボスの ムレスイマは 行動のたびに 哀 ↔ 怒
+    duetSuima: {
+        id: 'duetSuima', name: 'ムレスイマ', attr: '哀', sprite: 'muresuima', attrCycle: ['哀', '怒'],
+        hp: 90, maxHp: 90, atk: 12, def: 5, spd: 8, drop: 1,
+        pattern: ['tackle', 'tackle', 'charge', 'swirl'], chargeText: 'ムレスイマが、ふたつの音で うずを巻きはじめた……！'
+    },
+    // 合体ボス「デュエット」: 1 本の楽譜の上で 背中合わせの 2 羽。片方が 倒れると もう片方が 怒る。
+    // 本音は カナ (怒りの鳥) → ミオ (哀しみの鳥) の 順に 言い当てる。救うと ガクフメと トゲメトロが 仲間になる
+    duetDo: {
+        id: 'duetDo', name: '怒りの鳥', attr: '怒', sprite: 'togemetoro', partnerRage: true, solvedAs: 'togemetoro',
+        rageText: '怒りの鳥が、羽を逆立てた！', truthHead: 'カナの本音は？',
+        hp: 90, maxHp: 90, atk: 12, def: 6, spd: 10,
+        pattern: ['tackle', 'charge', 'swirl', 'tackle'], chargeText: '怒りの鳥の テンポが 速くなっていく……！', bigMove: 'せかすリズム',
+        truth: { ...TRUTH.kana }
+    },
+    duetAi: {
+        id: 'duetAi', name: '哀しみの鳥', attr: '哀', sprite: 'gakufume', partnerRage: true, solvedAs: 'gakufume',
+        rageText: '哀しみの鳥が、高く鳴いた！', truthHead: 'ミオの本音は？', after: 'duetDo',
+        waitText: '哀しみの鳥は、背中を向けたままだ。……先に、トゲのほうだ。',
+        hp: 90, maxHp: 90, atk: 11, def: 6, spd: 9,
+        pattern: ['tackle', 'tackle', 'charge', 'swirl'], chargeText: '哀しみの鳥が 高い音を ためている……！', bigMove: '止まらないソロ',
+        truth: { ...TRUTH.mio }
     },
     suima: { id: 'suima', name: 'スイマ', attr: '哀', sprite: 'suima', hp: 18, maxHp: 18, atk: 9, def: 3, spd: 8, drop: 1 },
     muresuima: {

@@ -1,6 +1,6 @@
 import { act, aliveFoes, answer, bench, chanceFoe, commands, createBattle, needsTarget, setTarget, TARGETED, TOP_COMMANDS } from './core/battle.js';
 import { ACTIONS, keyName } from './core/keys.js';
-import { advance, createKeep, dateLabel, devour, dreamsTonight, nextLoop, rescue, ACTIVE_DAY, LAST_DAY, PAIR } from './core/calendar.js';
+import { advance, createKeep, dateLabel, devour, dreamsTonight, nextLoop, rescue, rescuePair, ACTIVE_DAY, LAST_DAY, PAIR } from './core/calendar.js';
 import { bakSkills, bakUnit, grow } from './core/growth.js';
 import { createState, facing, isBlocked, objectAt, pickWord, placeName, step, tileAt, warp, DIRS } from './core/field.js';
 import { deepTalk, startDay, startMorning, timeLabel, timesBetween, NIGHT_START, PROLOGUE_START, RIKU_BRANCH_Y, TOWN_START } from './core/town.js';
@@ -25,7 +25,7 @@ const NOTE_MS = 650;
 const WIN_HEAL = 15;
 const PARTY_SIZE = 3;
 const COPY_BONUS = 0.1;
-const DREAM_MAPS = { mio: 'mizuzoko', kana: 'renshu' };
+const DREAM_MAPS = { mio: 'mizuzoko', kana: 'renshu', duet: 'duet' };
 
 const ctx = document.getElementById('game').getContext('2d');
 ctx.imageSmoothingEnabled = false;
@@ -125,6 +125,19 @@ const SCRIPTS = {
         await talk(LINES.metronomePainted);
     },
     metronomeLook: () => talk(LINES.metronomeLook),
+    // 二重奏ホール: 左の音で 右の扉が、右の音で 左の扉が 開く
+    noteMio: async () => {
+        const first = !state.flags.gateR;
+        state.flags.gateR = true;
+        await talk(first ? LINES.noteMio : LINES.noteAgain);
+    },
+    noteKana: async () => {
+        const first = !state.flags.gateL;
+        state.flags.gateL = true;
+        await talk(first ? LINES.noteKana : LINES.noteAgain);
+    },
+    queenMio: () => talk(LINES.queenMio),
+    judgeKana: () => talk(LINES.judgeKana),
     // 町
     tomeShop: () => talk(LINES.tomeShop),
     portSign: () => talk(LINES.portSign),
@@ -136,7 +149,7 @@ const SCRIPTS = {
     goHome: homeDoor
 };
 
-const NAMES = { mio: 'ミオ', kana: 'カナ' };
+const NAMES = { mio: 'ミオ', kana: 'カナ', duet: 'ミオとカナ' };
 
 // 人に話しかける。元気な夢主 (ミオ・カナ) とは「じっくり話す」か 選べる
 async function talkTo(who) {
@@ -310,12 +323,14 @@ async function fight(object) {
     if (object.script === 'firstBattle' && !state.flags.firstBattle) await talk(LINES.firstBattle);
     if (object.script === 'boss') await talk(LINES.boss);
     if (object.script === 'pairBoss') await talk(LINES.pairBoss);
+    if (object.script === 'duetMid') await talk(LINES.duetMid);
+    if (object.script === 'duetBoss') await talk(LINES.duetBoss);
 
     // 敵は 1 体 (foe) か 複数 (foes)。本音を持つ 敵 (なければ 1 体目) が この戦いの 主
     const foeList = (object.foes ?? [object.foe]).map((id) => FOES[id]);
     const foe = foeList.find((f) => f.truth) ?? foeList[0];
     const battle = createBattle(partyUnits(), foeList, { noEscape: object.script === 'firstBattle' });
-    await playEncounter(encounterTheme(MAPS[state.map]), foeList.some((f) => f.truth));
+    await playEncounter(encounterTheme(MAPS[state.map], state.x), foeList.some((f) => f.truth));
     await ui.fade(true);
     mode = 'battle';
     battleView = { foes: foeList.map((f) => f.sprite), down: [], ally: battle.ally.sprite, foeHit: [], allyHit: 0, pops: [] };
@@ -370,10 +385,10 @@ async function chooseTarget(battle) {
 
 function chooseTruth(battle) {
     battle.foe = chanceFoe(battle) ?? battle.foe;
-    const solvedBefore = keep.solved.includes(battle.foe.id);
+    const solvedBefore = keep.solved.includes(battle.foe.solvedAs ?? battle.foe.id);
     const choices = buildChoices(battle.foe.truth, state.words, { solvedBefore });
     const items = choices.map((line) => ({ id: line, label: line }));
-    return ui.menu(items, { head: LINES.truthHead, wide: true }).then((line) => answer(battle, line));
+    return ui.menu(items, { head: battle.foe.truthHead ?? LINES.truthHead, wide: true }).then((line) => answer(battle, line));
 }
 
 async function chooseSwap(battle) {
@@ -439,6 +454,18 @@ async function finish(battle, object, foe) {
         const start = MAPS[state.map].start;
         state.x = start.x;
         state.y = start.y;
+        return;
+    }
+    if (battle.over === 'truth' && object.script === 'duetBoss') {
+        // 夢合体: 2 人とも 目を覚まし、ガクフメと トゲメトロが 仲間に。夢双「ふたりのアンサンブル」の 相性
+        const before = bakSkills(keep.growth);
+        const joined = rescuePair(state, keep);
+        await talk(LINES.duetSaved);
+        for (const ally of joined) await talk(keep.copies[ally] ? LINES.copied(ALLIES[ally].name) : LINES.joined(ALLIES[ally].name));
+        await talk(LINES.musouGot);
+        await talk(LINES.grewSaved);
+        await announceSkills(before);
+        wakeUp();
         return;
     }
     if (battle.over === 'truth') {
@@ -626,6 +653,10 @@ async function morningPhase() {
         state.flags[`morning${state.day}`] = true;
         await talk(LINES.morningEvent[state.day]);
     }
+    if (keep.loop >= 2 && state.day === 2 && !keep.duetTold) {
+        keep.duetTold = true;
+        await talk(LINES.duetLesson);
+    }
     await playMovie(morningMovie(state, keep));
     if (!weekend) await talk(LINES.enterSchool);
     if (!weekend && LINES.homeroom[state.day] && !state.flags[`homeroom${state.day}`]) {
@@ -652,6 +683,11 @@ async function dayPhase() {
             await talk(LINES.day[state.day]);
         }
         if (state.day === 10 && PAIR.some((id) => state.status[id] === 'broken')) await talk(LINES.broken);
+        if (state.flags.duetSaved && !state.flags.duetAfter && state.day < 13) {
+            state.flags.duetAfter = true;
+            await talk(LINES.duetAfter);
+        }
+        if (state.day === 13 && state.flags.duetSaved) await talk(LINES.concertTogether);
     });
     await done;
     await playLapse(timesBetween(timeLabel(state), '夜', isWeekend(state.day)));   // 夕方 → 夜
@@ -684,7 +720,7 @@ async function useCanvas() {
         await talk(LINES.canvasOut);
         return;
     }
-    const dreams = dreamsTonight(state);
+    const dreams = dreamsTonight(state, keep);
     if (dreams.length && !keep.canvasTold) {
         keep.canvasTold = true;
         await talk(LINES.firstCanvas);
@@ -700,7 +736,7 @@ async function useCanvas() {
         wakeUp('sleep');
         return;
     }
-    await talk(LINES.drew(NAMES[id]));
+    await talk(id === 'duet' ? LINES.drewDuet : LINES.drew(NAMES[id]));
     wakeUp({ dream: id });
 }
 
@@ -731,7 +767,7 @@ async function enterDream(id) {
     mode = 'scene';   // 夢に入る セリフが 終わるまで 歩けない (フェードの あいだに 敵に ぶつからない)
     await ui.fade(false);
     await scene(async () => {
-        await talk(LINES.enterDream[map]);
+        await talk(map === 'duet' ? LINES.duetEnter : LINES.enterDream[map]);
         if (!state.flags.active) await talk(LINES.noBoss);
     });
     await entered;

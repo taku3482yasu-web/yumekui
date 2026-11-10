@@ -70,7 +70,7 @@ function drawTile(ctx, tile, x, y, open, theme) {
         ctx.fillStyle = '#8895cf';
         for (let i = 0; i < 4; i++) ctx.fillRect(x, y + i * 4, TILE, 2);
     }
-    if (tile === 'G' && !open) {
+    if ((tile === 'G' || tile === 'L' || tile === 'J') && !open) {
         ctx.fillStyle = '#20203a';
         ctx.fillRect(x, y, TILE, TILE);
         ctx.fillStyle = '#b08be8';
@@ -153,7 +153,12 @@ export function drawField(ctx, state, walk, time, actors = [], follower = null) 
     ctx.translate(-Math.round(camX), -Math.round(camY));
     map.tiles.forEach((row, y) => [...row].forEach((tile, x) => {
         if (map.real) drawRealTile(ctx, tile, x * TILE, y * TILE, time);
-        else drawTile(ctx, tile, x * TILE, y * TILE, state.flags.gateOpen, map.theme);
+        else {
+            // 二重奏ホールは 左が 水 (ミオ)、右が トゲ (カナ)。左右の扉は それぞれの 合図で 開く
+            const open = tile === 'L' ? state.flags.gateL : tile === 'J' ? state.flags.gateR : state.flags.gateOpen;
+            const theme = map.theme === 'duet' ? (x < map.split ? 'water' : 'tempo') : map.theme;
+            drawTile(ctx, tile, x * TILE, y * TILE, open, theme);
+        }
     }));
     for (const object of objectsOf(state)) drawObject(ctx, object, time);
     for (const actor of actors) drawObject(ctx, { kind: 'person', x: actor.x, y: actor.y, sprite: actor.who }, time);
