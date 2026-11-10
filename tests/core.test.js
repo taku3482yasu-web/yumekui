@@ -240,8 +240,9 @@ test('日付の表示', () => {
     assert.equal(dateLabel(14), '2月14日（日）');
 });
 
-test('片方を救うと もう片方は 刈り取られ 仲間が増える', () => {
+test('活性化したあと 片方を救うと もう片方は 刈り取られ 仲間が増える', () => {
     const state = createState();
+    state.day = 7;
     const keep = createKeep();
     const result = rescue(state, keep, 'mio', 'gakufume');
     assert.equal(result.other, 'kana');
@@ -409,6 +410,7 @@ test('体力を尽くすと 喰らえる。チュートリアルのボスは 喰
 
 test('喰らった夢主は 次の周も 抜け殻のまま', () => {
     const state = createState();
+    state.day = 7;
     const keep = createKeep();
     devour(state, keep, 'mio');
     assert.equal(state.status.mio, 'eaten');

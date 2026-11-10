@@ -9,6 +9,10 @@ export const MAX_STAGE = 5;
 export const NIGHTMARE_GAP = 2;
 export const NIGHTMARE_RATE = 1.3;   // 悪夢化した 夢の 敵の 強さ (最初の案)
 export const SIGHT = 3;              // もやの 中で 見える 広さ (マス)
+//   例外 (2026-11-10 ユーザー指定): 漠然と していない 完ぺきな 絵 (段階 5 まで 描き上げて 夢を「知っている」) なら、
+//   2 周目などで 活性化の 前でも すぐ 入れて、まだ 活性化していない (弱い) ユメクイと 戦える。合体の夢は 2 人とも 知っているとき
+export const DORMANT_FOE_RATE = 0.7;   // 活性化前の ユメクイ (ボス) の 強さ
+export const DORMANT_ALLY_RATE = 0.6;  // 活性化前に 仲間にした ユメクイの 強さ (夢のかけらで 活性化するまで)
 
 export const STAGES = [
     null,
@@ -42,8 +46,18 @@ export function growCanvas(keep, dream, pickedToday) {
     const canvas = canvasOf(keep);
     const gain = 1 + (pickedToday ? 1 : 0);
     const ids = dream === 'duet' ? PAIR : [dream];
-    for (const id of ids) canvas[id] = Math.min(MAX_STAGE, (canvas[id] ?? 1) + gain);
+    keep.known ??= {};
+    for (const id of ids) {
+        canvas[id] = Math.min(MAX_STAGE, (canvas[id] ?? 1) + gain);
+        if (canvas[id] >= MAX_STAGE) keep.known[id] = true;   // 描き上げた 夢は 次の周も 覚えている
+    }
     return stageOf(keep, dream);
+}
+
+// その夢を 完ぺきに 描ける (前に 段階 5 まで 描き上げた)。合体の夢は 2 人とも
+export function knowsDream(keep, dream) {
+    const ids = dream === 'duet' ? PAIR : [dream];
+    return ids.every((id) => keep.known?.[id]);
 }
 
 // ループ: 絵は 真っ白に 戻るが、ハルの 腕は 残る (前の周の 最後 − 1)。たどり着いた 階層も 覚えておく (段階 4 の 近道)

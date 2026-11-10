@@ -1,7 +1,8 @@
 import { createState } from './field.js';
 import { FIRST_IMAGES } from '../data/brush.js';
 import { grow } from './growth.js';
-import { isActive, loopCanvas } from './canvas.js';
+import { isActive, knowsDream, loopCanvas } from './canvas.js';
+import { makeDreamShards } from './shards.js';
 
 import { ACTIVE_DAY, LAST_DAY, LAST_RESCUE_DAY, OPEN_DAY, PAIR, isWeekend } from './days.js';
 
@@ -18,11 +19,18 @@ export function canTalk(state, id) {
 
 // 今夜 入れる夢。2 周目からは、2 人とも 元気なら ミオ×カナの夢 (夢合体『二重奏ホール』) も 描ける。
 //   ユメクイが 活性化する前は、描いても 夢の チャンネルに 引っかからないので どこにも 入れない
+//   ただし 完ぺきな 絵 (夢を 知っている) なら、活性化の 前でも 入れる (earlyDreams)
 export function dreamsTonight(state, keep = null) {
-    if (state.day < OPEN_DAY || !isActive(state)) return [];
+    if (state.day < OPEN_DAY || state.day > LAST_RESCUE_DAY) return [];
     const list = PAIR.filter((id) => state.status[id] === 'idle');
     if (keep && keep.loop >= 2 && list.length === 2) list.push('duet');
-    return list;
+    if (isActive(state)) return list;
+    return keep ? list.filter((id) => knowsDream(keep, id)) : [];
+}
+
+// 活性化の 前に 入る 夢か (ボスは まだ 活性化していない)
+export function isEarly(state) {
+    return !isActive(state);
 }
 
 // 夢合体で 2 人とも 救う。だれも 刈り取られない。ガクフメと トゲメトロが 仲間に (いれば 夢写し)
@@ -45,7 +53,7 @@ export function rescuePair(state, keep) {
 export function rescue(state, keep, id, ally) {
     const other = PAIR.find((item) => item !== id);
     state.status[id] = 'saved';
-    if (state.status[other] === 'idle') state.status[other] = 'reaped';
+    if (isActive(state) && state.status[other] === 'idle') state.status[other] = 'reaped';
     grow(keep, 'saved');
     const copied = keep.allies.includes(ally);
     if (copied) keep.copies[ally] = (keep.copies[ally] ?? 0) + 1;
@@ -57,7 +65,7 @@ export function rescue(state, keep, id, ally) {
 export function devour(state, keep, id) {
     const other = PAIR.find((item) => item !== id);
     state.status[id] = 'eaten';
-    if (state.status[other] === 'idle') state.status[other] = 'reaped';
+    if (isActive(state) && state.status[other] === 'idle') state.status[other] = 'reaped';
     if (!keep.eaten.includes(id)) keep.eaten.push(id);
     grow(keep, 'eaten');
     return { other };
@@ -89,10 +97,13 @@ export function advance(state) {
 export function nextLoop(keep, prevState = null) {
     keep.loop++;
     loopCanvas(keep, prevState);
+    makeDreamShards(keep, prevState);   // 前の周に 救った ユメクイが 夢のかけらに なる
+    if (prevState) keep.lastVisited = { ...(prevState.dreamsVisited ?? {}) };
     const state = createState();
     state.day = 1;
     state.phase = 'morning';
     state.flags.bak = true;
     for (const id of keep.eaten) state.status[id] = 'eaten';
+    for (const id of Object.keys(keep.hearts ?? {})) state.gone[id] = true;   // 拾った 心のかけらは もう 落ちていない
     return state;
 }

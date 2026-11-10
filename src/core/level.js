@@ -1,5 +1,6 @@
 import { BAK_YP_MOVES, LEVEL_MOVES, YP_STATS } from '../data/growth.js';
 import { SHAKE_POWER } from './battle.js';
+import { heartExpRate, taughtMoves } from './shards.js';
 
 // レベルと ユメポイント (仕様書「レベルとユメポイント」)。
 //   レベルと 経験値は state.levels に 置き、ループで 消える (nextLoop が state を 作り直す)。
@@ -60,8 +61,9 @@ export function gainExp(state, keep, { party, reserve = [] }, amount) {
         if (rec.lv >= MAX_LEVEL) rec.exp = 0;
         state.levels[id] = rec;
     };
-    for (const id of party) give(id, amount);
-    for (const id of reserve) give(id, Math.floor(amount * RESERVE_RATE));
+    // 心のかけら (経験値) を 持っている ユメクイは 1.5 倍
+    for (const id of party) give(id, Math.round(amount * heartExpRate(keep, id)));
+    for (const id of reserve) give(id, Math.floor(amount * RESERVE_RATE * heartExpRate(keep, id)));
     return events;
 }
 
@@ -144,6 +146,8 @@ export function growUnit(base, keep, state) {
     } else {
         extra = extra.concat(levelMoves(base.id, lv).map(({ id, label }) => ({ id, label })));
     }
+    // 心のかけらで 覚えた (本来 覚えない) 技
+    for (const move of taughtMoves(keep, base.id)) if (!extra.some((m) => m.id === move.id)) extra.push(move);
     return { ...unit, hp: unit.maxHp, moves: { ...base.moves, extra } };
 }
 

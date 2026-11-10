@@ -8,7 +8,7 @@ export const DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 const SOLID = new Set(['w', 'M', 'C', '#', 'b', 'k', 'd', 'p', 'e', 'f', 'x', 'T', 'h', 'R', 'n', '=', 't']);
 
 // ぶつかると 何かが起きる 物 (人・キャンバス・ベッド・看板は 調べると 起きる)
-const BUMP = ['foe', 'word', 'wake', 'door', 'block', 'brushSpot'];
+const BUMP = ['foe', 'word', 'wake', 'door', 'block', 'brushSpot', 'heart'];
 
 export function createState() {
     const start = MAPS.odoriba.start;
@@ -21,7 +21,9 @@ export function createState() {
 export function isVisible(object, state) {
     if (state.gone[object.id]) return false;
     if (object.hideIf && state.flags[object.hideIf]) return false;
-    if (object.needs && !state.flags[object.needs]) return false;
+    // ボス (needs: 'active') は 活性化してから。完ぺきな 絵で 活性化前に 入った 夢 (flags.early) では、まだ 活性化していない 姿で いる
+    if (object.needs === 'active' && !state.flags.active && !state.flags.early) return false;
+    if (object.needs && object.needs !== 'active' && !state.flags[object.needs]) return false;
     if (object.night && state.phase !== 'night') return false;   // 夜だけの物 (閉まった校門 など)
     if (object.phase && object.phase !== state.phase) return false;   // その時間帯だけの物 (朝の 通学路の 生徒 など)
     if (object.who && !present(state, object.who)) return false;

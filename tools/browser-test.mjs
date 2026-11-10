@@ -223,6 +223,8 @@ await shot('01f-prologue-painting');
 await key('j');
 await sleep(1800);
 await shot('01g-prologue-sea');
+// 描き終える 演出が 終わるまで 待つ (海が 満ちるまで 2.2 秒)
+for (let i = 0; i < 100 && (await read('yumekui.mode')) === 'painting'; i++) await sleep(80);
 await skip();
 await walkTo(13, 5);
 await key('ArrowDown', 40);

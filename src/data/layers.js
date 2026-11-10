@@ -13,6 +13,8 @@ const stairs = (prefix, x, y, to, at) => ({ id: `${prefix}Down`, kind: 'exit', x
 const foe = (id, x, y, kind) => ({ id, kind: 'foe', x, y, foe: kind });
 // 夢の住人 (認知で 歪んだ 現実の人)。下の 階層ほど ゆがみが 大きい。gives: 話すと 落とす まちがいの 言葉
 const resident = (id, x, y, sprite, line, gives = null) => ({ id, kind: 'talk', x, y, sprite, script: 'resident', line, gives });
+// 心のかけら (data/hearts.js。id が そのまま かけらの id)
+const heart = (id, x, y) => ({ id, kind: 'heart', x, y, sprite: 'heart' });
 
 // ---- ミオの夢『水底の音楽室』 ---------------------------------------------
 
@@ -149,6 +151,7 @@ export const LAYER_MAPS = {
             foe('mz2Suima', 9, 3, 'suima'),
             foe('mz2Onpu2', 15, 2, 'onpu'),
             resident('mz2Queen', 3, 7, 'mio', 'queen1'),
+            heart('heartDispel', 17, 9),
             stairs('mz2', 18, 1, 'mizuzoko3', { x: 2, y: 5 })
         ]
     },
@@ -168,6 +171,7 @@ export const LAYER_MAPS = {
             foe('mz3Onpu2', 13, 1, 'onpu'),
             foe('mz3Suima2', 10, 4, 'suima'),
             resident('mz3Queen', 7, 1, 'mio', 'queen2', '一人で'),
+            heart('heartMio', 12, 2),
             stairs('mz3', 18, 8, 'mizuzoko4', { x: 9, y: 7 })
         ]
     },
@@ -196,6 +200,7 @@ export const LAYER_MAPS = {
             foe('rs2Suima', 10, 6, 'suima'),
             foe('rs2Hari2', 14, 7, 'hari'),
             resident('rs2Judge', 3, 4, 'kana', 'judge1'),
+            heart('heartDrowsy', 1, 4),
             stairs('rs2', 18, 9, 'renshu3', { x: 9, y: 9 })
         ]
     },
@@ -215,6 +220,7 @@ export const LAYER_MAPS = {
             foe('rs3Suima1', 10, 5, 'suima'),
             foe('rs3Suima2', 12, 1, 'suima'),
             resident('rs3Judge', 17, 4, 'kana', 'judge2', '勝ちたかった'),
+            heart('heartKana', 3, 6),
             stairs('rs3', 9, 1, 'renshu4', { x: 9, y: 7 })
         ]
     },
@@ -279,6 +285,7 @@ export const LAYER_MAPS = {
             foe('du4Onpu', 20, 6, 'onpu'),
             foe('du4Suima', 12, 4, 'suima'),
             foe('du4Hari2', 22, 3, 'hari'),
+            heart('heartDuet', 23, 6),
             stairs('du4', 12, 1, 'duet5', { x: 12, y: 7 })
         ]
     },

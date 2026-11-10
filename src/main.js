@@ -1,11 +1,13 @@
 import { act, aliveFoes, answer, bench, chanceFoe, commands, createBattle, needsTarget, setTarget, TARGETED, TOP_COMMANDS } from './core/battle.js';
 import { ACTIONS, keyName } from './core/keys.js';
-import { advance, createKeep, dateLabel, devour, dreamsTonight, nextLoop, rescue, rescuePair, ACTIVE_DAY, LAST_DAY, PAIR } from './core/calendar.js';
+import { advance, createKeep, dateLabel, devour, dreamsTonight, isEarly, nextLoop, rescue, rescuePair, ACTIVE_DAY, LAST_DAY, PAIR } from './core/calendar.js';
 import { bakSkills, bakUnit, grow } from './core/growth.js';
 import { battleExp, gainExp, growUnit, layerFoe, reachLayer, ypLeft } from './core/level.js';
 import { openGrow } from './view/grow.js';
 import { applyEmotion, declineReborn, gainEmotions, pendingReborn, reborn } from './core/emotion.js';
-import { growCanvas, isNightmare, sightOf, stageOf, startLayers, truthHelp, NIGHTMARE_RATE, STAGES } from './core/canvas.js';
+import { growCanvas, isNightmare, knowsDream, sightOf, stageOf, startLayers, truthHelp, DORMANT_ALLY_RATE, DORMANT_FOE_RATE, NIGHTMARE_RATE, STAGES } from './core/canvas.js';
+import { dreamShardOf, giveHeart, heartsOf, isDormant, pickHeart, setDormant, teachHeart, useDreamShard } from './core/shards.js';
+import { HEARTS } from './data/hearts.js';
 import { createState, facing, isBlocked, objectAt, pickWord, placeName, step, tileAt, warp, DIRS } from './core/field.js';
 import { deepTalk, startDay, startMorning, timeLabel, timesBetween, NIGHT_START, PROLOGUE_START, RIKU_BRANCH_Y, TOWN_START } from './core/town.js';
 import { isWeekend } from './core/days.js';
@@ -107,8 +109,15 @@ function grownUnits() {
         const base = growUnit(id === 'bak' ? bakUnit(keep) : ALLIES[id], keep, state);
         const rate = 1 + (keep.copies[id] ?? 0) * COPY_BONUS;
         const maxHp = Math.round(base.maxHp * rate);
-        return applyEmotion({ ...base, maxHp, hp: maxHp, atk: Math.round(base.atk * rate), def: Math.round(base.def * rate) }, keep);
+        return dormant(applyEmotion({ ...base, maxHp, hp: maxHp, atk: Math.round(base.atk * rate), def: Math.round(base.def * rate) }, keep));
     });
+}
+
+// 活性化の 前に 仲間にした ユメクイは、夢のかけらで 活性化するまで 弱い
+function dormant(unit) {
+    if (!isDormant(state, unit.id)) return unit;
+    const maxHp = Math.round(unit.maxHp * DORMANT_ALLY_RATE);
+    return { ...unit, dormant: true, maxHp, hp: Math.min(unit.hp, maxHp), atk: Math.round(unit.atk * DORMANT_ALLY_RATE), def: Math.round(unit.def * DORMANT_ALLY_RATE) };
 }
 
 // 控えを含む、今の仲間。夢写しの回数だけ 強くなる
@@ -117,7 +126,7 @@ function partyUnits() {
         const base = growUnit(id === 'bak' ? bakUnit(keep) : ALLIES[id], keep, state);
         const rate = 1 + (keep.copies[id] ?? 0) * COPY_BONUS;
         const maxHp = Math.round(base.maxHp * rate);
-        const unit = applyEmotion({ ...base, maxHp, atk: Math.round(base.atk * rate), def: Math.round(base.def * rate) }, keep);
+        const unit = dormant(applyEmotion({ ...base, maxHp, atk: Math.round(base.atk * rate), def: Math.round(base.def * rate) }, keep));
         return { ...unit, hp: Math.min(hp[id] ?? unit.maxHp, unit.maxHp) };
     }).filter((unit) => unit.hp > 0);
 }
@@ -239,6 +248,7 @@ async function touch(object) {
         else await talkTo(object.who);
     }
     if (object.kind === 'brushSpot') await useBrushAt(object);
+    if (object.kind === 'heart') await findHeart(object);
     if (object.kind === 'look') await lookAt(object.image);
     if (object.kind === 'canvas') await useCanvas();
     if (object.kind === 'bed') await useBed();
@@ -316,7 +326,7 @@ async function enter(exit) {
     showHud();
     await ui.fade(false);
     if (here && here.layer > 1) await talk(LINES.layerEnter(layerLabel(here.dream, here.layer)));
-    if (here?.deepest && !state.flags.active) await talk(LINES.noBossDeep);
+    if (here?.deepest && !state.flags.active && !state.flags.early) await talk(LINES.noBossDeep);
     if (exit.to === 'omen') await talk(LINES.enterOmen);
     if (exit.to === 'hiroba') await talk(LINES.enterHiroba);
     if (goingOut && !state.nightOut) {
@@ -373,7 +383,8 @@ async function fight(object) {
     // 敵は 1 体 (foe) か 複数 (foes)。本音を持つ 敵 (なければ 1 体目) が この戦いの 主
     const layer = layerOf()?.layer ?? 1;   // 下の 階層ほど 敵が 強い
     const nightmare = state.sight?.nightmare ? NIGHTMARE_RATE : 1;   // 悪夢化した 合体の夢は 敵が 強い
-    const foeList = (object.foes ?? [object.foe]).map((id) => layerFoe(FOES[id], layer)).map((f) => nightmare === 1 ? f : { ...f, maxHp: Math.round(f.maxHp * nightmare), hp: Math.round(f.maxHp * nightmare), atk: Math.round(f.atk * nightmare) });
+    const sleepy = (f) => state.flags.early && f.truth ? { ...f, maxHp: Math.round(f.maxHp * DORMANT_FOE_RATE), hp: Math.round(f.maxHp * DORMANT_FOE_RATE), atk: Math.round(f.atk * DORMANT_FOE_RATE) } : f;   // 活性化前の ユメクイは 弱い
+    const foeList = (object.foes ?? [object.foe]).map((id) => sleepy(layerFoe(FOES[id], layer))).map((f) => nightmare === 1 ? f : { ...f, maxHp: Math.round(f.maxHp * nightmare), hp: Math.round(f.maxHp * nightmare), atk: Math.round(f.atk * nightmare) });
     const foe = foeList.find((f) => f.truth) ?? foeList[0];
     const battle = createBattle(partyUnits(), foeList, { noEscape: object.script === 'firstBattle', musou: keep.musou });
     await playEncounter(encounterTheme(MAPS[state.map], state.x), foeList.some((f) => f.truth));
@@ -515,6 +526,7 @@ async function finish(battle, object, foe) {
         await talk(LINES.musouGot);
         await talk(LINES.grewSaved);
         await announceSkills(before);
+        if (state.flags.early) for (const ally of joined) await awakenAlly(ally);
         wakeUp();
         return;
     }
@@ -623,7 +635,73 @@ async function saved(foe, before) {
     await talk(result.copied ? LINES.copied(name) : LINES.joined(name));
     await talk(LINES.grewSaved);
     await announceSkills(before);
+    if (state.flags.early) await awakenAlly(foe.ally);
     await tellReaped(result.other);
+}
+
+// 活性化の 前に 仲間にした ユメクイ: 弱いまま。前の周の 夢のかけらが あれば、使って 活性化できる
+async function awakenAlly(ally) {
+    setDormant(state, ally);
+    const name = ALLIES[ally].name;
+    await talk(LINES.dormantJoined(name));
+    await offerDreamShard(ally);
+}
+
+async function offerDreamShard(ally) {
+    const shard = dreamShardOf(keep, ally);
+    if (!shard || !isDormant(state, ally)) return;
+    const name = ALLIES[ally].name;
+    await talk(LINES.shardHint(name));
+    const id = await ui.menu([{ id: 'yes', label: LINES.shardYes }, { id: 'no', label: LINES.shardNo }], { head: LINES.shardHead(name, shard.lv) });
+    if (id !== 'yes') return;
+    useDreamShard(state, keep, ally);
+    await talk(LINES.shardUsed(name, shard.lv));
+}
+
+// 心のかけらを 拾う。経験値の かけらは だれかに 持たせ、技の かけらは だれかに 覚えさせる
+async function findHeart(object) {
+    if (!pickHeart(keep, object.id)) return;
+    state.gone[object.id] = true;
+    const heart = HEARTS[object.id];
+    await talk(LINES.heartFound(heart.label, heart.info));
+    await useHeart(object.id);
+}
+
+async function useHeart(id) {
+    const heart = HEARTS[id];
+    const rec = heartsOf(keep)[id];
+    if (heart.kind === 'move' && rec.taught) {
+        await talk(LINES.heartTaughtAlready(ALLIES[rec.taught].name, heart.moveLabel));
+        return;
+    }
+    const items = keep.allies.map((ally) => ({ id: ally, label: ALLIES[ally].name + (rec.holder === ally ? '（持っている）' : '') }));
+    items.push({ id: 'cancel', label: 'あとで' });
+    const who = await ui.menu(items, { head: heart.kind === 'exp' ? LINES.heartGiveHead : LINES.heartTeachHead(heart.moveLabel) });
+    if (who === 'cancel') return;
+    if (heart.kind === 'exp') {
+        giveHeart(keep, id, who);
+        await talk(LINES.heartGiven(ALLIES[who].name));
+    } else {
+        teachHeart(keep, id, who);
+        await talk(LINES.moveLearnedTalk(ALLIES[who].name, heart.moveLabel));
+    }
+}
+
+// メニューの「かけら」: 心のかけら と、使える 夢のかけら
+async function shardMenu() {
+    const items = Object.keys(heartsOf(keep)).map((id) => ({ id, label: HEARTS[id].label }));
+    for (const ally of keep.allies) {
+        if (isDormant(state, ally) && dreamShardOf(keep, ally)) items.push({ id: `dream:${ally}`, label: LINES.dreamShardName(ALLIES[ally].name) });
+    }
+    if (!items.length) {
+        await talk(LINES.noShards);
+        return;
+    }
+    items.push({ id: 'close', label: 'とじる' });
+    const id = await ui.menu(items, { head: 'かけら', wide: true });
+    if (id === 'close') return;
+    if (id.startsWith('dream:')) await offerDreamShard(id.slice(6));
+    else await useHeart(id);
 }
 
 async function tellReaped(id) {
@@ -735,6 +813,14 @@ async function morningPhase() {
         keep.duetTold = true;
         await talk(LINES.duetLesson);
     }
+    if (keep.loop >= 2 && state.day === 2 && !state.flags.loopAdvice) {
+        // 2 周目からの 2 日: 完ぺきな 絵なら 活性化前でも 入れること、前の周に 入らなかった 夢にも 入ろうと バクが 言う
+        state.flags.loopAdvice = true;
+        const known = PAIR.filter((who) => knowsDream(keep, who) && state.status[who] === 'idle');
+        if (known.length) await talk(LINES.earlyAdvice(known.map((who) => NAMES[who]).join('と')));
+        const missed = PAIR.filter((who) => !keep.lastVisited?.[who] && state.status[who] === 'idle');
+        if (missed.length) await talk(LINES.otherDreamAdvice(missed.map((who) => NAMES[who]).join('と')));
+    }
     await playMovie(morningMovie(state, keep));
     if (!weekend) await talk(LINES.enterSchool);
     if (!weekend && LINES.homeroom[state.day] && !state.flags[`homeroom${state.day}`]) {
@@ -802,6 +888,10 @@ async function useCanvas() {
     if (!keep.canvasTold) {
         keep.canvasTold = true;
         await talk(LINES.firstCanvas);
+    }
+    if (dreams.length && state.day < ACTIVE_DAY && !keep.earlyTold) {
+        keep.earlyTold = true;
+        await talk(LINES.perfectCanvas);
     }
     if (!dreams.length && state.day < ACTIVE_DAY) {
         // 活性化の 前: 描いても 絵が 漠然としていて、夢の チャンネルに 引っかからない
@@ -880,6 +970,10 @@ async function enterDream(id) {
     }
     const map = DREAM_LAYERS[id][layer - 1];
     const stage = stageOf(keep, id);
+    const early = isEarly(state);   // 完ぺきな 絵で 活性化前に 入る (ボスは まだ 活性化していない)
+    state.flags.early = early;
+    state.dreamsVisited ??= {};
+    state.dreamsVisited[id] = true;
     await ui.fade(true);
     const entered = dream(map);
     state.sight = { ...sightOf(stage), nightmare: id === 'duet' && isNightmare(keep) };
@@ -889,13 +983,15 @@ async function enterDream(id) {
     await scene(async () => {
         if (layer === 1) {
             await talk(map === 'duet' ? LINES.duetEnter : LINES.enterDream[map]);
-            if (!state.flags.active) await talk(LINES.noBoss);
+            if (early) await talk(LINES.earlyIn);
+            else if (!state.flags.active) await talk(LINES.noBoss);
         } else await talk(LINES.layerEnter(layerLabel(id, layer)));
         if (state.sight.nightmare) await talk(LINES.nightmareIn);
     });
     await entered;
     // 夢から 覚めると、夢の中で 見た 景色が 絵に 描き足される (その日に 言葉を 拾っていれば もう 1 段)
     state.sight = null;
+    state.flags.early = false;
     const before = stageOf(keep, id);
     const after = growCanvas(keep, id, state.words.length > (state.wordsAtDay ?? 0));
     if (after > before) await talk(LINES.canvasGrew(after, STAGES[after].label));
@@ -989,13 +1085,14 @@ async function weaveWords() {
 // ---- 設定 --------------------------------------------------------------
 
 async function fieldMenu() {
-    const items = [{ id: 'grow', label: 'なかま' }, { id: 'bak', label: 'バクの成長' }, { id: 'keys', label: 'ボタン設定' }, { id: 'close', label: 'とじる' }];
+    const items = [{ id: 'grow', label: 'なかま' }, { id: 'shards', label: 'かけら' }, { id: 'bak', label: 'バクの成長' }, { id: 'keys', label: 'ボタン設定' }, { id: 'close', label: 'とじる' }];
     if (keep.tutorial) items.unshift({ id: 'weave', label: '夢合わせ' });
     if (keep.brush) items.unshift({ id: 'brush', label: '夢筆' });
     if (keep.tutorial && MAPS[state.map].dream) items.unshift({ id: 'wake', label: '夢から覚める' });
     const id = await ui.menu(items);
     if (id === 'keys') await settings();
     if (id === 'grow') await growScreen();
+    if (id === 'shards') await shardMenu();
     if (id === 'weave') await weaveWords();
     if (id === 'brush') await talk(canUseBrush(state, keep) ? LINES.brushInfo(keep.images.map((i) => IMAGES[i].label).join('、')) : LINES.brushReal);
     if (id === 'wake') wakeUp();
