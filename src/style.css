@@ -55,11 +55,39 @@ canvas {
     inset: 0 0 auto 0;
     display: flex;
     justify-content: space-between;
+    align-items: flex-start;
     gap: 1em;
-    padding: 0.4em 0.7em;
-    background: linear-gradient(rgba(5, 6, 26, 0.8), transparent);
+    padding: 0.4em 0.5em;
     font-size: 0.8em;
     pointer-events: none;
+}
+
+#clock, #place {
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: rgba(13, 16, 48, 0.82);
+    padding: 0.25em 0.6em;
+}
+
+#date {
+    font-size: 1.15em;
+}
+
+#time {
+    color: #c9c4ff;
+}
+
+#time[data-time="昼"], #time[data-time="放課後"] {
+    color: #ffd86b;
+}
+
+#time[data-time="夕方"] {
+    color: #ffae7a;
+}
+
+#items {
+    font-size: 0.8em;
+    opacity: 0.8;
 }
 
 #msg, #menu {

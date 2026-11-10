@@ -71,11 +71,19 @@ async function skip(limit = 80) {
     throw new Error('会話が終わらない');
 }
 
-async function walkTo(x, y, avoid = true) {
+// 地図が変わる (出口を くぐる) か、着くか、会話・メニューが 始まったら 止まる
+async function walkTo(x, y, avoid = true, near = false) {
+    let map = null;
     for (let i = 0; i < 300; i++) {
         const now = await state();
-        if (now.m !== 'field') return now;
+        map ??= now.s.map;
+        if (now.m !== 'field' || now.s.map !== map) return now;
         if (now.s.x === x && now.s.y === y) return now;
+        if (near && Math.abs(now.s.x - x) + Math.abs(now.s.y - y) === 1) {
+            const dir = now.s.x < x ? 'ArrowRight' : now.s.x > x ? 'ArrowLeft' : now.s.y < y ? 'ArrowDown' : 'ArrowUp';
+            await key(dir, 40);   // 人の方を向く (ぶつかっても 動かない)
+            return state();
+        }
         const route = await read(`(${routeCode})(${x},${y})`);
         if (!route) throw new Error(`道がない ${x},${y} / いま ${now.s.x},${now.s.y}`);
         await key(route, 170);
@@ -88,7 +96,7 @@ async function walkTo(x, y, avoid = true) {
 const routeCode = `(tx,ty)=>{const s=yumekui.state;const t=window.__tiles(s.map);const key=(x,y)=>x+','+y;
 const prev=new Map([[key(s.x,s.y),null]]);const q=[[s.x,s.y]];const D=[['ArrowUp',0,-1],['ArrowDown',0,1],['ArrowLeft',-1,0],['ArrowRight',1,0]];
 while(q.length){const [x,y]=q.shift();if(x===tx&&y===ty){let c=key(x,y),step=null;while(prev.get(c)){step=prev.get(c)[1];c=prev.get(c)[0];}return step;}
-for(const [n,dx,dy] of D){const nx=x+dx,ny=y+dy,k=key(nx,ny);if(prev.has(k))continue;const ch=t[ny]?.[nx];if(!ch||ch==='w'||ch==='M')continue;if(ch==='G'&&!s.flags.gateOpen)continue;
+for(const [n,dx,dy] of D){const nx=x+dx,ny=y+dy,k=key(nx,ny);if(prev.has(k))continue;const ch=t[ny]?.[nx];if(!ch||window.__blocked(nx,ny))continue;
 const hit=window.__objects().find(o=>o.x===nx&&o.y===ny);if(hit&&!(nx===tx&&ny===ty)&&hit.kind!=='exit')continue;prev.set(k,[key(x,y),n]);q.push([nx,ny]);}}return null;}`;
 
 async function battle(useShake, eat = false) {
@@ -150,7 +158,7 @@ await sleep(300);
 await key('j');
 await sleep(700);
 await skip();
-await read(`(async()=>{const m=await import('/src/data/maps.js');const f=await import('/src/core/field.js');window.__tiles=(id)=>m.MAPS[id].tiles;window.__objects=()=>f.objectsOf(yumekui.state);})()`);
+await read(`(async()=>{const m=await import('/src/data/maps.js');const f=await import('/src/core/field.js');window.__tiles=(id)=>m.MAPS[id].tiles;window.__objects=()=>f.objectsOf(yumekui.state);window.__blocked=(x,y)=>f.isBlocked(yumekui.state,x,y);})()`);
 await sleep(200);
 await shot('02-field');
 
@@ -233,6 +241,26 @@ const waitField = async () => {
     }
     throw new Error('夢に入れない');
 };
+// 町: 人の となりまで歩いて、向いて 話しかける
+const talkTo = async (x, y) => {
+    await waitField();
+    await walkTo(x, y, true, true);
+    await key('j');
+    await sleep(300);
+};
+// 町: 家の玄関まで歩いて 入る (学校にいれば 階段から 坂道へ出る)
+const goHome = async (label = '家に帰る') => {
+    await waitField();
+    if ((await state()).s.map === 'school') {
+        await walkTo(1, 8);
+        await sleep(400);
+        await waitField();
+    }
+    await walkTo(4, 16);
+    await sleep(300);
+    const labels = await read('[...document.querySelectorAll("#menu button")].map(b=>b.textContent)');
+    await pick(labels.some((l) => l.includes(label)) ? label : '家に帰る');
+};
 const fightAt = async (x, y, shake = false) => {
     await walkTo(x, y);
     await sleep(300);
@@ -242,9 +270,11 @@ const fightAt = async (x, y, shake = false) => {
     await sleep(300);
 };
 
-await pick('音楽室');
-await sleep(300);
-await shot('12-town');
+await waitField();
+await shot('12-classroom');
+await talkTo(18, 4);
+await shot('12b-music-room');
+await pick('じっくり話す');
 await pick('ミオの夢');
 await sleep(900);
 await waitField();
@@ -262,14 +292,27 @@ await shot('13b-wake-door');
 await pick('目を覚ます');
 await sleep(1000);
 for (let day = 3; day < 7; day++) {
-    await pick('今夜は休む').catch(() => {});
-    await sleep(300);
-    await pick('家に帰る');
+    if (day > 3) {
+        if (day === 4) {
+            for (let i = 0; i < 100 && !(await state()).menu; i++) await sleep(80);
+            await shot('13c-night-room');
+        }
+        await pick('今夜は休む');
+        await sleep(300);
+    }
+    if (day === 3) {
+        await waitField();
+        await walkTo(1, 8);
+        await sleep(500);
+        await waitField();
+        await shot('12c-saka');
+    }
+    await goHome();
     await sleep(300);
 }
 await pick('今夜は休む');
 await sleep(300);
-await pick('家に帰る');
+await goHome();
 await sleep(300);
 const seven = await state();
 console.log('今の日', seven.s.day, seven.s.phase, '活性化', seven.s.flags.active);
@@ -283,14 +326,14 @@ await shot('14-after-rescue');
 await pick('今夜は休む').catch(() => {});
 const rescued = await state();
 console.log('仲間', JSON.stringify(await read('yumekui.keep.allies')), '状態', JSON.stringify(rescued.s.status));
-for (let i = 0; i < 12; i++) {
+for (let i = 0; i < 120; i++) {
     const now = await state();
     if ((await read('yumekui.keep.loop')) === 2) break;
     const labels = await read('[...document.querySelectorAll("#menu button")].map(b=>b.textContent)');
-    if (now.menu && labels.some((l) => l.includes('早送り'))) await pick('早送り');
-    else if (now.menu && labels.some((l) => l.includes('休む'))) await pick('今夜は休む');
-    else if (now.menu) await pick('家に帰る');
+    if (now.menu && labels.some((l) => l.includes('休む'))) await pick('今夜は休む');
+    else if (now.menu) await key('j');
     else if (now.msg) await key('j');
+    else if (now.m === 'field' && now.s.phase === 'day') await goHome('14日まで');
     await sleep(300);
 }
 for (let i = 0; i < 30 && (await read('yumekui.keep.loop')) !== 2; i++) {
@@ -308,12 +351,12 @@ console.log('周', loop, '日', looped.s.day, '仲間', JSON.stringify(allies), 
 
 // 2 周目: 2/7 まで進めて カナのユメクイを喰らう
 for (let day = 2; day < 7; day++) {
-    await pick('家に帰る');
+    await goHome();
     await sleep(300);
     await pick('今夜は休む');
     await sleep(300);
 }
-await pick('家に帰る');
+await goHome();
 await sleep(300);
 await pick('カナの夢');
 await sleep(900);

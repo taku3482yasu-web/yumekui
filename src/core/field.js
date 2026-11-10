@@ -1,14 +1,19 @@
 import { MAPS } from '../data/maps.js';
+import { present } from './town.js';
 
 export const DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 
-const SOLID = new Set(['w', 'M']);
+// 通れない タイル。夢: 空に浮かぶ海・お面の壁 / 現実: 壁・黒板・窓・机・ピアノ・イーゼル・手すり・校庭・木・建物・屋根・のれん・柵・テーブル
+const SOLID = new Set(['w', 'M', '#', 'b', 'k', 'd', 'p', 'e', 'f', 'x', 'T', 'h', 'R', 'n', '=', 't']);
+
+// ぶつかると 何かが起きる 物 (人・キャンバス・ベッド・看板は 調べると 起きる)
+const BUMP = ['foe', 'word', 'wake', 'door', 'block'];
 
 export function createState() {
     const start = MAPS.odoriba.start;
     return {
         map: 'odoriba', x: start.x, y: start.y, dir: 'up', flags: {}, words: [], shards: 0, gone: {},
-        day: 1, phase: 'night', status: { mio: 'idle', kana: 'idle' }, visits: {}
+        day: 1, phase: 'night', time: 'day', talkedToday: false, status: { mio: 'idle', kana: 'idle' }, visits: {}
     };
 }
 
@@ -16,6 +21,7 @@ export function isVisible(object, state) {
     if (state.gone[object.id]) return false;
     if (object.hideIf && state.flags[object.hideIf]) return false;
     if (object.needs && !state.flags[object.needs]) return false;
+    if (object.who && !present(state, object.who)) return false;
     return true;
 }
 
@@ -23,8 +29,17 @@ export function objectsOf(state) {
     return MAPS[state.map].objects.filter((object) => isVisible(object, state));
 }
 
+// 同じマスに 2 つあるときは、出口より 先に ほかの物 (通せんぼ など)
 export function objectAt(state, x, y) {
-    return objectsOf(state).find((object) => object.x === x && object.y === y) ?? null;
+    const here = objectsOf(state).filter((object) => object.x === x && object.y === y);
+    return here.find((object) => object.kind !== 'exit') ?? here[0] ?? null;
+}
+
+// 今いる 部屋の名前 (学校の 教室・音楽室 など)。部屋の区切りがない 地図は 地図の名前
+export function placeName(state) {
+    const map = MAPS[state.map];
+    const room = map.rooms?.find((r) => state.x >= r.x[0] && state.x <= r.x[1] && state.y >= r.y[0] && state.y <= r.y[1]);
+    return room?.name ?? map.name;
 }
 
 export function tileAt(state, x, y) {
@@ -44,7 +59,7 @@ export function step(state, dir) {
     const y = state.y + dy;
     state.dir = dir;
     const object = objectAt(state, x, y);
-    if (['foe', 'word', 'wake'].includes(object?.kind)) return { type: 'bump', object };
+    if (BUMP.includes(object?.kind)) return { type: 'bump', object };
     if (object && object.kind !== 'exit') return { type: 'stop' };
     if (isBlocked(state, x, y)) return { type: 'stop' };
     state.x = x;

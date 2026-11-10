@@ -1,15 +1,16 @@
 import { act, answer, bench, commands, createBattle } from './core/battle.js';
 import { ACTIONS, keyName } from './core/keys.js';
-import { advance, canTalk, createKeep, dateLabel, devour, dreamsTonight, nextLoop, rescue, ACTIVE_DAY, LAST_DAY, PAIR } from './core/calendar.js';
+import { advance, createKeep, dateLabel, devour, dreamsTonight, nextLoop, rescue, ACTIVE_DAY, LAST_DAY, PAIR } from './core/calendar.js';
 import { bakSkills, bakUnit, grow } from './core/growth.js';
-import { createState, facing, pickWord, step, tileAt, warp, DIRS } from './core/field.js';
+import { createState, facing, pickWord, placeName, step, tileAt, warp, DIRS } from './core/field.js';
+import { deepTalk, startDay, timeLabel, NIGHT_START } from './core/town.js';
 import { buildChoices } from './core/truth.js';
 import { MAPS } from './data/maps.js';
 import { ALLIES, FOES } from './data/units.js';
 import { LINES } from './scenes/story.js';
 import { createInput } from './view/input.js';
 import { createUi } from './view/ui.js';
-import { drawBattle, drawField, drawMorning, drawShadow, drawSky, drawTown } from './view/draw.js';
+import { drawBattle, drawField, drawMorning, drawShadow, drawSky } from './view/draw.js';
 
 const WALK_MS = 150;
 const NOTE_MS = 650;
@@ -38,9 +39,11 @@ async function talk(lines) {
 
 // ---- フィールド --------------------------------------------------------
 
-function showHud(place = MAPS[state.map].name) {
-    const time = state.phase === 'day' ? '放課後' : '夜';
-    ui.hud(place, state, `${dateLabel(state.day)}の${time}`);
+// 左上: 日付と時間帯 (夢の中では 夢の名前)。右上: 今いる場所
+function showHud(place = placeName(state)) {
+    const map = MAPS[state.map];
+    const time = map.dream ? `『${map.dream}』` : timeLabel(state);
+    ui.hud(place, state, dateLabel(state.day), time);
 }
 
 async function scene(work) {
@@ -77,11 +80,59 @@ const SCRIPTS = {
     bak: async () => {
         await talk(LINES.bak);
         state.flags.bak = true;
-    }
+    },
+    // 町
+    tomeShop: () => talk(LINES.tomeShop),
+    portSign: () => talk(LINES.portSign),
+    rikuRoad: () => talk(LINES.rikuRoad(state)),
+    rikuDoor: () => talk(LINES.rikuDoor),
+    goHome: homeDoor
 };
 
+const NAMES = { mio: 'ミオ', kana: 'カナ' };
+
+// 人に話しかける。元気な夢主 (ミオ・カナ) とは「じっくり話す」か 選べる
+async function talkTo(who) {
+    if (PAIR.includes(who) && state.status[who] === 'idle') {
+        await deepTalkTo(who);
+        return;
+    }
+    await talk(LINES.town(who, state));
+}
+
+// じっくり話す: 言えなかった言葉を聞いて、夕方になり 家に帰る (1 日 1 人)
+async function deepTalkTo(who) {
+    if (state.talkedToday) {
+        await talk(LINES.talkedToday(NAMES[who]));
+        return;
+    }
+    await talk(LINES.deepGreet[who]);
+    const id = await ui.menu([{ id: 'yes', label: LINES.deepYes }, { id: 'no', label: LINES.deepNo }], { head: LINES.deepHead(NAMES[who]) });
+    if (id !== 'yes') return;
+    const { count, word } = deepTalk(state, who, LINES.visitWord[who]);
+    const lines = LINES.visit[who];
+    await talk(lines[Math.min(count, lines.length - 1)]);
+    showHud();
+    if (word) await talk(LINES.wordHeard(word));
+    await talk(LINES.evening);
+    wakeUp();
+}
+
+// 家の玄関: 入ると その日は おしまい (夜になる)
+async function homeDoor() {
+    const items = [{ id: 'yes', label: LINES.goHomeYes }];
+    if (state.day >= ACTIVE_DAY + 3 && state.day < LAST_DAY) items.push({ id: 'skip', label: LINES.goHomeSkip });
+    items.push({ id: 'no', label: LINES.goHomeNo });
+    const id = await ui.menu(items, { head: LINES.goHomeHead });
+    if (id === 'skip') state.day = LAST_DAY;
+    if (id !== 'no') wakeUp();
+}
+
 async function touch(object) {
-    if (object.kind === 'talk') await SCRIPTS[object.script]();
+    if (object.kind === 'talk' || object.kind === 'door' || object.kind === 'block') await SCRIPTS[object.script]();
+    if (object.kind === 'person') await talkTo(object.who);
+    if (object.kind === 'canvas') await talk(LINES.canvas);
+    if (object.kind === 'bed') await talk(LINES.bed);
     if (object.kind === 'foe') await fight(object);
     if (object.kind === 'word') {
         const opened = pickWord(state, object);
@@ -119,6 +170,7 @@ function updateField(delta) {
     if (result.type === 'moved' || result.type === 'exit') {
         [walk.dx, walk.dy] = DIRS[dir];
         walk.left = 1;
+        if (MAPS[state.map].rooms) showHud();   // 部屋を 移ったら 右上の 場所が 変わる
     }
     if (result.type === 'exit') scene(() => enter(result.object));
     if (result.type === 'bump') scene(() => touch(result.object));
@@ -310,13 +362,9 @@ async function tellReaped(id) {
 
 // ---- 昼と夜 ------------------------------------------------------------
 
-function dream(map) {
+// 今の場所から 歩き回る。wakeUp() (夢から覚める・家に帰る) で 終わる
+function explore() {
     return new Promise((resolve) => {
-        hp = {};
-        state.map = map;
-        state.x = MAPS[map].start.x;
-        state.y = MAPS[map].start.y;
-        state.dir = 'up';
         walk.left = 0;
         wake = resolve;
         showHud();
@@ -324,42 +372,38 @@ function dream(map) {
     });
 }
 
-async function dayPhase() {
-    mode = 'town';
-    showHud('夢見坂町');
-    await ui.fade(false);
-    if (LINES.day[state.day] && !state.flags[`day${state.day}`]) {
-        state.flags[`day${state.day}`] = true;
-        await talk(LINES.day[state.day]);
-    }
-    if (state.day === 10 && PAIR.some((id) => state.status[id] === 'broken')) await talk(LINES.broken);
-    const items = PAIR.filter((id) => canTalk(state, id)).map((id) => ({ id, label: LINES.places[id] }));
-    items.push({ id: 'home', label: LINES.places.home });
-    if (state.day >= ACTIVE_DAY + 3 && state.day < LAST_DAY) items.push({ id: 'skip', label: LINES.places.skip });
-    const id = await ui.menu(items, { head: 'どこへ行く？' });
-    if (id === 'skip') {
-        state.day = LAST_DAY;
-        return;
-    }
-    if (PAIR.includes(id)) await visit(id);
+function dream(map) {
+    hp = {};
+    Object.assign(state, { map, x: MAPS[map].start.x, y: MAPS[map].start.y, dir: 'up' });
+    return explore();
 }
 
-async function visit(id) {
-    const count = state.visits[id] ?? 0;
-    state.visits[id] = count + 1;
-    const lines = LINES.visit[id];
-    await talk(lines[Math.min(count, lines.length - 1)]);
-    const word = LINES.visitWord[id];
-    if (!state.words.includes(word)) {
-        state.words.push(word);
-        showHud('夢見坂町');
-        await talk(LINES.wordHeard(word));
-    }
+// 放課後 (土日は 昼): 学校と町を 歩いて 話す。夢主と じっくり話すか、家の玄関に入ると 夜になる
+async function dayPhase() {
+    startDay(state);
+    const done = explore();
+    mode = 'scene';   // 日の始めの 出来事を 見せるまで 歩けない
+    await ui.fade(false);
+    await scene(async () => {
+        if (LINES.day[state.day] && !state.flags[`day${state.day}`]) {
+            state.flags[`day${state.day}`] = true;
+            await talk(LINES.day[state.day]);
+        }
+        if (state.day === 10 && PAIR.some((id) => state.status[id] === 'broken')) await talk(LINES.broken);
+    });
+    await done;
+}
+
+// 夜: ハルの部屋で、今夜 入る夢を選ぶ (キャンバスを調べて描く形は 次に作る)
+function toRoom() {
+    Object.assign(state, NIGHT_START);
+    walk.left = 0;
+    mode = 'scene';
+    showHud();
 }
 
 async function nightPhase() {
-    mode = 'opening';
-    showHud('ハルの部屋');
+    toRoom();
     await ui.fade(false);
     const items = dreamsTonight(state).map((id) => ({ id, label: LINES.dreamNames[id] }));
     items.push({ id: 'rest', label: LINES.dreamNames.rest });
@@ -375,7 +419,7 @@ async function nightPhase() {
     });
     await entered;
     await ui.fade(true);
-    mode = 'opening';
+    toRoom();
     await ui.fade(false);
 }
 
@@ -404,7 +448,7 @@ async function campaign() {
 
 async function fieldMenu() {
     const items = [{ id: 'bak', label: 'バクの成長' }, { id: 'keys', label: 'ボタン設定' }, { id: 'close', label: 'とじる' }];
-    if (keep.tutorial) items.unshift({ id: 'wake', label: '夢から覚める' });
+    if (keep.tutorial && MAPS[state.map].dream) items.unshift({ id: 'wake', label: '夢から覚める' });
     const id = await ui.menu(items);
     if (id === 'keys') await settings();
     if (id === 'wake') wakeUp();
@@ -466,7 +510,6 @@ function frame(now) {
     if (mode === 'battle' && battleView) drawBattle(ctx, battleView, now);
     else if (mode === 'shadow') drawShadow(ctx, now);
     else if (mode === 'morning') drawMorning(ctx);
-    else if (mode === 'town') drawTown(ctx);
     else if (mode === 'title' || mode === 'opening') drawSky(ctx, now);
     else drawField(ctx, state, walk, now);
     requestAnimationFrame(frame);

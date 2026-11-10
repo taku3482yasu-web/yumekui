@@ -70,6 +70,60 @@ function drawTile(ctx, tile, x, y, open, theme) {
     }
 }
 
+
+// ---- 現実の町 (暖かい色: 夕焼け・木・砂) -----------------------------------
+const REAL = {
+    floor: ['#c9a27a', '#bf976e', '#a8805a'],      // 教室・家の 木の床
+    corridor: ['#d8c8a8', '#cfbe9c', '#b8a684'],   // 廊下
+    road: ['#9a8a80', '#928279', '#857469'],       // 坂道
+    walk: ['#d8b890', '#cfae86', '#b89670'],       // 歩道・渡り廊下
+    grass: ['#8fae6a', '#86a462', '#769454']
+};
+
+function checker(ctx, x, y, colors) {
+    ctx.fillStyle = (x / TILE + y / TILE) % 2 ? colors[0] : colors[1];
+    ctx.fillRect(x, y, TILE, TILE);
+    ctx.fillStyle = colors[2];
+    ctx.fillRect(x, y + 15, TILE, 1);
+}
+
+function drawRealTile(ctx, tile, x, y, time) {
+    const box = (color, dx, dy, w, h) => { ctx.fillStyle = color; ctx.fillRect(x + dx, y + dy, w, h); };
+    switch (tile) {
+        case '.': return checker(ctx, x, y, REAL.floor);
+        case 'c': return checker(ctx, x, y, REAL.corridor);
+        case ',': return checker(ctx, x, y, REAL.road);
+        case '_': case 'o': case 'm': checker(ctx, x, y, REAL.walk); if (tile === 'm') box('#7a4a3a', 2, 0, 12, 14); return;
+        case 'g': checker(ctx, x, y, REAL.grass); box('#a8c880', 4, 5, 1, 2); box('#a8c880', 11, 10, 1, 2); return;
+        case 's': checker(ctx, x, y, REAL.corridor); for (let i = 0; i < 4; i++) box('#9a8466', 0, i * 4 + 2, TILE, 1); return;
+        case '#': box('#e8d8bc', 0, 0, TILE, TILE); box('#c8b494', 0, 12, TILE, 4); return;
+        case 'b': box('#e8d8bc', 0, 0, TILE, TILE); box('#3f6a4f', 0, 3, TILE, 9); box('#5c8a6a', 0, 4, TILE, 1); return;
+        case 'k': box('#e8d8bc', 0, 0, TILE, TILE); box('#9fc4dc', 2, 3, 12, 8); box('#e8d8bc', 7, 3, 2, 8); return;
+        case 'd': checker(ctx, x, y, REAL.floor); box('#8a6a4a', 1, 2, 14, 9); box('#a8865e', 1, 2, 14, 2); box('#5c4630', 2, 11, 2, 4); box('#5c4630', 12, 11, 2, 4); return;
+        case 'p': checker(ctx, x, y, REAL.floor); box('#20203a', 0, 2, TILE, 12); box('#e8ecf5', 0, 9, TILE, 3); return;
+        case 'e': checker(ctx, x, y, REAL.floor); box('#8a6a4a', 7, 1, 2, 14); box('#f4ecdc', 3, 2, 10, 8); return;
+        case 'f': checker(ctx, x, y, REAL.walk); box('#8a6a4a', 0, 6, TILE, 2); for (let i = 1; i < TILE; i += 5) box('#8a6a4a', i, 6, 2, 8); return;
+        case 'x': box('#a8b878', 0, 0, TILE, TILE); box('#98a868', 3, 9, 2, 1); return;
+        case 'T': box('#8fae6a', 0, 0, TILE, TILE); box('#4f7a44', 1, 0, 14, 11); box('#6a9a56', 3, 2, 6, 4); box('#6a4a32', 6, 11, 4, 5); return;
+        case 'h': box('#d8b890', 0, 0, TILE, TILE); box('#c09a72', 0, 0, 1, TILE); return;
+        case 'R': box('#b0574a', 0, 0, TILE, TILE); box('#8f4038', 0, 5, TILE, 1); box('#8f4038', 0, 11, TILE, 1); return;
+        case 'n': box('#d8b890', 0, 0, TILE, TILE); box('#3f5a9a', 0, 0, TILE, 9); box('#e8ecf5', 4, 2, 8, 4); return;
+        case '=': checker(ctx, x, y, REAL.walk); box('#e8ecf5', 0, 5, TILE, 2); box('#e8ecf5', 2, 5, 2, 9); box('#e8ecf5', 12, 5, 2, 9); return;
+        case 't': checker(ctx, x, y, REAL.floor); box('#7a5a3e', 0, 3, TILE, 9); return;
+        case 'w': {
+            box('#4f86b8', 0, 0, TILE, TILE);
+            const wave = Math.round(Math.sin(time / 600 + x / 30) * 2);
+            box('#8fc0e0', 2 + wave, 5, 6, 1);
+            box('#8fc0e0', 8 - wave, 11, 5, 1);
+            return;
+        }
+        default: return checker(ctx, x, y, REAL.floor);
+    }
+}
+
+// 時間帯の色: 夕方は 橙、夜は 紺 (町は 暖かい色のまま、上から 重ねる)
+const TINT = { evening: 'rgba(240, 120, 60, 0.22)', night: 'rgba(16, 20, 70, 0.5)' };
+
 export function drawField(ctx, state, walk, time) {
     const map = MAPS[state.map];
     const rows = map.tiles.length;
@@ -81,22 +135,34 @@ export function drawField(ctx, state, walk, time) {
     const camX = worldW <= W ? (worldW - W) / 2 : clamp(px + 8 - W / 2, 0, worldW - W);
     const camY = worldH <= H ? (worldH - H) / 2 : clamp(py + 8 - H / 2, 0, worldH - H);
 
-    drawSky(ctx, time);
+    if (map.real) {
+        ctx.fillStyle = map.indoor ? '#2a2030' : '#4f7a44';
+        ctx.fillRect(0, 0, W, H);
+    } else drawSky(ctx, time);
     ctx.save();
     ctx.translate(-Math.round(camX), -Math.round(camY));
     map.tiles.forEach((row, y) => [...row].forEach((tile, x) => {
-        drawTile(ctx, tile, x * TILE, y * TILE, state.flags.gateOpen, map.theme);
+        if (map.real) drawRealTile(ctx, tile, x * TILE, y * TILE, time);
+        else drawTile(ctx, tile, x * TILE, y * TILE, state.flags.gateOpen, map.theme);
     }));
     for (const object of objectsOf(state)) drawObject(ctx, object, time);
     drawHal(ctx, state, px, py, walk);
     ctx.restore();
+    const tint = map.real && (state.phase === 'night' ? TINT.night : state.time === 'evening' ? TINT.evening : null);
+    if (tint) {
+        ctx.fillStyle = tint;
+        ctx.fillRect(0, 0, W, H);
+    }
 }
 
+// 動かない物 (看板・人・家具) は 上下に揺らさない
+const STILL = ['talk', 'person', 'canvas', 'bed'];
+
 function drawObject(ctx, object, time) {
-    if (object.kind === 'exit') return;
     const name = object.sprite ?? FOES[object.foe]?.sprite;
+    if (!name) return;   // 出口・戸口・通せんぼは 絵を 描かない (タイルで 見える)
     const image = sprite(name);
-    const bob = object.kind === 'talk' ? 0 : Math.round(Math.sin(time / 300 + object.x) * 1.5);
+    const bob = STILL.includes(object.kind) ? 0 : Math.round(Math.sin(time / 300 + object.x) * 1.5);
     const x = object.x * TILE + (TILE - image.width) / 2;
     const y = object.y * TILE + TILE - image.height + bob;
     ctx.drawImage(image, Math.round(x), Math.round(y));
@@ -157,14 +223,6 @@ export function drawShadow(ctx, time) {
     ctx.quadraticCurveTo(70, 120, 160, 112);
     ctx.quadraticCurveTo(250, 120, 280, H);
     ctx.fill();
-}
-
-export function drawTown(ctx) {
-    drawMorning(ctx);
-    ctx.fillStyle = '#b0627a';
-    for (let x = 0; x < W; x += 8) ctx.fillRect(x, 170 - (x % 48) / 2, 8, H);
-    ctx.fillStyle = '#6f4a78';
-    ctx.fillRect(0, 196, W, H);
 }
 
 export function drawMorning(ctx) {

@@ -98,9 +98,13 @@ export function createUi(input) {
         return new Promise((resolve) => setTimeout(resolve, 420));
     }
 
-    function hud(place, state, date) {
+    // 左上に 日付と 時間帯 (夢の中では 夢の名前)、右上に 今いる場所 (仕様書「画面左上の表示」)
+    function hud(place, state, date, time) {
         $('hud').hidden = false;
-        $('place').textContent = `${date}　${place}`;
+        $('date').textContent = date;
+        $('time').textContent = time;
+        $('time').dataset.time = time;
+        $('place').textContent = place;
         $('items').textContent = `言葉 ${state.words.length}　夢のかけら ${state.shards}`;
     }
 

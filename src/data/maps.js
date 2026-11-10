@@ -1,3 +1,5 @@
+import { TOWN_MAPS } from './town.js';
+
 // ハルの夢『顔色の坂道』。w = 空に浮かぶ海 / M = お面の壁 / . = 坂 / s = 階段 / G = 閉じた門
 const odoriba = [
     'wwwwwwwwwwwwwwwwwwww',
@@ -71,7 +73,7 @@ const renshu = [
 
 export const MAPS = {
     odoriba: {
-        id: 'odoriba', name: '目覚めの踊り場', tiles: odoriba, start: { x: 9, y: 7 },
+        id: 'odoriba', name: '目覚めの踊り場', dream: '顔色の坂道', tiles: odoriba, start: { x: 9, y: 7 },
         objects: [
             { id: 'sign1', kind: 'talk', x: 5, y: 5, sprite: 'sign', script: 'sign1' },
             { id: 'blanket', kind: 'talk', x: 9, y: 4, sprite: 'blanket', script: 'bak', hideIf: 'bak' },
@@ -82,7 +84,7 @@ export const MAPS = {
         ]
     },
     omen: {
-        id: 'omen', name: 'お面通り', tiles: omen, start: { x: 2, y: 5 },
+        id: 'omen', name: 'お面通り', dream: '顔色の坂道', tiles: omen, start: { x: 2, y: 5 },
         objects: [
             { id: 'maskGuide', kind: 'talk', x: 4, y: 4, sprite: 'sign', script: 'maskGuide' },
             { id: 'omoteKi', kind: 'foe', x: 10, y: 5, foe: 'omote-喜' },
@@ -100,14 +102,14 @@ export const MAPS = {
         ]
     },
     hiroba: {
-        id: 'hiroba', name: '坂の上の広場', tiles: hiroba, start: { x: 9, y: 8 },
+        id: 'hiroba', name: '坂の上の広場', dream: '顔色の坂道', tiles: hiroba, start: { x: 9, y: 8 },
         objects: [
             { id: 'rest', kind: 'talk', x: 6, y: 7, sprite: 'blanket', script: 'rest' },
             { id: 'boss', kind: 'foe', x: 9, y: 3, foe: 'muresuima', sprite: 'muresuima-map', script: 'boss' }
         ]
     },
     mizuzoko: {
-        id: 'mizuzoko', name: '水底の音楽室', tiles: mizuzoko, start: { x: 9, y: 9 }, theme: 'water',
+        id: 'mizuzoko', name: '水底の音楽室', dream: '水底の音楽室', tiles: mizuzoko, start: { x: 9, y: 9 }, theme: 'water',
         objects: [
             { id: 'mioWake', kind: 'wake', x: 10, y: 9, sprite: 'wakeDoor' },
             { id: 'mioOnpu1', kind: 'foe', x: 9, y: 7, foe: 'onpu' },
@@ -118,7 +120,7 @@ export const MAPS = {
         ]
     },
     renshu: {
-        id: 'renshu', name: '止まらない練習室', tiles: renshu, start: { x: 2, y: 8 }, theme: 'tempo',
+        id: 'renshu', name: '止まらない練習室', dream: '止まらない練習室', tiles: renshu, start: { x: 2, y: 8 }, theme: 'tempo',
         objects: [
             { id: 'kanaWake', kind: 'wake', x: 3, y: 9, sprite: 'wakeDoor' },
             { id: 'kanaHari1', kind: 'foe', x: 6, y: 8, foe: 'hari' },
@@ -127,5 +129,6 @@ export const MAPS = {
             { id: 'kanaWord', kind: 'word', x: 15, y: 3, word: 'ほしかった', sprite: 'word' },
             { id: 'kanaBoss', kind: 'foe', x: 9, y: 5, foe: 'togemetoro', needs: 'active', script: 'pairBoss' }
         ]
-    }
+    },
+    ...TOWN_MAPS
 };

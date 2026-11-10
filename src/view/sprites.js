@@ -254,6 +254,180 @@ const FACES = {
     楽: { color: 'v', rows: ['..........', 'kkkk..kkkk', '..........', '...k..k...', '....kk....', '..........'] }
 };
 
+
+// ---- 現実の人 (キャラクター設定資料集「町の人たち」) ------------------------
+// 体の型 (H 髪 / S 肌 / E 目 / G 眼鏡 / U シャツ / T 上着 / B 下 / F くつ) に、人ごとの色と 目印を のせる。
+// 縦 16 ドット・正面向き。年寄りと子どもは 背を低くする
+const BODY = {
+    short: [
+        '....HHHH....',
+        '..HHHHHHHH..',
+        '.HHHHHHHHHH.',
+        '.HHSSSSSSHH.',
+        '.HSEESSEESH.',
+        '..SSSSSSSS..',
+        '...SSSSSS...',
+        '..UUUUUUUU..',
+        '.TTTUUUUTTT.',
+        '.TTTTUUTTTT.',
+        '.STTTTTTTTS.',
+        '..TTTTTTTT..',
+        '..BBBBBBBB..',
+        '..BBB..BBB..',
+        '..BBB..BBB..',
+        '..FFF..FFF..'
+    ],
+    long: [
+        '....HHHH....',
+        '..HHHHHHHH..',
+        '.HHHHHHHHHH.',
+        'HHHSSSSSSHHH',
+        'HHSEESSEESHH',
+        'HHSSSSSSSSHH',
+        'HH.SSSSSS.HH',
+        'HHUUUUUUUUHH',
+        'HTTTUUUUTTTH',
+        '.TTTTUUTTTT.',
+        '.STTTTTTTTS.',
+        '..TTTTTTTT..',
+        '..BBBBBBBB..',
+        '.BBBBBBBBBB.',
+        '...SS..SS...',
+        '...FF..FF...'
+    ],
+    skirt: [
+        '....HHHH....',
+        '..HHHHHHHH..',
+        '.HHHHHHHHHH.',
+        '.HHSSSSSSHH.',
+        '.HSEESSEESH.',
+        '..SSSSSSSS..',
+        '...SSSSSS...',
+        '..UUUUUUUU..',
+        '.TTTUUUUTTT.',
+        '.TTTTUUTTTT.',
+        '.STTTTTTTTS.',
+        '..TTTTTTTT..',
+        '..BBBBBBBB..',
+        '.BBBBBBBBBB.',
+        '...SS..SS...',
+        '...FF..FF...'
+    ],
+    old: [
+        '............',
+        '............',
+        '....HHHH....',
+        '..HHHHHHHH..',
+        '.HHSSSSSSHH.',
+        '.HGEGSSGEGH.',
+        '..SSSSSSSS..',
+        '...SSSSSS...',
+        '..UUUUUUUU..',
+        '.TTTTTTTTTT.',
+        '.STTTTTTTTS.',
+        '..TTTTTTTT..',
+        '..TTTTTTTT..',
+        '..BBBBBBBB..',
+        '...BB..BB...',
+        '...FF..FF...'
+    ],
+    child: [
+        '............',
+        '............',
+        '............',
+        '....HHHH....',
+        '..HHHHHHHH..',
+        '.HHSSSSSSHH.',
+        '.HSEESSEESH.',
+        '..SSSSSSSS..',
+        '..TTTTTTTT..',
+        '.TTTTTTTTTT.',
+        '.STTTTTTTTS.',
+        '..BBBBBBBB..',
+        '..BBB..BBB..',
+        '...SS..SS...',
+        '...SS..SS...',
+        '...FF..FF...'
+    ]
+};
+
+// 人ごとの 色。marks: [x, y, 色] の 目印 (リクの黄色いパーカー、ミオの楽譜、カナのリストバンド など)
+const PEOPLE = {
+    riku: { body: 'short', H: '#8a5a32', T: '#ffd86b', U: '#ffd86b', B: '#2f4a7d', F: '#141428', marks: [[3, 8, '#2f4a7d'], [8, 8, '#2f4a7d']] },
+    mio: { body: 'long', H: '#20203a', T: '#2f4a7d', U: '#e8ecf5', B: '#22365e', F: '#141428', marks: [[2, 11, '#e8ecf5'], [3, 11, '#e8ecf5'], [2, 10, '#e8ecf5']] },
+    kana: { body: 'skirt', H: '#3a2a20', T: '#2f4a7d', U: '#e8ecf5', B: '#22365e', F: '#141428', marks: [[10, 10, '#ff8f7a'], [1, 10, '#ff8f7a']] },
+    momo: { body: 'skirt', H: '#5c4630', T: '#2f4a7d', U: '#e8ecf5', B: '#22365e', F: '#141428', marks: [[8, 1, '#f0b6c8'], [9, 1, '#f0b6c8'], [3, 7, '#f0b6c8'], [4, 7, '#f0b6c8'], [7, 7, '#f0b6c8'], [8, 7, '#f0b6c8']] },
+    kaito: { body: 'short', H: '#20203a', T: '#2f4a7d', U: '#e8ecf5', B: '#22365e', F: '#141428', marks: [[2, 6, '#e8524a'], [3, 6, '#e8524a'], [8, 6, '#e8524a'], [9, 6, '#e8524a'], [2, 7, '#e8524a'], [9, 7, '#e8524a']] },
+    student: { body: 'short', H: '#3a2a20', T: '#2f4a7d', U: '#e8ecf5', B: '#22365e', F: '#141428' },
+    sora: { body: 'skirt', H: '#5c4630', T: '#e8ecf5', U: '#e8ecf5', B: '#22365e', F: '#141428', marks: [[3, 9, '#6fb0ff'], [7, 10, '#ff8f7a'], [5, 11, '#ffd86b']] },
+    aki: { body: 'short', H: '#3a2a20', T: '#2f7d5a', U: '#2f7d5a', B: '#2f7d5a', F: '#e8ecf5', marks: [[1, 0, '#3a2a20'], [10, 1, '#3a2a20'], [9, 10, '#e8524a']] },
+    tome: { body: 'old', H: '#c6c9ea', T: '#e8ecf5', U: '#e8ecf5', B: '#59509a', F: '#5c4630' },
+    ken: { body: 'child', H: '#20203a', T: '#6fb0ff', U: '#6fb0ff', B: '#8a6a4a', F: '#e8ecf5', marks: [[3, 11, '#5c4630'], [8, 11, '#5c4630']] },
+    father: { body: 'short', H: '#20203a', T: '#e8ecf5', U: '#e8ecf5', B: '#3a3a50', F: '#141428', marks: [[5, 8, '#59509a'], [6, 8, '#59509a'], [5, 9, '#59509a'], [6, 9, '#59509a'], [5, 10, '#59509a']] },
+    rikuMother: { body: 'skirt', H: '#8a5a32', T: '#c07a5a', U: '#c07a5a', B: '#5c4630', F: '#141428' }
+};
+
+function personArt(id) {
+    const look = PEOPLE[id];
+    const colors = { S: PALETTE.s, E: PALETTE.e, G: '#c6c9ea', ...look };
+    const canvas = document.createElement('canvas');
+    canvas.width = 12;
+    canvas.height = 16;
+    const ctx = canvas.getContext('2d');
+    BODY[look.body].forEach((row, y) => [...row].forEach((ch, x) => {
+        if (ch === '.') return;
+        ctx.fillStyle = colors[ch];
+        ctx.fillRect(x, y, 1, 1);
+    }));
+    for (const [x, y, color] of look.marks ?? []) {
+        ctx.fillStyle = color;
+        ctx.fillRect(x, y, 1, 1);
+    }
+    return canvas;
+}
+
+export const PERSON_IDS = Object.keys(PEOPLE);
+
+// ハルの部屋の キャンバス (イーゼルに 白い布) と ベッド
+const ROOM_ART = {
+    canvas: [
+        '................',
+        '.......aa.......',
+        '..kkkkkkkkkkkk..',
+        '..kmmmmmmmmmmk..',
+        '..kmmmmmmmmmmk..',
+        '..kmmmmmmmmmmk..',
+        '..kmmmmmmmmmmk..',
+        '..kmmmmmmmmmmk..',
+        '..kmmmmmmmmmmk..',
+        '..kkkkkkkkkkkk..',
+        '....a......a....',
+        '...a...aa...a...',
+        '...a...aa...a...',
+        '..a....aa....a..',
+        '..a....aa....a..',
+        '................'
+    ],
+    bed: [
+        '................',
+        'kkkkkkkkkkkkkkkk',
+        'kmmmmmkuuuuuuuuk',
+        'kmmmmmkuuuuuuuuk',
+        'kmmmmmkuuuuuuuuk',
+        'kkkkkkkuuuuuuuuk',
+        'kuuuuuuuuuuuuuuk',
+        'kuuuuuuuuuuuuuuk',
+        'kuuuuuuuuuuuuuuk',
+        'kuuuuuuuuuuuuuuk',
+        'kkkkkkkkkkkkkkkk',
+        'kaaaaaaaaaaaaaak',
+        'ka............ak',
+        '................',
+        '................',
+        '................'
+    ]
+};
+
 const cache = new Map();
 
 function paint(rows, draw) {
@@ -319,6 +493,8 @@ export function sprite(name) {
     else if (name === 'muresuima') canvas = schoolArt(64);
     else if (name === 'muresuima-map') canvas = schoolArt(32);
     else if (name === 'bak-wild') canvas = paint(wildRows());
+    else if (PEOPLE[name]) canvas = personArt(name);
+    else if (ROOM_ART[name]) canvas = paint(ROOM_ART[name]);
     else canvas = paint(ART[name]);
     cache.set(name, canvas);
     return canvas;
