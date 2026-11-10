@@ -1,4 +1,4 @@
-import { act, answer, bench, commands, createBattle } from './core/battle.js';
+import { act, aliveFoes, answer, bench, chanceFoe, commands, createBattle, needsTarget, setTarget, TARGETED } from './core/battle.js';
 import { ACTIONS, keyName } from './core/keys.js';
 import { advance, createKeep, dateLabel, devour, dreamsTonight, nextLoop, rescue, ACTIVE_DAY, LAST_DAY, PAIR } from './core/calendar.js';
 import { bakSkills, bakUnit, grow } from './core/growth.js';
@@ -11,7 +11,7 @@ import { ALLIES, FOES } from './data/units.js';
 import { LINES } from './scenes/story.js';
 import { createInput } from './view/input.js';
 import { createUi } from './view/ui.js';
-import { drawBattle, drawField, drawMorning, drawShadow, drawSky } from './view/draw.js';
+import { drawBattle, drawField, drawMorning, drawShadow, drawSky, foeX } from './view/draw.js';
 import { drawCalendar, drawLapse } from './view/time.js';
 import { drawEncounter, encounterTheme } from './view/encounter.js';
 import { createPainting, drawPainting, finishPainting, updatePainting } from './view/painting.js';
@@ -311,26 +311,30 @@ async function fight(object) {
     if (object.script === 'boss') await talk(LINES.boss);
     if (object.script === 'pairBoss') await talk(LINES.pairBoss);
 
-    const foe = FOES[object.foe];
-    const battle = createBattle(partyUnits(), foe);
-    await playEncounter(encounterTheme(MAPS[state.map]), Boolean(foe.truth));
+    // 敵は 1 体 (foe) か 複数 (foes)。本音を持つ 敵 (なければ 1 体目) が この戦いの 主
+    const foeList = (object.foes ?? [object.foe]).map((id) => FOES[id]);
+    const foe = foeList.find((f) => f.truth) ?? foeList[0];
+    const battle = createBattle(partyUnits(), foeList);
+    await playEncounter(encounterTheme(MAPS[state.map]), foeList.some((f) => f.truth));
     await ui.fade(true);
     mode = 'battle';
-    battleView = { foe: foe.sprite, ally: battle.ally.sprite, foeHit: 0, allyHit: 0, pops: [] };
+    battleView = { foes: foeList.map((f) => f.sprite), down: [], ally: battle.ally.sprite, foeHit: [], allyHit: 0, pops: [] };
     ui.hideHud();
     ui.status(battle);
     await ui.fade(false);
 
     while (!battle.over) {
-        await ui.say('', `${foe.name}が 立ちはだかる。どうする？`, { wait: 0 });
+        const names = aliveFoes(battle).map((f) => f.name).join('と');
+        await ui.say('', `${names}が 立ちはだかる。どうする？`, { wait: 0 });
         const id = await ui.menu(commands(battle));
         ui.hideMsg();
-        ui.hideMsg();
-        let events;
+        let events = null;
         if (id === 'truth') events = await chooseTruth(battle);
         else if (id === 'swap') events = await chooseSwap(battle);
-        else events = act(battle, id);
-        await play(battle, events);
+        else if (TARGETED.includes(id) && needsTarget(battle)) {
+            if (await chooseTarget(battle)) events = act(battle, id);
+        } else events = act(battle, id);
+        if (events) await play(battle, events);
     }
 
     await ui.fade(true);
@@ -342,7 +346,19 @@ async function fight(object) {
     await finish(battle, object, foe);
 }
 
+// 敵が 複数のとき、ねらう 敵を 選ぶ (もどると 選び直し)
+async function chooseTarget(battle) {
+    const items = aliveFoes(battle).map((f) => ({ id: String(f.index), label: `${f.name}（${f.attr}）` }));
+    items.push({ id: 'back', label: 'もどる' });
+    const id = await ui.menu(items, { head: 'どれを ねらう？' });
+    if (id === 'back') return false;
+    setTarget(battle, battle.foes[Number(id)]);
+    ui.status(battle);
+    return true;
+}
+
 function chooseTruth(battle) {
+    battle.foe = chanceFoe(battle) ?? battle.foe;
     const solvedBefore = keep.solved.includes(battle.foe.id);
     const choices = buildChoices(battle.foe.truth, state.words, { solvedBefore });
     const items = choices.map((line) => ({ id: line, label: line }));
@@ -362,8 +378,16 @@ async function play(battle, events) {
         if (event.t === 'say') await ui.say('', event.text, { wait: NOTE_MS });
         if (event.t === 'hit') showHit(event);
         if (event.t === 'heal') pop(`+${event.amount}`, 70, 92, '#7fe0a8');
-        if (event.t === 'shake') pop(`ゆらぎ +${event.gain}`, 205, 40, '#ffc95e');
-        if (event.t === 'chance') await ui.say('', `${battle.foe.name}の気持ちが 大きく揺れている！ 本音を言い当てるチャンスだ！`, { wait: NOTE_MS * 2 });
+        if (event.t === 'shake') pop(`ゆらぎ +${event.gain}`, foeX(battleView, event.index ?? 0), 40, '#ffc95e');
+        if (event.t === 'chance') await ui.say('', `${event.name}の気持ちが 大きく揺れている！ 本音を言い当てるチャンスだ！`, { wait: NOTE_MS * 2 });
+        if (event.t === 'down') {
+            battleView.down[event.index] = true;
+            if (battle.foes.length > 1 && !battle.over) await ui.say('', `${event.name}を たおした！`, { wait: NOTE_MS });
+        }
+        if (event.t === 'solved') {
+            battleView.down[event.index] = true;
+            if (!battle.over) await ui.say('', `${event.name}に 本音が とどいた！`, { wait: NOTE_MS * 2 });
+        }
         ui.status(battle);
     }
     ui.hideMsg();
@@ -372,9 +396,10 @@ async function play(battle, events) {
 function showHit(event) {
     const now = performance.now();
     const isFoe = event.target === 'foe';
-    battleView[isFoe ? 'foeHit' : 'allyHit'] = now + 300;
+    if (isFoe) battleView.foeHit[event.index ?? 0] = now + 300;
+    else battleView.allyHit = now + 300;
     const color = event.aff > 1 ? '#ffc95e' : '#ffffff';
-    pop(String(event.amount), isFoe ? 205 : 70, isFoe ? 60 : 92, color);
+    pop(String(event.amount), isFoe ? foeX(battleView, event.index ?? 0) : 70, isFoe ? 60 : 92, color);
 }
 
 function pop(text, x, y, color) {
@@ -431,8 +456,9 @@ async function finish(battle, object, foe) {
         keep.brush = true;   // バクが 筆に 姿を変える (最初の夢で 手に入る)
         await talk(LINES.getBrush);
     }
-    if (foe.drop) {
-        state.shards += foe.drop;
+    const drops = battle.foes.reduce((sum, f) => sum + (f.drop ?? 0), 0);   // 倒した スイマの 数だけ
+    if (drops) {
+        state.shards += drops;
         showHud();
         await ui.say('', '夢のかけらを 取り戻した！', { wait: NOTE_MS });
         ui.hideMsg();

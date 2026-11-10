@@ -110,13 +110,29 @@ export function createUi(input) {
 
     const hideHud = () => { $('hud').hidden = true; };
 
+    // 敵は 何体でも 並べる (ねらっている 敵に ▶、倒れた 敵は うすく)。本音を持つ 敵は ココロゲージも
     function status(battle) {
         $('status').hidden = false;
-        paintUnit('foe-status', battle.foe);
+        const box = $('foe-status');
+        const many = battle.foes.length > 1;
+        box.replaceChildren(...battle.foes.map((foe) => {
+            const block = document.createElement('div');
+            block.className = 'foe';
+            block.classList.toggle('down', Boolean(foe.down));
+            block.innerHTML = '<div class="row"><span class="name"></span><span class="attr"></span></div><div class="bar hp"><i></i></div>';
+            block.querySelector('.name').textContent = (many && foe === battle.foe && !foe.down ? '▶' : '') + foe.name;
+            block.querySelector('.attr').textContent = foe.attr;
+            paintBar(block.querySelector('.hp'), foe.hp / foe.maxHp);
+            if (foe.truth) {
+                const kokoro = document.createElement('div');
+                kokoro.className = 'bar kokoro';
+                kokoro.innerHTML = '<i></i>';
+                kokoro.firstElementChild.style.width = `${foe.kokoro}%`;
+                block.append(kokoro);
+            }
+            return block;
+        }));
         paintUnit('ally-status', battle.ally);
-        const kokoro = document.querySelector('#foe-status .kokoro');
-        kokoro.hidden = !battle.foe.truth;
-        kokoro.firstElementChild.style.width = `${battle.foe.kokoro}%`;
         document.querySelector('#ally-status .num').textContent = `${battle.ally.hp}/${battle.ally.maxHp}`;
     }
 
@@ -139,8 +155,11 @@ function paintUnit(id, unit) {
     const box = $(id);
     box.querySelector('.name').textContent = unit.name;
     box.querySelector('.attr').textContent = unit.attr;
-    const rate = Math.max(0, unit.hp / unit.maxHp);
-    const bar = box.querySelector('.hp');
+    paintBar(box.querySelector('.hp'), unit.hp / unit.maxHp);
+}
+
+function paintBar(bar, value) {
+    const rate = Math.max(0, value);
     bar.classList.toggle('low', rate < 0.3);
     bar.firstElementChild.style.width = `${rate * 100}%`;
 }

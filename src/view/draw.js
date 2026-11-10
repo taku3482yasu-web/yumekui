@@ -212,11 +212,16 @@ export function drawBattle(ctx, view, time) {
     ctx.ellipse(70, 158, 60, 12, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    const foe = sprite(view.foe);
-    const scale = foe.width >= 64 ? 1.5 : 4;
-    const foeShake = view.foeHit > time ? Math.sin(time / 20) * 4 : 0;
-    const foeY = 130 - foe.height * scale + Math.sin(time / 500) * 2;
-    ctx.drawImage(foe, Math.round(205 - (foe.width * scale) / 2 + foeShake), Math.round(foeY), foe.width * scale, foe.height * scale);
+    // 敵: 1 体なら まん中、複数なら 横に 並べる (倒れた 敵は 消える)
+    view.foes.forEach((name, i) => {
+        if (view.down[i]) return;
+        const foe = sprite(name);
+        const many = view.foes.length > 1;
+        const scale = foe.width >= 64 ? (many ? 1.1 : 1.5) : many ? 3 : 4;
+        const shake = view.foeHit[i] > time ? Math.sin(time / 20) * 4 : 0;
+        const y = 130 - foe.height * scale + Math.sin(time / 500 + i) * 2;
+        ctx.drawImage(foe, Math.round(foeX(view, i) - (foe.width * scale) / 2 + shake), Math.round(y), foe.width * scale, foe.height * scale);
+    });
 
     const bak = sprite(view.ally);
     const bakShake = view.allyHit > time ? Math.sin(time / 20) * 4 : 0;
@@ -230,6 +235,14 @@ export function drawBattle(ctx, view, time) {
         ctx.textAlign = 'center';
         ctx.fillText(pop.text, pop.x, pop.y - (1 - left) * 18);
     }
+}
+
+// 敵の 横の 位置 (1 体なら 205、複数なら 並べる)
+export function foeX(view, i) {
+    const n = view.foes.length;
+    if (n === 1) return 205;
+    const span = Math.min(150, 60 * (n - 1));
+    return 205 - span / 2 + (span * i) / (n - 1);
 }
 
 export function drawShadow(ctx, time) {

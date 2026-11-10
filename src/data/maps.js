@@ -77,8 +77,9 @@ export const MAPS = {
         objects: [
             { id: 'sign1', kind: 'talk', x: 5, y: 5, sprite: 'sign', script: 'sign1' },
             { id: 'blanket', kind: 'talk', x: 9, y: 4, sprite: 'blanket', script: 'bak', hideIf: 'bak' },
-            { id: 'nanashi1', kind: 'foe', x: 9, y: 2, foe: 'nanashi', needs: 'bak', script: 'firstBattle' },
-            { id: 'nanashi2', kind: 'foe', x: 10, y: 2, foe: 'nanashi', needs: 'bak', script: 'firstBattle' },
+            // 最初の戦いは ナナシ 2 体 (敵複数の バトル)
+            { id: 'nanashi1', kind: 'foe', x: 9, y: 2, foe: 'nanashi', foes: ['nanashi', 'nanashi'], needs: 'bak', script: 'firstBattle' },
+            { id: 'nanashi2', kind: 'foe', x: 10, y: 2, foe: 'nanashi', foes: ['nanashi', 'nanashi'], needs: 'bak', script: 'firstBattle' },
             // 崩れた階段: 夢筆で 階段を 描くと 上れる (夢筆の 使い方を 覚える場所)
             { id: 'stairSpot1', kind: 'brushSpot', group: 'odoribaStairs', x: 9, y: 1, sprite: 'brushMark', accepts: ['stairs'], paint: [[9, 1, 's'], [10, 1, 's']], hideIf: 'painted_odoribaStairs', done: 'stairsPainted', hint: 'brushHintStairs' },
             { id: 'stairSpot2', kind: 'brushSpot', group: 'odoribaStairs', x: 10, y: 1, sprite: 'brushMark', accepts: ['stairs'], paint: [[9, 1, 's'], [10, 1, 's']], hideIf: 'painted_odoribaStairs', done: 'stairsPainted', hint: 'brushHintStairs' },

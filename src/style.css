@@ -265,3 +265,12 @@ canvas {
     60% { transform: translate(-3px, 0); }
     80% { transform: translate(3px, 1px); }
 }
+
+/* 敵が 複数のとき: 1 体ずつ 並べる。倒れた 敵は うすく */
+#foe-status .foe + .foe {
+    margin-top: 0.3em;
+}
+
+#foe-status .foe.down {
+    opacity: 0.35;
+}
