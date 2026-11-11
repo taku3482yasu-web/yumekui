@@ -2,7 +2,7 @@
 //   - 人 (person) は 日と夢主の状態で 出たり消えたりする (present)
 //   - 夢主 (mio / kana) とは「じっくり話す」ができる。1 日 1 人で、話すと夕方になって家に帰る
 //   - 立ち話は 何回でも
-import { ACTIVE_DAY, PAIR, RIKU_DOWN_DAY, isWeekend } from './days.js';
+import { PAIR, RIKU_DOWN_DAY, activeDay, isWeekend } from './days.js';
 
 // その人が 今 町にいるか。夜の町には 人がいない (父は 家にいる)。
 //   朝は 通学路の ムービー (scenes/mornings.js) で その日の 人だけを 出すので、地図の 人は 出さない
@@ -14,14 +14,15 @@ export function present(state, who) {
     if (PAIR.includes(who)) {
         const status = state.status[who];
         if (status === 'saved' || status === 'eaten') return true;          // 目を覚ました (喰らった人は 気持ちが ない)
-        return status === 'idle' && state.day < ACTIVE_DAY;                  // 7 日から 倒れている。刈り取られた人も 来ない
+        // 期限 (7 日) か、話を 最後まで 進めた 次の日から 倒れている。進めた その日は まだ 町にいる。刈り取られた人も 来ない
+        return status === 'idle' && (state.day < activeDay(state) || (state.day === state.activeDay && state.story?.duet && state.phase !== 'morning'));
     }
     return true;
 }
 
 // じっくり話せるか (今日まだ だれとも じっくり話していない・その夢主が 元気)
 export function canDeepTalk(state, who) {
-    return PAIR.includes(who) && state.status[who] === 'idle' && state.day < ACTIVE_DAY && !state.talkedToday;
+    return PAIR.includes(who) && state.status[who] === 'idle' && state.day < activeDay(state) && !state.talkedToday;
 }
 
 // じっくり話す。訪ねた回数を数えて、まだ聞いていない言葉が あれば 拾う

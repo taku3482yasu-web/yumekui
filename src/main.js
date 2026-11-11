@@ -1,6 +1,6 @@
 import { act, aliveFoes, answer, bench, chanceFoe, commands, createBattle, needsTarget, setTarget, TARGETED, TOP_COMMANDS } from './core/battle.js';
 import { ACTIONS, keyName } from './core/keys.js';
-import { advance, createKeep, dateLabel, devour, dreamsTonight, isEarly, nextLoop, sleepAfterNightmare, rescue, rescuePair, ACTIVE_DAY, LAST_DAY, PAIR } from './core/calendar.js';
+import { advance, advanceStory, createKeep, dateLabel, devour, dreamsTonight, isEarly, nextLoop, sleepAfterNightmare, rescue, rescuePair, activeDay, lastRescueDay, LAST_DAY, PAIR, STORY_STEPS } from './core/calendar.js';
 import { bakSkills, bakUnit, grow } from './core/growth.js';
 import { battleExp, gainExp, growUnit, layerFoe, reachLayer, ypLeft } from './core/level.js';
 import { openGrow } from './view/grow.js';
@@ -11,7 +11,7 @@ import { dreamShardOf, giveHeart, heartsOf, isDormant, pickHeart, setDormant, te
 import { HEARTS } from './data/hearts.js';
 import { chaseStep, createState, facing, isBlocked, objectAt, pickWord, placeName, step, tileAt, warp, DIRS } from './core/field.js';
 import { deepTalk, startDay, startMorning, timeLabel, timesBetween, NIGHT_START, PROLOGUE_START, RIKU_BRANCH_Y, TOWN_START } from './core/town.js';
-import { isWeekend, LAST_RESCUE_DAY, WAKE_DAY } from './core/days.js';
+import { isWeekend, WAKE_DAY } from './core/days.js';
 import { frontChoices, makeSentence, nextChoices, sentenceChoices } from './core/sentence.js';
 import { OWNER_NAMES, WORDS } from './data/words.js';
 import { DREAM_LAYERS, MAPS } from './data/maps.js';
@@ -239,13 +239,20 @@ async function deepTalkTo(who) {
         return;
     }
     await talk(LINES.deepGreet[who]);
-    const id = await ui.menu([{ id: 'yes', label: LINES.deepYes }, { id: 'no', label: LINES.deepNo }], { head: LINES.deepHead(NAMES[who]) });
+    // 次が 最後の段なら、話すと その夜に 活性化する (勝負を 始めるか プレイヤーが 決める)
+    const last = (state.story?.duet ?? 0) === STORY_STEPS - 1;
+    const id = await ui.menu([{ id: 'yes', label: LINES.deepYes }, { id: 'no', label: LINES.deepNo }], { head: last ? LINES.deepHeadLast(NAMES[who]) : LINES.deepHead(NAMES[who]) });
     if (id !== 'yes') return;
     const { count, word } = deepTalk(state, who, LINES.visitWord[who]);
-    const lines = LINES.visit[who];
-    await talk(lines[Math.min(count, lines.length - 1)]);
+    const step = (state.story?.duet ?? 0) < STORY_STEPS ? advanceStory(state) : null;
+    if (step === STORY_STEPS) await talk(LINES.storyLast);
+    else {
+        const lines = LINES.visit[who];
+        await talk(lines[Math.min(count, lines.length - 1)]);
+    }
     showHud();
     if (word) await talk(LINES.wordHeard(word));
+    if (step === STORY_STEPS) await talk(LINES.storyActive);
     await talk(LINES.evening);
     wakeUp();
 }
@@ -262,7 +269,7 @@ async function homeDoor() {
         return;
     }
     const items = [{ id: 'yes', label: LINES.goHomeYes }];
-    if (state.day >= ACTIVE_DAY + 3 && state.day < LAST_DAY) items.push({ id: 'skip', label: LINES.goHomeSkip });
+    if (state.day > lastRescueDay(state) && state.day < LAST_DAY) items.push({ id: 'skip', label: LINES.goHomeSkip });
     items.push({ id: 'no', label: LINES.goHomeNo });
     const id = await ui.menu(items, { head: LINES.goHomeHead });
     if (id === 'skip') state.day = LAST_DAY;
@@ -1106,7 +1113,7 @@ async function dayPhase() {
 //   玄関から 夜の町へ出て 帰って寝ると、夢に入らずに 朝になる (仕様書「1日の流れ」)
 async function nightPhase() {
     Object.assign(state, NIGHT_START);
-    if (keep.loop === 1 && state.day === LAST_RESCUE_DAY && !state.flags.nightmareDone && PAIR.every((id) => state.status[id] === 'idle')) {
+    if (keep.loop === 1 && state.day === lastRescueDay(state) && !state.flags.nightmareDone && PAIR.every((id) => state.status[id] === 'idle')) {
         mode = 'scene';
         await ui.fade(false);
         await talk(LINES.nightmareVisit);
@@ -1146,12 +1153,12 @@ async function useCanvas() {
         keep.canvasTold = true;
         await talk(LINES.firstCanvas);
     }
-    if (dreams.length && state.day < ACTIVE_DAY && !keep.earlyTold) {
+    if (dreams.length && state.day < activeDay(state) && !keep.earlyTold) {
         keep.earlyTold = true;
         await talk(LINES.perfectCanvas);
     }
     if (state.flags.dreamsClosed) await talk(LINES.canvasClosed);
-    else if (!dreams.length && state.day < ACTIVE_DAY) {
+    else if (!dreams.length && state.day < activeDay(state)) {
         // 活性化の 前: 描いても 絵が 漠然としていて、夢の チャンネルに 引っかからない
         await talk(keep.channelTold ? LINES.notActiveAgain : LINES.notActive);
         keep.channelTold = true;

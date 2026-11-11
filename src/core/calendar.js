@@ -4,9 +4,9 @@ import { grow } from './growth.js';
 import { isActive, knowsDream, loopCanvas } from './canvas.js';
 import { makeDreamShards } from './shards.js';
 
-import { ACTIVE_DAY, LAST_DAY, LAST_RESCUE_DAY, OPEN_DAY, PAIR, RIKU_DOWN_DAY, isWeekend } from './days.js';
+import { LAST_DAY, OPEN_DAY, PAIR, RIKU_DOWN_DAY, STORY_STEPS, activeDay, isWeekend, lastRescueDay } from './days.js';
 
-export { ACTIVE_DAY, LAST_DAY, LAST_RESCUE_DAY, OPEN_DAY, PAIR, dateLabel } from './days.js';
+export { ACTIVE_DAY, LAST_DAY, LAST_RESCUE_DAY, OPEN_DAY, PAIR, STORY_STEPS, activeDay, dateLabel, lastRescueDay } from './days.js';
 
 // ループしても残るもの
 export function createKeep() {
@@ -14,7 +14,7 @@ export function createKeep() {
 }
 
 export function canTalk(state, id) {
-    return state.day < ACTIVE_DAY && state.status[id] === 'idle';
+    return state.day < activeDay(state) && state.status[id] === 'idle';
 }
 
 // 今夜 入れる夢。2 周目からは、2 人とも 元気なら ミオ×カナの夢 (夢合体『二重奏ホール』) も 描ける。
@@ -24,7 +24,7 @@ export function canTalk(state, id) {
 export function dreamsTonight(state, keep = null) {
     if (state.flags.dreamsClosed) return [];   // 1 周目: ナイトメアに 負けたあとは 夢が 閉じかけている
     const riku = state.day >= RIKU_DOWN_DAY && state.day <= LAST_DAY && state.status.riku === 'idle' ? ['riku'] : [];
-    if (state.day < OPEN_DAY || state.day > LAST_RESCUE_DAY) return riku;
+    if (state.day < OPEN_DAY || state.day > lastRescueDay(state)) return riku;
     const list = PAIR.filter((id) => state.status[id] === 'idle');
     if (keep && keep.loop >= 2 && list.length === 2) list.push('duet');
     if (isActive(state)) return [...list, ...riku];
@@ -85,6 +85,19 @@ export function sleepAfterNightmare(state, wakeDay) {
     state.flags.hospitalNext = true;
 }
 
+// ミオ×カナの ストーリーを 1 段 進める (じっくり話すたび。1 日 1 人なので 1 日 1 段まで)。
+//   最後の段を 見ると、その夜に ユメクイが 活性化する (期限より 早く 勝負を 始められる)。返り値: 進んだあとの 段
+export function advanceStory(state) {
+    if (!state.story) state.story = {};
+    const step = Math.min((state.story.duet ?? 0) + 1, STORY_STEPS);
+    state.story.duet = step;
+    if (step === STORY_STEPS && state.activeDay == null) {
+        state.activeDay = Math.min(state.day, activeDay(state));
+        state.flags.active = true;
+    }
+    return step;
+}
+
 // 1 日は 朝 → 放課後 → 夜。夜が明けると 次の日の朝。土日は 朝が 飛んで 昼 (家にいる) から
 export function advance(state) {
     if (state.phase === 'morning') {
@@ -95,7 +108,7 @@ export function advance(state) {
         state.phase = 'night';
         return 'night';
     }
-    if (state.day === LAST_RESCUE_DAY) {
+    if (state.day === lastRescueDay(state)) {
         for (const id of PAIR) {
             if (state.status[id] === 'idle') state.status[id] = 'broken';
         }
@@ -103,7 +116,7 @@ export function advance(state) {
     state.day++;
     state.wordsAtDay = state.words.length;   // その日に 言葉を 拾ったか (キャンバスの 段階)
     state.phase = isWeekend(state.day) ? 'day' : 'morning';
-    if (state.day >= ACTIVE_DAY) state.flags.active = true;
+    if (state.day >= activeDay(state)) state.flags.active = true;
     return state.day > LAST_DAY ? 'loop' : state.phase;
 }
 

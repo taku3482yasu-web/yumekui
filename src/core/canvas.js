@@ -1,4 +1,4 @@
-import { ACTIVE_DAY, LAST_RESCUE_DAY, PAIR } from './days.js';
+import { PAIR, activeDay, lastRescueDay } from './days.js';
 
 // 夢の キャンバス (企画書「夢のキャンバス」・仕様書「未実装の仕様 夢のキャンバス」)
 //   夢主ごとに 段階 1〜5。その夢に 入るごとに ＋1、その日に 言葉を 拾っていれば さらに ＋1。
@@ -69,7 +69,7 @@ export function loopCanvas(keep, prevState = null) {
 
 // その夜 その夢主の 夢に 入れるか: ユメクイが 活性化していて、夢主が まだ 倒れていない
 export function isActive(state) {
-    return state.day >= ACTIVE_DAY && state.day <= LAST_RESCUE_DAY;
+    return state.day >= activeDay(state) && state.day <= lastRescueDay(state);
 }
 
 // どの 階層から 始められるか (いちばん 深い 階層)。
