@@ -617,7 +617,7 @@ async function finish(battle, object, foe) {
     if (jingle) {
         musicOverride = null;
         sound.playBgm(null, { transition: 'hard' });
-        jingleDone = Promise.race([sound.jingle(jingle), new Promise((resolve) => setTimeout(resolve, 9000))]);
+        jingleDone = Promise.race([sound.jingle(jingle), new Promise((resolve) => setTimeout(resolve, 18000))]);
     }
     if (battle.over === 'lose') {
         hp = {};
