@@ -30,7 +30,7 @@ export const BGM = {
     // ノーマルED: 救った人の パートだけ 鳴らす (救えなかった人の パートは 鳴らない)
     M21: { file: 'M21_normal_end', title: '空白のある絵', loop: false, layers: { mio: 'M21_mio', kana: 'M21_kana', riku: 'M21_riku' } },
     M22: { file: 'M22_yumekui_end', title: 'おなかいっぱい', loop: false },
-    M23: { file: 'M23_bak', title: 'ふとんの中の味方', loop: true },
+    M23: { file: 'M23_bak', title: 'ふとんの中の味方', loop: true, loopStart: 29.555 },
     M24: { file: 'M24_makimodoshi', title: 'まきもどしのうた', loop: false, versions: ['short'] },
     // 戦闘の 終わりの 短い曲 (11/11 追加)
     M25: { file: 'M25_victory', title: 'やったね', loop: false },
