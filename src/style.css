@@ -106,6 +106,19 @@ canvas {
     line-height: 1.55;
 }
 
+/* 会話の 立ち絵: 左が 主人公の側、右が 相手 (左右反転して 左向き)。メッセージ枠の 後ろに 立つ */
+.portrait {
+    position: absolute;
+    bottom: 0;
+    height: 82%;
+    width: auto;
+    pointer-events: none;
+    image-rendering: pixelated;
+}
+.portrait[hidden] { display: none; }
+#portrait-left { left: 1%; }
+#portrait-right { right: 1%; transform: scaleX(-1); }
+
 #speaker {
     color: var(--kokoro);
     font-size: 0.85em;

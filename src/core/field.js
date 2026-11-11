@@ -5,7 +5,7 @@ import { paintedTile } from './brush.js';
 export const DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 
 // 通れない タイル。夢: 空に浮かぶ海・お面の壁・崩れた所 (C。夢筆で 描くと 通れる) / 現実: 壁・黒板・窓・机・ピアノ・イーゼル・手すり・校庭・木・建物・屋根・のれん・柵・テーブル
-const SOLID = new Set(['w', 'M', 'C', '#', 'b', 'k', 'd', 'p', 'e', 'f', 'x', 'T', 'h', 'R', 'n', '=', 't']);
+const SOLID = new Set(['w', 'M', 'C', '#', 'b', 'k', 'd', 'p', 'e', 'f', 'x', 'T', 'h', 'R', 'n', '=', 't', 'V']);   // V = 夢の 裂け目 (夢筆で 橋 B を かけると 通れる)
 
 // ぶつかると 何かが起きる 物 (人・キャンバス・ベッド・看板は 調べると 起きる)
 const BUMP = ['foe', 'word', 'wake', 'door', 'block', 'brushSpot', 'heart'];
@@ -87,7 +87,7 @@ export function warp(state, exit) {
 }
 
 export function pickWord(state, object) {
-    state.words.push(object.word);
+    if (!state.words.includes(object.word)) state.words.push(object.word);   // 同じ 言葉を 別の 場所で 拾っても 1 つ
     state.gone[object.id] = true;
     const rest = MAPS[state.map].objects.some((item) => item.kind === 'word' && !state.gone[item.id]);
     const opens = !rest && state.map === 'omen';

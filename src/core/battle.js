@@ -143,7 +143,7 @@ export function act(b, id, target = null) {
     if (b.ally.dodgeBuff && --b.ally.dodgeBuff.turns <= 0) b.ally.dodgeBuff = null;
     b.cheer = false;
     // 夢感情が 80 を こえると、ときどき 気まぐれな 行動 (仕様書「いちばん高い感情で起きること」)
-    if (b.ally.whim && !['swap', 'run', 'release'].includes(id) && !id.startsWith('musou:')) {
+    if (b.ally.whim && !['swap', 'run', 'release', 'snack'].includes(id) && !id.startsWith('musou:')) {
         const whim = whimOf(b, id, events);
         if (whim === 'play') {
             if (!b.over) foesTurn(b, events);
@@ -153,7 +153,7 @@ export function act(b, id, target = null) {
             act2(b, id, target, events);
         } else if (whim) id = whim;
     }
-    if (b.ally.tired > 0 && id !== 'swap' && id !== 'run') {
+    if (b.ally.tired > 0 && id !== 'swap' && id !== 'run' && id !== 'snack') {
         // 夢双の あとは 息切れで 1 回 休み
         b.ally.tired--;
         events.push({ t: 'say', text: `${b.ally.name}は 息切れしている……。` });
@@ -164,6 +164,7 @@ export function act(b, id, target = null) {
     if (id === 'attack') attack(b, events);
     if (id === 'shake') shake(b, events);
     if (id === 'heal') heal(b, events);
+    if (id === 'snack') snack(b, events);   // アイテム: 駄菓子 (ハルが 渡す。数は 呼ぶ側で 減らす)
     if (id === 'sleep') sleep(b, events);
     if (id === 'rush') rush(b, events);
     if (id === 'shield') shield(b, events);
@@ -323,6 +324,15 @@ function fierce(b, events, power, kind) {
         events.push({ t: 'heal', target: 'ally', amount: gain });
     }
     hurtFoe(b, foe, amount, events);
+}
+
+// 駄菓子: 前に 出ている 仲間の 体力が 最大の 35% もどる (バイトの お礼)
+export const SNACK_RATE = 0.35;
+function snack(b, events) {
+    const amount = Math.min(b.ally.maxHp - b.ally.hp, Math.round(b.ally.maxHp * SNACK_RATE));
+    b.ally.hp += amount;
+    events.push({ t: 'say', text: `ハルは ${b.ally.name}に 駄菓子を わけた。` });
+    events.push({ t: 'heal', target: 'ally', amount });
 }
 
 function heal(b, events) {

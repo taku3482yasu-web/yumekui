@@ -15,13 +15,17 @@ const foe = (id, x, y, kind) => ({ id, kind: 'foe', x, y, foe: kind });
 const resident = (id, x, y, sprite, line, gives = null) => ({ id, kind: 'talk', x, y, sprite, script: 'resident', line, gives });
 // 心のかけら (data/hearts.js。id が そのまま かけらの id)
 const heart = (id, x, y) => ({ id, kind: 'heart', x, y, sprite: 'heart' });
+// 言葉の かけら (吹き出し)
+const word = (id, x, y, text) => ({ id, kind: 'word', x, y, word: text, sprite: 'word' });
+// 裂け目 (V): 夢筆で 橋を 描くと、そのマスが 橋 (B) に なって 通れる。奥に 言葉が ある
+const gap = (id, x, y) => ({ id, kind: 'brushSpot', x, y, sprite: 'brushMark', accepts: ['bridge'], paint: [[x, y, 'B']], hideIf: `painted_${id}`, done: 'bridgePainted', hint: 'brushHintBridge' });
 
 // ---- ミオの夢『水底の音楽室』 ---------------------------------------------
 
 const mizuzoko2 = [
     W20,
-    'w......wwwwww.....sw',
-    'w......wwwwww......w',
+    'w.V....wwwwww.....sw',
+    'wVV....wwwwww......w',
     'w..................w',
     'w......wwwwww......w',
     'www.wwwwwwwwwwww.www',
@@ -66,8 +70,8 @@ const renshu2 = [
     'w..........wwwwwwwww',
     'w..........wwwwwwwww',
     'wwwwwwwww..wwwwwwwww',
-    'wwwwwwwww..........w',
-    'wwwwwwwww..........w',
+    'wwwwwwwww.......V..w',
+    'wwwwwwwww........VVw',
     'wwwwwwwwwwwwwwww...w',
     'wwwwwwwwwwwwwwww..sw',
     W20
@@ -91,8 +95,8 @@ const renshu3 = [
 
 const duet2 = [
     W26,
-    'w.....wwwwwwwwwwwwww....sw',
-    'w.....wwwwwwwwwwwwww.....w',
+    'w.V...wwwwwwwwwwwwww....sw',
+    'wVV...wwwwwwwwwwwwww.....w',
     'w........................w',
     'w........................w',
     'w.....wwwwww..wwwwww.....w',
@@ -251,6 +255,8 @@ export const LAYER_MAPS = {
             foe('mz2Suima', 9, 3, 'suima'),
             foe('mz2Onpu2', 15, 2, 'onpu'),
             resident('mz2Queen', 3, 7, 'mio', 'queen1'),
+            gap('mz2Gap', 2, 1),
+            word('mz2Word', 1, 1, '一緒に'),   // 楽器倉庫の 奥 (橋を かけると 届く)
             heart('heartDispel', 17, 9),
             stairs('mz2', 18, 1, 'mizuzoko3', { x: 2, y: 5 })
         ]
@@ -300,6 +306,8 @@ export const LAYER_MAPS = {
             foe('rs2Suima', 10, 6, 'suima'),
             foe('rs2Hari2', 14, 7, 'hari'),
             resident('rs2Judge', 3, 4, 'kana', 'judge1'),
+            gap('rs2Gap', 16, 6),
+            word('rs2Word', 18, 6, '相談して'),   // 拍子木の 廊下の 奥 (橋を かけると 届く)
             heart('heartDrowsy', 1, 4),
             stairs('rs2', 18, 9, 'renshu3', { x: 9, y: 9 })
         ]
@@ -349,6 +357,8 @@ export const LAYER_MAPS = {
             foe('du2Hari1', 22, 2, 'hari'),
             foe('du2Suima', 8, 3, 'suima'),
             foe('du2Onpu2', 17, 4, 'onpu'),
+            gap('du2Gap', 2, 1),
+            word('du2Word', 1, 1, '一緒に'),   // ミオの 楽屋の 奥 (橋を かけると 届く)
             stairs('du2', 24, 1, 'duet3', { x: 12, y: 8 })
         ]
     },
@@ -368,6 +378,7 @@ export const LAYER_MAPS = {
             foe('du3Onpu2', 3, 4, 'onpu'),
             resident('du3Queen', 1, 2, 'mio', 'queen2', '一人で'),
             resident('du3Judge', 24, 2, 'kana', 'judge2', '勝ちたかった'),
+            word('du3Word', 21, 1, '相談して'),   // 右の 譜面室
             stairs('du3', 2, 1, 'duet4', { x: 2, y: 5 })
         ]
     },

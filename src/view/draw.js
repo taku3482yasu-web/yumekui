@@ -74,11 +74,32 @@ function drawTile(ctx, tile, x, y, open, theme) {
         ctx.fillRect(x + 6, y + 10, 4, 1);
         return;
     }
+    if (tile === 'V') {
+        // 夢の 裂け目: 底の 見えない 暗がりに 小さな 星
+        ctx.fillStyle = '#0a0a1e';
+        ctx.fillRect(x, y, TILE, TILE);
+        ctx.fillStyle = '#3a3a6a';
+        ctx.fillRect(x, y, TILE, 2);
+        ctx.fillStyle = '#8895cf';
+        ctx.fillRect(x + 4, y + 8, 1, 1);
+        ctx.fillRect(x + 11, y + 12, 1, 1);
+        return;
+    }
     const floor = FLOORS[theme ?? 'base'];
     ctx.fillStyle = (x / TILE + y / TILE) % 2 ? floor[0] : floor[1];
     ctx.fillRect(x, y, TILE, TILE);
     ctx.fillStyle = floor[2];
     ctx.fillRect(x, y + 15, TILE, 1);
+    if (tile === 'B') {
+        // 夢筆で かけた 橋 (裂け目の 上の 板)
+        ctx.fillStyle = '#0a0a1e';
+        ctx.fillRect(x, y, TILE, TILE);
+        ctx.fillStyle = '#a07a50';
+        for (let i = 0; i < 4; i++) ctx.fillRect(x + 1, y + i * 4, TILE - 2, 3);
+        ctx.fillStyle = '#6a4a32';
+        ctx.fillRect(x, y, 1, TILE);
+        ctx.fillRect(x + TILE - 1, y, 1, TILE);
+    }
     if (tile === 's') {
         ctx.fillStyle = '#8895cf';
         for (let i = 0; i < 4; i++) ctx.fillRect(x, y + i * 4, TILE, 2);

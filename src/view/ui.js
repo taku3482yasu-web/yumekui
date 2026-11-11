@@ -97,6 +97,31 @@ export function createUi(input, sounds = {}) {
 
     const hideMsg = () => { msg.hidden = true; };
 
+    // 会話の 立ち絵。stage = { left, right } (core/portraits.js)、null で 両方 消す。
+    //   読み込めない 絵 (まだ 無い 人) は 覚えておいて 出さない
+    const missing = new Set();
+    const sides = { left: $('portrait-left'), right: $('portrait-right') };
+    for (const el of Object.values(sides)) {
+        el.addEventListener('load', () => { if (el.dataset.want === el.getAttribute('src')) el.hidden = false; });
+        el.addEventListener('error', () => { missing.add(el.getAttribute('src')); el.hidden = true; });
+    }
+    function portraits(stage, pathOf) {
+        for (const [side, el] of Object.entries(sides)) {
+            const who = stage?.[side];
+            const path = who ? pathOf(who.name, who.expression) : null;
+            el.dataset.want = path ?? '';
+            if (!path || missing.has(path)) {
+                el.hidden = true;
+                continue;
+            }
+            if (el.getAttribute('src') === path && el.complete && el.naturalWidth) el.hidden = false;
+            else {
+                el.hidden = true;
+                el.setAttribute('src', path);
+            }
+        }
+    }
+
     function fade(on) {
         $('fade').style.opacity = on ? 1 : 0;
         return new Promise((resolve) => setTimeout(resolve, 420));
@@ -109,7 +134,7 @@ export function createUi(input, sounds = {}) {
         $('time').textContent = time;
         $('time').dataset.time = time;
         $('place').textContent = place;
-        $('items').textContent = `言葉 ${state.words.length}　夢のかけら ${state.shards}`;
+        $('items').textContent = `言葉 ${state.words.length}　夢のかけら ${state.shards}${state.snacks > 0 ? `　駄菓子 ${state.snacks}` : ''}`;
     }
 
     const hideHud = () => { $('hud').hidden = true; };
@@ -152,7 +177,7 @@ export function createUi(input, sounds = {}) {
         text.textContent = line;
     }
 
-    return { say, show, menu, hideMsg, fade, hud, hideHud, status, hideStatus, title };
+    return { say, show, menu, hideMsg, fade, hud, hideHud, status, hideStatus, title, portraits };
 }
 
 function paintUnit(id, unit) {

@@ -32,6 +32,8 @@ import { bgmFor, layersFor, stepVolume, transitionFor, voicedAt, voiceOf, wobble
 import { stepsOf } from './core/movie.js';
 import { createMoviePlayer, createStage, drawFilm, playFilm } from './view/movie.js';
 import { MOVIES } from './scenes/movies.js';
+import { nextStage, portraitPath, startStage } from './core/portraits.js';
+import { canWork, shopHint, useSnack, work, JOBS } from './core/job.js';
 
 const WALK_MS = 150;
 const NOTE_MS = 650;
@@ -89,8 +91,15 @@ function followerView() {
 }
 const walk = { dx: 0, dy: 0, left: 0 };
 
+// 会話: 立ち絵を 左 (主人公の側) と 右 (相手) に 出す。セリフの 3 つ目は 表情 (smile など、なければ neutral)
 async function talk(lines) {
-    for (const [name, line] of lines) await ui.say(name, line);
+    let stage = startStage();
+    for (const [name, line, expression] of lines) {
+        stage = nextStage(stage, name, expression, keep.allies);
+        ui.portraits(stage, portraitPath);
+        await ui.say(name, line);
+    }
+    ui.portraits(null);
     ui.hideMsg();
 }
 
@@ -164,6 +173,7 @@ const SCRIPTS = {
     },
     // 夢筆で 描いたあと
     stairsPainted: () => talk(LINES.stairsPainted),
+    bridgePainted: () => talk(LINES.bridgePainted),
     pianoPainted: () => talk(LINES.pianoPainted),
     pianoRest: async () => {
         hp = {};
@@ -199,7 +209,10 @@ const SCRIPTS = {
     },
     judgeKana: () => talk(LINES.judgeKana),
     // 町
-    tomeShop: () => talk(LINES.tomeShop),
+    tomeShop: async () => {
+        await talk(LINES.tomeShop);
+        await partTimeJob();
+    },
     portSign: () => talk(LINES.portSign),
     rikuRoad: () => talk(LINES.rikuRoad(state)),
     rikuDoor: async () => {
@@ -247,6 +260,26 @@ async function deepTalkTo(who) {
     showHud();
     if (word) await talk(LINES.wordHeard(word));
     await talk(LINES.evening);
+    wakeUp();
+}
+
+// 土日の 昼の バイト: トメの 駄菓子屋で 店番か 荷運び。お礼は 駄菓子 (バトルの アイテム)。終わると 夕方に なって 家に 帰る
+async function partTimeJob() {
+    if (state.phase === 'night') return talk(LINES.shopNight);
+    if (!isWeekend(state.day)) return talk(LINES.shopWeekday);
+    if (!canWork(state)) return talk(LINES.shopDone);
+    await talk(LINES.jobAsk);
+    const items = Object.entries(JOBS).map(([id, job]) => ({ id, label: job.label }));
+    items.push({ id: 'no', label: LINES.jobNo });
+    const id = await ui.menu(items, { head: LINES.jobHead });
+    if (id === 'no') return;
+    const hint = shopHint(state, keep);
+    const count = work(state, id);
+    await talk(id === 'shop' ? LINES.jobShop : LINES.jobCarry);
+    if (id === 'shop') await talk(LINES.shopHint[hint]);   // 店番: お客さんの 話
+    showHud();
+    await talk(LINES.jobPaid(count));
+    await talk(LINES.jobEvening);
     wakeUp();
 }
 
@@ -484,7 +517,7 @@ async function fight(object) {
         let events = null;
         if (top === 'fight') events = await chooseMove(battle);
         if (top === 'guard') events = act(battle, 'guard');
-        if (top === 'item') await ui.say('', LINES.noItem, { wait: NOTE_MS });
+        if (top === 'item') events = await chooseItem(battle);
         if (top === 'run') events = act(battle, 'run');
         if (events) await play(battle, events);
     }
@@ -498,6 +531,17 @@ async function fight(object) {
     await finish(battle, object, foe);
     musicOverride = undefined;   // 救った・喰らった あとの 静けさを 終える
     return battle.over;
+}
+
+// 「アイテム」: バイトで もらった 駄菓子で 前の 仲間の 体力を もどす (もどると いちばん上の コマンドへ)
+async function chooseItem(battle) {
+    if (!(state.snacks > 0)) {
+        await ui.say('', LINES.noItem, { wait: NOTE_MS });
+        return null;
+    }
+    const id = await ui.menu([{ id: 'snack', label: LINES.snackUse }, { id: 'back', label: 'もどる' }], { head: LINES.snackHead(state.snacks) });
+    if (id !== 'snack' || !useSnack(state)) return null;
+    return act(battle, 'snack');
 }
 
 // 「たたかう」: 技を 選ぶ (もどると いちばん上の コマンドへ)
