@@ -4,6 +4,21 @@
 
 企画書: https://claude.ai/artifact/1b5QqWpwvEiTK2mwCZKNDR
 
+## 素材の置き場所
+
+素材制作仕様書の「置き場所とファイル名」のとおりに置きます。名前がそろっていれば、コードから番号や名前で呼べます。
+
+| 素材 | 置き場所 | ファイル名 |
+| --- | --- | --- |
+| 曲 | `public/audio/bgm/` | `M06_town.ogg`（同じ名前の `.mp3` も）。一覧は `src/data/sounds.js` |
+| 効果音 | `public/audio/se/` | `SE21_hit.ogg` など |
+| セリフの声 | `public/audio/voice/` | `haru.ogg`・`narration.ogg` など |
+| 立ち絵（キャラ） | `public/img/chara/` | `haru_neutral.png`（表情は neutral・smile・troubled・angry・cry・surprised）、横顔は `haru_profile.png`。背景が透明の PNG |
+| 立ち絵（ユメクイ） | `public/img/yumekui/` | `gakufume_normal.png`・`gakufume_scream.png`・`gakufume_saved.png` など |
+| 背景の絵 | `public/img/bg/` | `haru_dream.jpg`（ハルの夢『顔色の坂道』）。仕様書にない置き場所なので、使い方はこれから決める |
+
+AI で作った元のファイルや資料（PDF・Word）は、リポジトリの外の `my-project/ユメクイ資料/` に置いています（`04_素材の原本/` が作ったままのファイル）。
+
 ## ほかのPCで作業する
 
 リポジトリは公開（https://github.com/taku3482yasu-web/yumekui ）。Node.js（LTS）と Git があれば、どのPCでも同じように作業できます。
