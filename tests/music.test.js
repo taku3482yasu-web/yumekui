@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { battleBgm, battleJingle, bgmFile, bgmFor, layersFor, normalizeAudio, seVolume, stepVolume, transitionFor, voicedAt, voiceOf, wobbleFor, BOSS_BGM, DREAM_BGM, ENDING_BGM } from '../src/core/music.js';
+import { battleBgm, battleJingle, bgmFile, loopSong, bgmFor, layersFor, normalizeAudio, seVolume, stepVolume, transitionFor, voicedAt, voiceOf, wobbleFor, BOSS_BGM, DREAM_BGM, ENDING_BGM } from '../src/core/music.js';
 import { BGM, DEFAULT_AUDIO, SE } from '../src/data/sounds.js';
 import { MAPS } from '../src/data/maps.js';
 import { FOES } from '../src/data/units.js';
@@ -119,4 +119,11 @@ test('短い曲が 鳴っている あいだは 戦闘の 曲も 場面の 曲�
     assert.equal(bgmFor({ mode: 'field', map: MAPS.home, phase: 'night', jingle: true }), null);
     assert.equal(bgmFor({ mode: 'scene', override: 'M17', jingle: true }), 'M17');
     assert.equal(bgmFor({ mode: 'field', map: MAPS.odoriba }), 'M03');   // 鳴り終われば もとの 曲
+});
+
+test('ループの 場面は M24 まきもどしのうた。1 周目の 終わりは ふつうの版、2 周目の 終わりからは 短い版', () => {
+    assert.deepEqual(loopSong(1), { id: 'M24', version: null });
+    assert.deepEqual(loopSong(2), { id: 'M24', version: 'short' });
+    assert.equal(bgmFile('M24', loopSong(1).version), 'M24_makimodoshi');
+    assert.equal(bgmFile('M24', loopSong(2).version), 'M24_short');
 });

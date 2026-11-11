@@ -39,6 +39,12 @@ export function battleBgm(foeIds = []) {
     return 'M04';
 }
 
+// ループで 時間が 巻きもどる 場面の 曲: M24『まきもどしのうた』。はじめて 聞く 1 周目の 終わりは ふつうの版、
+// 2 周目の 終わりからは くりかえしだけの 短い版 (サウンドリスト「M24」)
+export function loopSong(loop) {
+    return { id: 'M24', version: loop >= 2 ? 'short' : null };
+}
+
 // 戦闘の 終わりの 短い曲: 勝ちは M25、負けは M26。ナイトメアに 負けたとき・終幕の 戦いは 鳴らさない
 export function battleJingle(over, script = null) {
     if (script === 'final') return null;

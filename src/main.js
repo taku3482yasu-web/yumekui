@@ -28,7 +28,7 @@ import { morningMovie } from './scenes/mornings.js';
 import { canUseBrush, hasImageFor, learnImage, paint } from './core/brush.js';
 import { IMAGES, TILE_IMAGES } from './data/brush.js';
 import { createSound } from './view/sound.js';
-import { battleJingle, bgmFor, layersFor, stepVolume, transitionFor, voicedAt, voiceOf, wobbleFor, ENDING_BGM } from './core/music.js';
+import { battleJingle, bgmFor, loopSong, layersFor, stepVolume, transitionFor, voicedAt, voiceOf, wobbleFor, ENDING_BGM } from './core/music.js';
 import { stepsOf } from './core/movie.js';
 import { createMoviePlayer, createStage, drawFilm, playFilm } from './view/movie.js';
 import { MOVIES } from './scenes/movies.js';
@@ -75,6 +75,7 @@ const follow = { x: 0, y: 0, fromX: 0, fromY: 0 };   // ハルに ついてく�
 let painting = null;       // プロローグで キャンバスに 描く 画面
 let intro = null;          // はじまりの 夢 (砂浜 → 大きな目「おきろ」)
 let musicOverride;         // 物語の 場面で 決めた 曲 (エンディング・ループ など。null は 無音・undefined は 場面で 決める)
+let musicVersion = null;   // musicOverride の 曲の 版 (M24 の 短い版 など)
 let jinglePlaying = null;  // 勝ち・負けの 短い曲 (鳴っている あいだ 場面の 曲を 待たせる。待つ あいだも 歩ける)
 const stage = createStage();   // 演出スクリプト (ムービー) の 舞台
 const seenMovies = new Set();
@@ -1349,18 +1350,26 @@ async function campaign() {
         const before = state.day;
         const next = advance(state);
         if (next === 'loop') {
+            const final = isFinalLoop(keep);
+            if (!final) {
+                // ループ: 時間が 巻きもどる あいだ『まきもどしのうた』(M24。2 周目の 終わりからは 短い版)。
+                // 画面を 切り替える 前に 決めて おく (でないと 明るくなる あいだ タイトルの 曲が 鳴る)
+                const song = loopSong(keep.loop);
+                musicOverride = song.id;
+                musicVersion = song.version;
+            }
             mode = 'opening';
             ui.hideHud();
             await ui.fade(false);
-            if (isFinalLoop(keep)) {
+            if (final) {
                 await finale();   // 3 周目の 14 日の 夜で 小規模版は 終わる
                 return;
             }
-            musicOverride = 'M17';   // ループ「十四日目の夜」(M24 と ムービー MV07 は 段階5 の 続きで)
             await talk(LINES.loop);
             state = nextLoop(keep, state);
             await ui.fade(true);
             musicOverride = undefined;
+            musicVersion = null;
         } else if (state.day !== before && !skipTear) {
             await playCalendar(before, state.day);
             // 土日: カレンダーが めくれたあと、朝が 飛んで 昼まで 時間が進む
@@ -1679,7 +1688,8 @@ function updateMusic() {
         jingle: Boolean(jinglePlaying)
     });
     if (id === undefined) return;
-    sound.playBgm(id, { transition: transitionFor(mode, id), layers: layersFor(id, state.status), wobble: wobbleFor(id, keep.loop, isFinalLoop(keep)) });
+    const version = id !== null && id === musicOverride ? musicVersion : null;
+    sound.playBgm(id, { version, transition: transitionFor(mode, id), layers: layersFor(id, state.status), wobble: wobbleFor(id, keep.loop, isFinalLoop(keep)) });
 }
 
 // ブラウザのテストが 状態を読むための窓口

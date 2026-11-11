@@ -573,8 +573,10 @@ console.log('ナイトメアのあと', await read('yumekui.state.day'), JSON.st
 await shot('14c-prep');
 const rescued = await state();
 console.log('仲間', JSON.stringify(await read('yumekui.keep.allies')), '状態', JSON.stringify(rescued.s.status));
+let loopBgm = null;   // ループの 場面で 鳴らしたい 曲 (M24)
 for (let i = 0; i < 600; i++) {
     const now = await state();
+    if (now.m === 'opening' && !loopBgm) loopBgm = await read('yumekui.bgm');
     if ((await read('yumekui.keep.loop')) === 2) break;
     const labels = await read('[...document.querySelectorAll("#menu button")].map(b=>b.textContent)');
     if (now.menu && labels.some((l) => l.includes('描かずに寝る'))) await pick('描かずに寝る');
@@ -587,10 +589,13 @@ for (let i = 0; i < 600; i++) {
 }
 for (let i = 0; i < 30 && (await read('yumekui.keep.loop')) !== 2; i++) {
     const now = await state();
+    if (now.m === 'opening' && !loopBgm) loopBgm = await read('yumekui.bgm');
     if (now.msg) await key('j');
     else if (now.menu) await key('j');
     else await sleep(100);
 }
+console.log('ループの曲', loopBgm);
+if (loopBgm !== 'M24') throw new Error('ループの 場面で M24 が 鳴らない: ' + loopBgm);
 await sleep(1200);
 await shot('15-loop-2');
 const looped = await state();
