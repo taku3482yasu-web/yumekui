@@ -7,9 +7,9 @@ export const AUDIO_DIR = { bgm: 'audio/bgm/', se: 'audio/se/', voice: 'audio/voi
 export const BGM = {
     M01: { file: 'M01_title', title: '夢見坂', loop: true, loopStart: 17.177 },   // loopStart: イントロのあと、くり返しが 始まる 秒 (11/12 Suno 版)
     M02: { file: 'M02_haru', title: 'うん、いいよ', loop: true },
-    M03: { file: 'M03_haru_dream', title: 'みんなこっちを見てる', loop: true },
+    M03: { file: 'M03_haru_dream', title: 'みんなこっちを見てる', loop: true, loopStart: 24.029 },
     M04: { file: 'M04_battle', title: '飲み込んだ言葉', loop: true, loopStart: 39.450 },
-    M05: { file: 'M05_muresuima', title: '自分で決めたかった', loop: true },
+    M05: { file: 'M05_muresuima', title: '自分で決めたかった', loop: true, loopStart: 28.758 },
     // 町の曲: 町の人の パートを 別に 用意できたら、喰らった人の パートを 永久に 消す
     M06: { file: 'M06_town', title: '潮風と坂道', loop: true, town: true, layers: { mio: 'M06_mio', kana: 'M06_kana', riku: 'M06_riku' } },
     M07: { file: 'M07_room', title: '白いキャンバス', loop: true, loopStart: 17.944 },
