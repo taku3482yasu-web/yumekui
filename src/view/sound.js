@@ -143,6 +143,8 @@ export function createSound() {
             const node = ctx.createBufferSource();
             node.buffer = buffer;
             node.loop = Boolean(entry.loop);
+            // イントロを 1 回だけ 鳴らし、loopStart〜曲の終わりを くり返す (小節の 切れ目で 切ってある)
+            if (node.loop && who === 'main' && entry.loopStart) node.loopStart = Math.min(entry.loopStart, buffer.duration - 0.1);
             depth.connect(node.detune);
             const part = ctx.createGain();
             part.gain.value = who === 'main' || layers.includes(who) ? 1 : 0;
@@ -179,6 +181,7 @@ export function createSound() {
         gain.gain.value = volume;
         node.connect(gain).connect(gains[kind]);
         node.start();
+        await new Promise((resolve) => { node.onended = resolve; });   // 鳴り終わるまで (待つ かどうかは 呼ぶ側が 決める)
     }
 
     return {
@@ -192,8 +195,9 @@ export function createSound() {
             once('se', AUDIO_DIR.se, SE[id].file, seVolume(id, settings) / Math.max(settings.se, 0.01));
         },
         // 短い 曲 (救ったときの M18 など)。曲の 音量で 鳴らす
+        // 短い曲。返り値は 鳴り終わる (ファイルが 無ければ すぐ) promise
         jingle(id, version = null) {
-            once('bgm', AUDIO_DIR.bgm, bgmFile(id, version));
+            return once('bgm', AUDIO_DIR.bgm, bgmFile(id, version));
         },
         voice(file) {
             once('voice', AUDIO_DIR.voice, file);
