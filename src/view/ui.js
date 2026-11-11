@@ -1,7 +1,8 @@
 const $ = (id) => document.getElementById(id);
 const TYPE_MS = 28;
 
-export function createUi(input) {
+// sounds: { type(name, line, index) 1 文字 出るたび・cursor() カーソル移動・decide(id) 決めたとき } (音を 鳴らす)
+export function createUi(input, sounds = {}) {
     const msg = $('msg');
     const speaker = $('speaker');
     const text = $('text');
@@ -39,6 +40,7 @@ export function createUi(input) {
             timer = setInterval(() => {
                 shown++;
                 text.textContent = line.slice(0, shown);
+                sounds.type?.(name, line, shown - 1);
                 if (shown >= line.length) reveal();
             }, TYPE_MS);
         });
@@ -61,6 +63,7 @@ export function createUi(input) {
             let index = items.findIndex((item) => !item.disabled);
             const close = (item) => {
                 off();
+                sounds.decide?.(item.id);
                 menuBox.hidden = true;
                 resolve(item.id);
             };
@@ -81,6 +84,7 @@ export function createUi(input) {
                 } while (items[next].disabled);
                 index = next;
                 paint();
+                sounds.cursor?.();
             };
             const off = input.onPress((key) => {
                 if (key === 'up') move(-1);

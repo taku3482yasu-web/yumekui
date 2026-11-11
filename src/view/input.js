@@ -74,6 +74,7 @@ export function createInput() {
 
     return {
         direction: () => [...held].reverse().find((action) => action !== 'a' && action !== 'b') ?? null,
+        isHeld: (action) => held.includes(action),   // ムービーを 長押しで 飛ばす
         onPress(listener) {
             listeners.add(listener);
             return () => listeners.delete(listener);

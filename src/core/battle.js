@@ -222,10 +222,10 @@ export function answer(b, choice) {
     foe.chance = false;
     foe.kokoro = 50;
     if (b.nestle) {
-        events.push({ t: 'say', text: 'その言葉は 届かなかった。でも バクが そばに よりそっている。' });
+        events.push({ t: 'say', text: 'その言葉は 届かなかった。でも バクが そばに よりそっている。', se: 'SE29' });
     } else {
         foe.atk = Math.round(foe.atk * WRONG_ATK);
-        events.push({ t: 'say', text: `その言葉は 届かなかった。${foe.name}の力が 増した！` });
+        events.push({ t: 'say', text: `その言葉は 届かなかった。${foe.name}の力が 増した！`, se: 'SE29' });
     }
     foesTurn(b, events);
     return events;
@@ -251,7 +251,7 @@ function shake(b, events, rate = 1) {
         return;
     }
     if (!b.trueEye && b.rng() >= SHAKE_HIT) {
-        events.push({ t: 'say', text: 'しかし 気持ちは 揺れなかった。' });
+        events.push({ t: 'say', text: 'しかし 気持ちは 揺れなかった。', se: 'SE26' });
         return;
     }
     const boost = (b.ally.kokoroRate ?? 1) * (b.joy > 0 ? 1.5 : 1) * b.kokoroOnce;
@@ -439,7 +439,7 @@ function foeTurn(b, foe, events) {
     }
     foe.step++;
     if (move === 'charge') {
-        events.push({ t: 'say', text: foe.chargeText ?? `${foe.name}が 大きく うずを巻きはじめた……！` });
+        events.push({ t: 'say', text: foe.chargeText ?? `${foe.name}が 大きく うずを巻きはじめた……！`, se: 'SE32' });
         return;
     }
     const big = move === 'swirl';

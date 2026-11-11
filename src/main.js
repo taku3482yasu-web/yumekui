@@ -27,6 +27,11 @@ import { drawIntro } from './view/intro.js';
 import { morningMovie } from './scenes/mornings.js';
 import { canUseBrush, hasImageFor, learnImage, paint } from './core/brush.js';
 import { IMAGES, TILE_IMAGES } from './data/brush.js';
+import { createSound } from './view/sound.js';
+import { bgmFor, layersFor, stepVolume, transitionFor, voicedAt, voiceOf, wobbleFor, ENDING_BGM } from './core/music.js';
+import { stepsOf } from './core/movie.js';
+import { createMoviePlayer, createStage, drawFilm, playFilm } from './view/movie.js';
+import { MOVIES } from './scenes/movies.js';
 
 const WALK_MS = 150;
 const NOTE_MS = 650;
@@ -45,7 +50,13 @@ function layerOf(mapId = state.map) {
 const ctx = document.getElementById('game').getContext('2d');
 ctx.imageSmoothingEnabled = false;
 const input = createInput();
-const ui = createUi(input);
+const sound = createSound();
+// 文字の 声・カーソル・決定の 音
+const ui = createUi(input, {
+    type: (name, line, index) => { if (voicedAt(line, index)) sound.voice(voiceOf(name)); },
+    cursor: () => sound.se('SE01'),
+    decide: (id) => sound.se(['back', 'cancel', 'no', 'close'].includes(id) ? 'SE03' : 'SE02')
+});
 
 let state = createState();
 let keep = createKeep();
@@ -61,6 +72,9 @@ let actors = [];           // ムービーに 出ている 人 (朝の 通学路
 const follow = { x: 0, y: 0, fromX: 0, fromY: 0 };   // ハルに ついてくる 仲間の 位置 (夢の中の バク・プロローグの リク)
 let painting = null;       // プロローグで キャンバスに 描く 画面
 let intro = null;          // はじまりの 夢 (砂浜 → 大きな目「おきろ」)
+let musicOverride;         // 物語の 場面で 決めた 曲 (エンディング・ループ など。null は 無音・undefined は 場面で 決める)
+const stage = createStage();   // 演出スクリプト (ムービー) の 舞台
+const seenMovies = new Set();
 
 // バクを ハルの いる マスに 置き直す (夢に入ったとき・地図を 移ったとき)
 function resetFollow() {
@@ -137,6 +151,7 @@ const SCRIPTS = {
     maskGuide: () => talk(LINES.maskGuide),
     rest: async () => {
         hp = {};
+        sound.se('SE09');
         await talk(LINES.rest);
         if (ypLeft(keep) <= 0) return;
         const id = await ui.menu([{ id: 'yes', label: LINES.ypRestYes }, { id: 'no', label: LINES.ypRestNo }], { head: LINES.ypRestHead });
@@ -281,12 +296,8 @@ function updateChase(now) {
 
 async function caught() {
     state.chaser = null;
-    mode = 'scare';
-    const screen = document.getElementById('screen');
-    screen.classList.remove('shake');
-    void screen.offsetWidth;
-    screen.classList.add('shake');
-    await new Promise((resolve) => setTimeout(resolve, 1600));
+    await film('NIGASANAI');
+    mode = 'scare';   // 次の 暗転まで 赤い字を 残す
     await ui.fade(true);
     mode = 'scene';
     await ui.fade(false);
@@ -316,9 +327,11 @@ async function touch(object) {
     if (object.kind === 'foe') await fight(object);
     if (object.kind === 'word') {
         const opened = pickWord(state, object);
+        sound.se('SE05');
         showHud();
         await talk(LINES.wordFound(object.word));
         if (opened) {
+            sound.se('SE06');
             await talk(LINES.gateOpen);
             // チュートリアル: 3 つの 言葉を バクが つないで、夢合わせを 教える
             makeSentence(state, ['ほんとは', '自分で'], '決めたかった');
@@ -329,7 +342,10 @@ async function touch(object) {
     if (object.kind === 'wake') {
         const items = [{ id: 'yes', label: LINES.wakeYes }, { id: 'no', label: LINES.wakeNo }];
         const id = await ui.menu(items, { head: LINES.wakeHead });
-        if (id === 'yes') wakeUp();
+        if (id === 'yes') {
+            sound.se('SE08');
+            wakeUp();
+        }
     }
 }
 
@@ -450,10 +466,11 @@ async function fight(object) {
     const foe = foeList.find((f) => f.truth) ?? foeList[0];
     const scaled = object.scale ? foeList.map((f) => ({ ...f, maxHp: Math.round(f.maxHp * object.scale), hp: Math.round(f.maxHp * object.scale), atk: Math.round(f.atk * object.scale) })) : foeList;
     const battle = createBattle(partyUnits(), scaled, { noEscape: ['firstBattle', 'nightmare', 'final'].includes(object.script), musou: keep.musou, kizuna: object.kizuna ?? null, dreamEat: Boolean(object.dreamEat) });
+    sound.se('SE20');
     await playEncounter(encounterTheme(MAPS[state.map], state.x), foeList.some((f) => f.truth));
     await ui.fade(true);
     mode = 'battle';
-    battleView = { foes: foeList.map((f) => f.sprite), down: [], ally: battle.ally.sprite, foeHit: [], allyHit: 0, pops: [] };
+    battleView = { foes: foeList.map((f) => f.sprite), foeIds: foeList.map((f) => f.id), down: [], ally: battle.ally.sprite, foeHit: [], allyHit: 0, pops: [] };
     ui.hideHud();
     ui.status(battle);
     await ui.fade(false);
@@ -479,6 +496,7 @@ async function fight(object) {
     showHud();
     await ui.fade(false);
     await finish(battle, object, foe);
+    musicOverride = undefined;   // 救った・喰らった あとの 静けさを 終える
     return battle.over;
 }
 
@@ -524,6 +542,7 @@ async function chooseSwap(battle) {
 
 async function play(battle, events) {
     for (const event of events) {
+        battleSound(event);
         if (event.t === 'swap') battleView.ally = event.sprite;
         if (event.t === 'say') await ui.say('', event.text, { wait: NOTE_MS });
         if (event.t === 'hit') showHit(event);
@@ -541,6 +560,19 @@ async function play(battle, events) {
         ui.status(battle);
     }
     ui.hideMsg();
+}
+
+// バトルの 出来事に 合わせた 効果音 (サウンドリスト「バトル」)
+function battleSound(event) {
+    if (event.se) sound.se(event.se);
+    if (event.t === 'hit') sound.se(event.target === 'foe' && event.aff > 1 ? 'SE22' : 'SE21');
+    if (event.t === 'heal') sound.se('SE24');
+    if (event.t === 'shake') sound.se('SE25');
+    if (event.t === 'chance') sound.se('SE27');
+    if (event.t === 'solved') sound.se('SE28');
+    if (event.t === 'swap') sound.se('SE30');
+    if (event.t === 'musou') sound.se('SE35');
+    if (event.t === 'end' && event.result === 'lose') sound.se('SE31');
 }
 
 function showHit(event) {
@@ -586,6 +618,10 @@ async function finish(battle, object, foe) {
         return;
     }
     await awardExp(battle);
+    if (battle.over === 'truth') {
+        musicOverride = null;   // 曲を 止めて、救ったときの 短い曲 (M18)
+        sound.jingle('M18', object.script === 'duetBoss' ? null : foe.dream);
+    }
     if (battle.over === 'truth' && object.script === 'duetBoss') {
         // 夢合体: 2 人とも 目を覚まし、ガクフメと トゲメトロが 仲間に。夢双「ふたりのアンサンブル」の 相性
         const before = bakSkills(keep.growth);
@@ -608,6 +644,7 @@ async function finish(battle, object, foe) {
             await talk(LINES.bossWin);
             await talk(LINES.grewSaved);
             await announceSkills(before);
+            musicOverride = undefined;   // 影と 朝の 曲は 場面で 決める
             await ending();
         } else {
             await saved(foe, before);
@@ -617,6 +654,9 @@ async function finish(battle, object, foe) {
         return;
     }
     if (battle.over === 'devour') {
+        musicOverride = null;   // 喰らう: 曲を その場で 止めて、短い音 (M19)
+        sound.playBgm(null, { transition: 'hard' });
+        sound.jingle('M19');
         const before = bakSkills(keep.growth);
         const result = devour(state, keep, foe.dream);
         await talk(LINES.devour[foe.dream]);
@@ -641,6 +681,7 @@ async function finish(battle, object, foe) {
     if (drops) {
         state.shards += drops;
         showHud();
+        sound.se('SE07');
         await ui.say('', '夢のかけらを 取り戻した！', { wait: NOTE_MS });
         ui.hideMsg();
         if (!state.flags.firstSuima) {
@@ -692,13 +733,9 @@ async function nightmareAfter(foe) {
 
 async function nightmareLoss() {
     hp = {};
-    mode = 'scare';   // 真っ黒な 画面に 赤い「に が さ な い」
     ui.hideHud();
-    const screen = document.getElementById('screen');
-    screen.classList.remove('shake');
-    void screen.offsetWidth;
-    screen.classList.add('shake');
-    await new Promise((resolve) => setTimeout(resolve, 1800));
+    await film('NIGASANAI');   // 真っ黒な 画面に 赤い「に が さ な い」
+    mode = 'scare';            // 次の 暗転まで 赤い字を 残す
     const from = state.day;
     sleepAfterNightmare(state, WAKE_DAY);
     state.nightFailed = true;
@@ -739,6 +776,7 @@ async function finale() {
         await talk(LINES.goodBefore);
         await finalBattle('nemuriboshi', { kizuna: kizunaFriends(state) });   // キズナ攻撃で ラスボスに 挑む
         mode = 'black';
+        musicOverride = ENDING_BGM.good;
         await talk(LINES.goodAfter);
     } else if (route === 'yumekui') {
         await talk(LINES.yumekuiBefore);
@@ -747,6 +785,7 @@ async function finale() {
         await talk(LINES.yumekuiBoss);
         await finalBattle('nemuriboshi', { dreamEat: true });   // 夢喰いで ラスボスを 喰らう (実質 勝ちの イベント)
         mode = 'black';
+        musicOverride = ENDING_BGM.yumekui;
         await talk(LINES.yumekuiAfter);
     } else {
         await talk(LINES.normalBefore);
@@ -756,6 +795,7 @@ async function finale() {
         await talk(LINES.normalSecond(lost.join('も、') || 'スイマたち'));
         await finalBattle('nightmare2', { kizuna: [], scale: 1 + ABSORB_RATE * lost.length });
         mode = 'black';
+        musicOverride = ENDING_BGM.normal;   // 救った人の パートだけ 鳴る
         await talk(LINES.normalAfter);
         if (state.status.riku === 'saved') await talk(LINES.normalRikuSaved);
         else {
@@ -787,7 +827,10 @@ async function ending() {
 async function announceSkills(before) {
     const known = before.map((skill) => skill.id);
     for (const skill of bakSkills(keep.growth)) {
-        if (!known.includes(skill.id)) await talk(LINES.learned(skill.label));
+        if (!known.includes(skill.id)) {
+            sound.se('SE34');
+            await talk(LINES.learned(skill.label));
+        }
     }
 }
 
@@ -926,6 +969,34 @@ function playEncounter(theme, boss) {
         encounter = { theme, boss, start: performance.now(), done: resolve };
         mode = 'encounter';
     });
+}
+
+// ---- 演出スクリプト (ムービー) --------------------------------------------
+
+// 番号で ムービーを 流す。2 回目からは 短い版 (あれば)。決定の 長押しで 飛ばせる
+const FILM_EFFECTS = {
+    // ホラー演出: ふつうなら 画面を 揺らす。ひかえめなら 揺らさない
+    horror: (step, instant) => {
+        if (instant || !step.shake || sound.settings().horror === 'soft') return;
+        const screen = document.getElementById('screen');
+        screen.classList.remove('shake');
+        void screen.offsetWidth;
+        screen.classList.add('shake');
+    },
+    calendar: (step) => playCalendar(step.from, step.to),
+    lapse: (step) => playLapse(step.labels)
+};
+async function film(id) {
+    const movie = MOVIES[id];
+    const steps = stepsOf(movie, seenMovies.has(id));
+    seenMovies.add(id);
+    Object.assign(stage, createStage(), { soft: sound.settings().horror === 'soft' });
+    const back = mode;
+    mode = 'film';
+    const player = createMoviePlayer({ stage, ui, sound, effects: FILM_EFFECTS });
+    const result = await playFilm(steps, { stage, input, player });
+    if (mode === 'film') mode = back;
+    return result;
 }
 
 // ---- 朝の 通学路の ムービー ------------------------------------------------
@@ -1111,6 +1182,7 @@ async function paintCanvas(id) {
     ui.hideHud();
     await new Promise((resolve) => {
         const off = input.onPress((key) => { if (key === 'a') finishPainting(painting, performance.now()); });
+        sound.se('SE10');
         painting = createPainting(performance.now(), { colors, caption, blur: (5 - stage) / 4 });
         painting.done = () => { off(); resolve(); };
         mode = 'painting';
@@ -1227,9 +1299,11 @@ async function campaign() {
                 await finale();   // 3 周目の 14 日の 夜で 小規模版は 終わる
                 return;
             }
+            musicOverride = 'M17';   // ループ「十四日目の夜」(M24 と ムービー MV07 は 段階5 の 続きで)
             await talk(LINES.loop);
             state = nextLoop(keep, state);
             await ui.fade(true);
+            musicOverride = undefined;
         } else if (state.day !== before && !skipTear) {
             await playCalendar(before, state.day);
             // 土日: カレンダーが めくれたあと、朝が 飛んで 昼まで 時間が進む
@@ -1291,12 +1365,13 @@ async function weaveWords() {
 // ---- 設定 --------------------------------------------------------------
 
 async function fieldMenu() {
-    const items = [{ id: 'grow', label: 'なかま' }, { id: 'shards', label: 'かけら' }, { id: 'bak', label: 'バクの成長' }, { id: 'keys', label: 'ボタン設定' }, { id: 'close', label: 'とじる' }];
+    const items = [{ id: 'grow', label: 'なかま' }, { id: 'shards', label: 'かけら' }, { id: 'bak', label: 'バクの成長' }, { id: 'keys', label: 'ボタン設定' }, { id: 'audio', label: '音の設定' }, { id: 'close', label: 'とじる' }];
     if (keep.tutorial) items.unshift({ id: 'weave', label: '夢合わせ' });
     if (keep.brush) items.unshift({ id: 'brush', label: '夢筆' });
     if (keep.tutorial && MAPS[state.map].dream) items.unshift({ id: 'wake', label: '夢から覚める' });
     const id = await ui.menu(items);
     if (id === 'keys') await settings();
+    if (id === 'audio') await audioSettings();
     if (id === 'grow') await growScreen();
     if (id === 'shards') await shardMenu();
     if (id === 'weave') await weaveWords();
@@ -1317,6 +1392,25 @@ async function settings() {
         if (id === 'swap') input.toggleSwap();
         else if (id === 'reset') input.reset();
         else await assignKey(id);
+    }
+}
+
+// 音の 設定: 曲・効果音・声の 音量 (選ぶたびに 10% ずつ。100% の 次は 0%) と ホラー演出
+async function audioSettings() {
+    const pct = (v) => `${Math.round(v * 100)}%`;
+    for (;;) {
+        const now = sound.settings();
+        const items = [
+            { id: 'bgm', label: `曲：${pct(now.bgm)}` },
+            { id: 'se', label: `効果音：${pct(now.se)}` },
+            { id: 'voice', label: `セリフの声：${pct(now.voice)}` },
+            { id: 'horror', label: `ホラー演出：${now.horror === 'soft' ? 'ひかえめ' : 'ふつう'}` },
+            { id: 'back', label: 'もどる' }
+        ];
+        const id = await ui.menu(items, { head: '音の設定', wide: true });
+        if (id === 'back') return;
+        if (id === 'horror') sound.set('horror', now.horror === 'soft' ? 'normal' : 'soft');
+        else sound.set(id, stepVolume(now[id]));
     }
 }
 
@@ -1442,10 +1536,12 @@ async function start() {
     ui.hideHud();
     ui.title(true);
     for (;;) {
-        const id = await ui.menu([{ id: 'start', label: 'はじめる' }, { id: 'keys', label: 'ボタン設定' }], { center: true });
+        const id = await ui.menu([{ id: 'start', label: 'はじめる' }, { id: 'keys', label: 'ボタン設定' }, { id: 'audio', label: '音の設定' }], { center: true });
+        sound.unlock();   // スマホは 画面を 触るまで 音を 出せない
         if (id === 'start') break;
         ui.title(false);
-        await settings();
+        if (id === 'audio') await audioSettings();
+        else await settings();
         ui.title(true);
     }
     ui.title(false);
@@ -1499,7 +1595,8 @@ function frame(now) {
             encounter.finished = true;   // 真っ白の まま 止めておく (次の フェードまで)
             encounter.done();
         }
-    } else if (mode === 'battle' && battleView) drawBattle(ctx, battleView, now);
+    } else if (mode === 'film') drawFilm(ctx, stage, now);
+    else if (mode === 'battle' && battleView) drawBattle(ctx, battleView, now);
     else if (mode === 'shadow') drawShadow(ctx, now);
     else if (mode === 'morning') drawMorning(ctx);
     else if (mode === 'title' || mode === 'opening') drawSky(ctx, now);
@@ -1512,11 +1609,23 @@ function frame(now) {
         ctx.fillText(LINES.scareText, 160 + (Math.random() - 0.5) * 6, 126 + (Math.random() - 0.5) * 6);
         ctx.textAlign = 'left';
     } else drawField(ctx, state, walk, now, state.chaser ? [{ ...state.chaser, who: 'nightmare' }] : actors, followerView());
+    updateMusic();
     requestAnimationFrame(frame);
 }
 
+// 場面に 合わせて 曲を 切り替える (同じ 曲なら 何もしない)
+function updateMusic() {
+    const map = MAPS[state.map];
+    const id = bgmFor({
+        mode, map, phase: state.phase, foes: battleView?.foeIds ?? [], chase: Boolean(state.chaser),
+        prologue: state.flags.prologue ? { roomEntered: Boolean(state.flags.roomEntered) } : null, override: musicOverride
+    });
+    if (id === undefined) return;
+    sound.playBgm(id, { transition: transitionFor(mode, id), layers: layersFor(id, state.status), wobble: wobbleFor(id, keep.loop, isFinalLoop(keep)) });
+}
+
 // ブラウザのテストが 状態を読むための窓口
-window.yumekui = { get state() { return state; }, get mode() { return mode; }, get keep() { return keep; }, growScreen, finale };
+window.yumekui = { get state() { return state; }, get mode() { return mode; }, get keep() { return keep; }, get bgm() { return sound.current(); }, get bgmPlaying() { return sound.playing(); },growScreen, finale, film };
 
 requestAnimationFrame(frame);
 start();
