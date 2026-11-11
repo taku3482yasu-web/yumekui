@@ -6,7 +6,10 @@ import { MAPS } from '../src/data/maps.js';
 import { FOES } from '../src/data/units.js';
 
 test('曲は 小規模版の 24 曲 (M01〜M24)。ファイル名は 番号_英字', () => {
-    assert.equal(Object.keys(BGM).length, 24);
+    assert.equal(Object.keys(BGM).length, 26);
+    assert.equal(BGM.M25.file, 'M25_victory');
+    assert.equal(BGM.M26.file, 'M26_defeat');
+    assert.ok(BGM.M04.loopStart > 0, 'イントロの あとから くり返す');
     for (const [id, entry] of Object.entries(BGM)) assert.match(entry.file, new RegExp(`^${id}_[a-z_]+$`));
     for (const [id, entry] of Object.entries(SE)) assert.match(entry.file, new RegExp(`^${id}_[a-z]+$`));
 });
@@ -74,8 +77,8 @@ test('テープの ゆれは 町の曲だけ。周を 重ねるほど 大きく�
     assert.equal(wobbleFor('M04', 3), 0);
 });
 
-test('版ちがいの ファイル名 (M18_mio・M24_short)', () => {
-    assert.equal(bgmFile('M18', 'mio'), 'M18_mio');
+test('版ちがいの ファイル名 (M24_short)。M18 は 全員 共通', () => {
+    assert.equal(bgmFile('M18', 'mio'), 'M18_saved');
     assert.equal(bgmFile('M18'), 'M18_saved');
     assert.equal(bgmFile('M18', 'duet'), 'M18_saved');   // 無い 版は 本体
     assert.equal(bgmFile('M24', 'short'), 'M24_short');

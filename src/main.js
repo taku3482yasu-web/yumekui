@@ -648,6 +648,14 @@ async function finish(battle, object, foe) {
         await nightmareLoss();
         return;
     }
+    // 勝った・負けた: 戦闘の 曲を 止めて 短い曲 (M25 / M26)。町や 夢の 曲は 鳴り終わってから
+    const jingle = battle.over === 'win' ? 'M25' : battle.over === 'lose' ? 'M26' : null;
+    let jingleDone = null;
+    if (jingle) {
+        musicOverride = null;
+        sound.playBgm(null, { transition: 'hard' });
+        jingleDone = Promise.race([sound.jingle(jingle), new Promise((resolve) => setTimeout(resolve, 9000))]);
+    }
     if (battle.over === 'lose') {
         hp = {};
         if (keep.tutorial) {
@@ -659,6 +667,7 @@ async function finish(battle, object, foe) {
         const start = MAPS[state.map].start;
         state.x = start.x;
         state.y = start.y;
+        await jingleDone;
         return;
     }
     await awardExp(battle);
@@ -733,6 +742,7 @@ async function finish(battle, object, foe) {
             await talk(LINES.firstSuima);
         }
     }
+    await jingleDone;
 }
 
 // 経験値: 倒した 敵 (本音を 届けた・喰らった 敵も) の 合計を、パーティは そのまま、控えは 半分

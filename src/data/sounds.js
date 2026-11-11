@@ -5,14 +5,14 @@ export const AUDIO_DIR = { bgm: 'audio/bgm/', se: 'audio/se/', voice: 'audio/voi
 
 // loop: 最後まで 鳴ったら 頭に もどる。layers: 同じ 長さの パート (ステム)。あれば 本体と 同時に 鳴らし、場面に 合わせて 消す
 export const BGM = {
-    M01: { file: 'M01_title', title: '夢見坂', loop: true },
+    M01: { file: 'M01_title', title: '夢見坂', loop: true, loopStart: 17.177 },   // loopStart: イントロのあと、くり返しが 始まる 秒 (11/12 Suno 版)
     M02: { file: 'M02_haru', title: 'うん、いいよ', loop: true },
     M03: { file: 'M03_haru_dream', title: 'みんなこっちを見てる', loop: true },
-    M04: { file: 'M04_battle', title: '飲み込んだ言葉', loop: true },
+    M04: { file: 'M04_battle', title: '飲み込んだ言葉', loop: true, loopStart: 39.450 },
     M05: { file: 'M05_muresuima', title: '自分で決めたかった', loop: true },
     // 町の曲: 町の人の パートを 別に 用意できたら、喰らった人の パートを 永久に 消す
     M06: { file: 'M06_town', title: '潮風と坂道', loop: true, town: true, layers: { mio: 'M06_mio', kana: 'M06_kana', riku: 'M06_riku' } },
-    M07: { file: 'M07_room', title: '白いキャンバス', loop: true },
+    M07: { file: 'M07_room', title: '白いキャンバス', loop: true, loopStart: 17.944 },
     M08: { file: 'M08_mio_dream', title: '泡になったソロ', loop: true },
     M09: { file: 'M09_kana_dream', title: 'せかされる拍', loop: true },
     M10: { file: 'M10_gakufume', title: 'ひとりの席', loop: true },
@@ -23,15 +23,18 @@ export const BGM = {
     M15: { file: 'M15_nightmare', title: '星のない夜', loop: true },
     M16: { file: 'M16_himawarion', title: '空元気', loop: true },
     M17: { file: 'M17_loop', title: '十四日目の夜', loop: false },
-    // 救ったとき: 人ごとの 版 (M18_mio など) が あれば そちらを 鳴らす
-    M18: { file: 'M18_saved', title: 'ほどける音', loop: false, versions: ['mio', 'kana', 'riku'] },
+    // 救ったとき: 全員 共通の 1 曲 (11/11 決定。人ごとの 版は 作らない)
+    M18: { file: 'M18_saved', title: 'ほどける音', loop: false },
     M19: { file: 'M19_devour', title: '―', loop: false },
     M20: { file: 'M20_good_end', title: '言えた日', loop: false },
     // ノーマルED: 救った人の パートだけ 鳴らす (救えなかった人の パートは 鳴らない)
     M21: { file: 'M21_normal_end', title: '空白のある絵', loop: false, layers: { mio: 'M21_mio', kana: 'M21_kana', riku: 'M21_riku' } },
     M22: { file: 'M22_yumekui_end', title: 'おなかいっぱい', loop: false },
     M23: { file: 'M23_bak', title: 'ふとんの中の味方', loop: true },
-    M24: { file: 'M24_makimodoshi', title: 'まきもどしのうた', loop: false, versions: ['short'] }
+    M24: { file: 'M24_makimodoshi', title: 'まきもどしのうた', loop: false, versions: ['short'] },
+    // 戦闘の 終わりの 短い曲 (11/11 追加)
+    M25: { file: 'M25_victory', title: 'やったね', loop: false },
+    M26: { file: 'M26_defeat', title: '目がさめる', loop: false }
 };
 
 export const SE = {
