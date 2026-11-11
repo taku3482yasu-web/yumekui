@@ -6,8 +6,8 @@ export const AUDIO_DIR = { bgm: 'audio/bgm/', se: 'audio/se/', voice: 'audio/voi
 // loop: 最後まで 鳴ったら 頭に もどる。layers: 同じ 長さの パート (ステム)。あれば 本体と 同時に 鳴らし、場面に 合わせて 消す
 export const BGM = {
     M01: { file: 'M01_title', title: '夢見坂', loop: true, loopStart: 17.177 },   // loopStart: イントロのあと、くり返しが 始まる 秒 (11/12 Suno 版)
-    M02: { file: 'M02_haru', title: 'うん、いいよ', loop: true },
-    M03: { file: 'M03_haru_dream', title: 'みんなこっちを見てる', loop: true, loopStart: 24.029 },
+    M02: { file: 'M02_haru', title: 'うん、いいよ', loop: true, loopStart: 23.840 },
+    M03: { file: 'M03_haru_dream', title: 'みんなこっちを見てる', loop: true, loopStart: 24.796 },
     M04: { file: 'M04_battle', title: '飲み込んだ言葉', loop: true, loopStart: 39.450 },
     M05: { file: 'M05_muresuima', title: '自分で決めたかった', loop: true, loopStart: 28.758 },
     // 町の曲: 町の人の パートを 別に 用意できたら、喰らった人の パートを 永久に 消す
@@ -30,7 +30,7 @@ export const BGM = {
     // ノーマルED: 救った人の パートだけ 鳴らす (救えなかった人の パートは 鳴らない)
     M21: { file: 'M21_normal_end', title: '空白のある絵', loop: false, layers: { mio: 'M21_mio', kana: 'M21_kana', riku: 'M21_riku' } },
     M22: { file: 'M22_yumekui_end', title: 'おなかいっぱい', loop: false },
-    M23: { file: 'M23_bak', title: 'ふとんの中の味方', loop: true },
+    M23: { file: 'M23_bak', title: 'ふとんの中の味方', loop: true, loopStart: 29.555 },
     M24: { file: 'M24_makimodoshi', title: 'まきもどしのうた', loop: false, versions: ['short'] },
     // 戦闘の 終わりの 短い曲 (11/11 追加)
     M25: { file: 'M25_victory', title: 'やったね', loop: false },

@@ -28,7 +28,7 @@ import { morningMovie } from './scenes/mornings.js';
 import { canUseBrush, hasImageFor, learnImage, paint } from './core/brush.js';
 import { IMAGES, TILE_IMAGES } from './data/brush.js';
 import { createSound } from './view/sound.js';
-import { battleJingle, bgmFor, loopSong, layersFor, stepVolume, transitionFor, voicedAt, voiceOf, wobbleFor, ENDING_BGM } from './core/music.js';
+import { battleJingle, bgmFor, loopSong, BAK_BGM, FINAL_NIGHT_BGM, layersFor, stepVolume, transitionFor, voicedAt, voiceOf, wobbleFor, ENDING_BGM } from './core/music.js';
 import { stepsOf } from './core/movie.js';
 import { createMoviePlayer, createStage, drawFilm, playFilm } from './view/movie.js';
 import { MOVIES } from './scenes/movies.js';
@@ -163,13 +163,20 @@ const SCRIPTS = {
     rest: async () => {
         hp = {};
         sound.se('SE09');
-        await talk(LINES.rest);
-        if (ypLeft(keep) <= 0) return;
-        const id = await ui.menu([{ id: 'yes', label: LINES.ypRestYes }, { id: 'no', label: LINES.ypRestNo }], { head: LINES.ypRestHead });
-        if (id === 'yes') await growScreen(true);
+        musicOverride = BAK_BGM;   // 毛布で 休む あいだは バクの テーマ
+        try {
+            await talk(LINES.rest);
+            if (ypLeft(keep) <= 0) return;
+            const id = await ui.menu([{ id: 'yes', label: LINES.ypRestYes }, { id: 'no', label: LINES.ypRestNo }], { head: LINES.ypRestHead });
+            if (id === 'yes') await growScreen(true);
+        } finally {
+            musicOverride = undefined;
+        }
     },
     bak: async () => {
+        musicOverride = BAK_BGM;   // バクと はじめて 話す
         await talk(LINES.bak);
+        musicOverride = undefined;
         state.flags.bak = true;
         resetFollow();
     },
@@ -1351,7 +1358,8 @@ async function campaign() {
         const next = advance(state);
         if (next === 'loop') {
             const final = isFinalLoop(keep);
-            if (!final) {
+            if (final) musicOverride = FINAL_NIGHT_BGM;   // 終幕の 前の 14 日の 夜 (戦いが 始まるまで)
+            else {
                 // ループ: 時間が 巻きもどる あいだ『まきもどしのうた』(M24。2 周目の 終わりからは 短い版)。
                 // 画面を 切り替える 前に 決めて おく (でないと 明るくなる あいだ タイトルの 曲が 鳴る)
                 const song = loopSong(keep.loop);
@@ -1684,7 +1692,7 @@ function updateMusic() {
     const map = MAPS[state.map];
     const id = bgmFor({
         mode, map, phase: state.phase, foes: battleView?.foeIds ?? [], chase: Boolean(state.chaser),
-        prologue: state.flags.prologue ? { roomEntered: Boolean(state.flags.roomEntered) } : null, override: musicOverride,
+        prologue: state.flags.prologue ? { roomEntered: Boolean(state.flags.roomEntered), rikuWalk: Boolean(state.flags.rikuWalk) } : null, override: musicOverride,
         jingle: Boolean(jinglePlaying)
     });
     if (id === undefined) return;

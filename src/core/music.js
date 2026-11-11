@@ -45,6 +45,11 @@ export function loopSong(loop) {
     return { id: 'M24', version: loop >= 2 ? 'short' : null };
 }
 
+// 最後の 周の 14 日の 夜 (終幕の 前): M17「十四日目の夜」
+export const FINAL_NIGHT_BGM = 'M17';
+// バクの テーマ M23「ふとんの中の味方」: 夢の 毛布で 休むとき・バクと はじめて 話すとき
+export const BAK_BGM = 'M23';
+
 // 戦闘の 終わりの 短い曲: 勝ちは M25、負けは M26。ナイトメアに 負けたとき・終幕の 戦いは 鳴らさない
 export function battleJingle(over, script = null) {
     if (script === 'final') return null;
@@ -69,6 +74,8 @@ export function bgmFor({ mode, map = null, phase = 'day', foes = [], chase = fal
     if (map.dream) return DREAM_BGM[map.dream] ?? 'M03';
     // プロローグの 家: 父との 会話は 曲なし (時計の 音)、自分の部屋に 入ってから M07
     if (prologue && map.id === 'home') return prologue.roomEntered ? 'M07' : null;
+    // プロローグの 帰り道: リクと 歩いている あいだは ハルの テーマ M02「うん、いいよ」(リクと 分かれたら 町の 曲)
+    if (prologue && prologue.rikuWalk) return 'M02';
     if (phase === 'night') return 'M07';
     return 'M06';
 }

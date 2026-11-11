@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { battleBgm, battleJingle, bgmFile, loopSong, bgmFor, layersFor, normalizeAudio, seVolume, stepVolume, transitionFor, voicedAt, voiceOf, wobbleFor, BOSS_BGM, DREAM_BGM, ENDING_BGM } from '../src/core/music.js';
+import { battleBgm, battleJingle, bgmFile, loopSong, BAK_BGM, FINAL_NIGHT_BGM, bgmFor, layersFor, normalizeAudio, seVolume, stepVolume, transitionFor, voicedAt, voiceOf, wobbleFor, BOSS_BGM, DREAM_BGM, ENDING_BGM } from '../src/core/music.js';
 import { BGM, DEFAULT_AUDIO, SE } from '../src/data/sounds.js';
 import { MAPS } from '../src/data/maps.js';
 import { FOES } from '../src/data/units.js';
@@ -126,4 +126,17 @@ test('ループの 場面は M24 まきもどしのうた。1 周目の 終わ�
     assert.deepEqual(loopSong(2), { id: 'M24', version: 'short' });
     assert.equal(bgmFile('M24', loopSong(1).version), 'M24_makimodoshi');
     assert.equal(bgmFile('M24', loopSong(2).version), 'M24_short');
+});
+
+test('プロローグの 帰り道は リクと 歩く あいだ M02、分かれたら M06。家は 今までどおり', () => {
+    assert.equal(bgmFor({ mode: 'field', map: MAPS.saka, phase: 'day', prologue: { rikuWalk: true } }), 'M02');
+    assert.equal(bgmFor({ mode: 'field', map: MAPS.saka, phase: 'day', prologue: { rikuWalk: false } }), 'M06');
+    assert.equal(bgmFor({ mode: 'field', map: MAPS.home, prologue: { rikuWalk: true, roomEntered: false } }), null);
+});
+
+test('バクの テーマは M23、最後の 周の 14 日の 夜は M17', () => {
+    assert.equal(BAK_BGM, 'M23');
+    assert.equal(FINAL_NIGHT_BGM, 'M17');
+    assert.equal(bgmFor({ mode: 'scene', map: MAPS.odoriba, override: BAK_BGM }), 'M23');
+    assert.equal(bgmFor({ mode: 'opening', override: FINAL_NIGHT_BGM }), 'M17');
 });
