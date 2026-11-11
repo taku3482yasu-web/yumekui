@@ -530,7 +530,7 @@ const PEOPLE = {
     commuterB: { body: 'short', H: '#5c4630', T: '#2f4a7d', U: '#e8ecf5', B: '#22365e', F: '#141428', marks: [[1, 11, '#8a6a4a'], [1, 12, '#8a6a4a']] },
     commuterC: { body: 'short', H: '#20203a', T: '#2f4a7d', U: '#e8ecf5', B: '#22365e', F: '#141428', marks: [[4, 4, '#c6c9ea'], [7, 4, '#c6c9ea']] },
     commuterD: { body: 'long', H: '#8a5a32', T: '#2f4a7d', U: '#e8ecf5', B: '#22365e', F: '#141428' },
-    rikuMother: { body: 'skirt', H: '#8a5a32', T: '#c07a5a', U: '#c07a5a', B: '#5c4630', F: '#141428' }
+    rikuFather: { body: 'short', H: '#5c4630', T: '#4a5a6a', U: '#e8ecf5', B: '#3a3a50', F: '#141428' }
 };
 
 function personArt(id) {

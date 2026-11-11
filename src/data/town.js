@@ -130,7 +130,7 @@ export const TOWN_MAPS = {
             { id: 'fromRiku1', kind: 'exit', x: 0, y: 5, to: 'saka', at: { x: 22, y: 8 } },
             { id: 'fromRiku2', kind: 'exit', x: 0, y: 6, to: 'saka', at: { x: 22, y: 9 } },
             { id: 'rikuDoor', kind: 'door', x: 7, y: 3, script: 'rikuDoor' },
-            { ...person('rikuMother', 'rikuMother', 9, 4), needs: 'rikuMother' }
+            { ...person('rikuFather', 'rikuFather', 9, 4), needs: 'rikuFather' }
         ]
     },
     home: {

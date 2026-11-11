@@ -203,10 +203,10 @@ const SCRIPTS = {
     portSign: () => talk(LINES.portSign),
     rikuRoad: () => talk(LINES.rikuRoad(state)),
     rikuDoor: async () => {
-        // 3 周目: ミオと カナを 救ったことが あれば、リクの母から『引っ越し』を 聞ける (台本 4-2)
+        // 3 周目: ミオと カナを 救ったことが あれば、リクの父から『引っ越し』を 聞ける (台本 4-2)
         await talk(LINES.rikuDoor);
         if (keep.loop >= 3 && savedPair() && !state.words.includes('引っ越し')) {
-            await talk(LINES.rikuMom);
+            await talk(LINES.rikuDad);
             state.words.push('引っ越し');
             showHud();
         }
