@@ -39,8 +39,18 @@ export function battleBgm(foeIds = []) {
     return 'M04';
 }
 
+// 戦闘の 終わりの 短い曲: 勝ちは M25、負けは M26。ナイトメアに 負けたとき・終幕の 戦いは 鳴らさない
+export function battleJingle(over, script = null) {
+    if (script === 'final') return null;
+    if (over === 'win') return 'M25';
+    if (over === 'lose' && script !== 'nightmare') return 'M26';
+    return null;
+}
+
 // 場面から 曲を 決める。override は 物語の 場面で 決めた 曲 (エンディングなど。null なら 無音)
-export function bgmFor({ mode, map = null, phase = 'day', foes = [], chase = false, prologue = null, override } = {}) {
+// jingle: 勝ち・負けの 短い曲が 鳴っている あいだ。戦闘の 曲と 場面で 決める 曲は 止めて おく (物語で 決めた 曲は 鳴らす)
+export function bgmFor({ mode, map = null, phase = 'day', foes = [], chase = false, prologue = null, override, jingle = false } = {}) {
+    if (jingle && (mode === 'battle' || override === undefined)) return null;
     if (mode === 'battle') return battleBgm(foes);   // 戦いは 物語の 場面の 曲より 先
     if (override !== undefined) return override;
     if (mode === 'title' || mode === 'opening') return 'M01';

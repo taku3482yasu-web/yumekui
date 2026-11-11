@@ -28,7 +28,7 @@ import { morningMovie } from './scenes/mornings.js';
 import { canUseBrush, hasImageFor, learnImage, paint } from './core/brush.js';
 import { IMAGES, TILE_IMAGES } from './data/brush.js';
 import { createSound } from './view/sound.js';
-import { bgmFor, layersFor, stepVolume, transitionFor, voicedAt, voiceOf, wobbleFor, ENDING_BGM } from './core/music.js';
+import { battleJingle, bgmFor, layersFor, stepVolume, transitionFor, voicedAt, voiceOf, wobbleFor, ENDING_BGM } from './core/music.js';
 import { stepsOf } from './core/movie.js';
 import { createMoviePlayer, createStage, drawFilm, playFilm } from './view/movie.js';
 import { MOVIES } from './scenes/movies.js';
@@ -75,6 +75,7 @@ const follow = { x: 0, y: 0, fromX: 0, fromY: 0 };   // ハルに ついてく�
 let painting = null;       // プロローグで キャンバスに 描く 画面
 let intro = null;          // はじまりの 夢 (砂浜 → 大きな目「おきろ」)
 let musicOverride;         // 物語の 場面で 決めた 曲 (エンディング・ループ など。null は 無音・undefined は 場面で 決める)
+let jinglePlaying = null;  // 勝ち・負けの 短い曲 (鳴っている あいだ 場面の 曲を 待たせる。待つ あいだも 歩ける)
 const stage = createStage();   // 演出スクリプト (ムービー) の 舞台
 const seenMovies = new Set();
 
@@ -502,6 +503,8 @@ async function fight(object) {
     sound.se('SE20');
     await playEncounter(encounterTheme(MAPS[state.map], state.x), foeList.some((f) => f.truth));
     await ui.fade(true);
+    jinglePlaying = null;   // 前の 戦闘の 短い曲が 残っていたら 止めて、戦闘の 曲へ
+    sound.stopJingles();
     mode = 'battle';
     battleView = { foes: foeList.map((f) => f.sprite), foeIds: foeList.map((f) => f.id), down: [], ally: battle.ally.sprite, foeHit: [], allyHit: 0, pops: [] };
     ui.hideHud();
@@ -522,6 +525,16 @@ async function fight(object) {
         if (events) await play(battle, events);
     }
 
+    // 勝ち・負け: 戦闘が 終わった その場で 戦闘の 曲を 止めて 短い曲 (M25 / M26)。場面の 曲は 鳴り終わってから
+    const jingle = battleJingle(battle.over, object.script);
+    if (jingle) {
+        sound.playBgm(null, { transition: 'hard' });
+        const done = Promise.race([sound.jingle(jingle), new Promise((resolve) => setTimeout(resolve, 18000))]);
+        jinglePlaying = done;
+        done.then(() => { if (jinglePlaying === done) jinglePlaying = null; });
+    }
+    // 救った・喰らった: 場面の 曲が 一瞬 鳴らないよう、画面が もどる 前に 静かに しておく
+    if (battle.over === 'truth' || battle.over === 'devour') musicOverride = null;
     await ui.fade(true);
     ui.hideStatus();
     battleView = null;
@@ -648,14 +661,6 @@ async function finish(battle, object, foe) {
         await nightmareLoss();
         return;
     }
-    // 勝った・負けた: 戦闘の 曲を 止めて 短い曲 (M25 / M26)。町や 夢の 曲は 鳴り終わってから
-    const jingle = battle.over === 'win' ? 'M25' : battle.over === 'lose' ? 'M26' : null;
-    let jingleDone = null;
-    if (jingle) {
-        musicOverride = null;
-        sound.playBgm(null, { transition: 'hard' });
-        jingleDone = Promise.race([sound.jingle(jingle), new Promise((resolve) => setTimeout(resolve, 18000))]);
-    }
     if (battle.over === 'lose') {
         hp = {};
         if (keep.tutorial) {
@@ -667,7 +672,6 @@ async function finish(battle, object, foe) {
         const start = MAPS[state.map].start;
         state.x = start.x;
         state.y = start.y;
-        await jingleDone;
         return;
     }
     await awardExp(battle);
@@ -742,7 +746,6 @@ async function finish(battle, object, foe) {
             await talk(LINES.firstSuima);
         }
     }
-    await jingleDone;
 }
 
 // 経験値: 倒した 敵 (本音を 届けた・喰らった 敵も) の 合計を、パーティは そのまま、控えは 半分
@@ -1672,7 +1675,8 @@ function updateMusic() {
     const map = MAPS[state.map];
     const id = bgmFor({
         mode, map, phase: state.phase, foes: battleView?.foeIds ?? [], chase: Boolean(state.chaser),
-        prologue: state.flags.prologue ? { roomEntered: Boolean(state.flags.roomEntered) } : null, override: musicOverride
+        prologue: state.flags.prologue ? { roomEntered: Boolean(state.flags.roomEntered) } : null, override: musicOverride,
+        jingle: Boolean(jinglePlaying)
     });
     if (id === undefined) return;
     sound.playBgm(id, { transition: transitionFor(mode, id), layers: layersFor(id, state.status), wobble: wobbleFor(id, keep.loop, isFinalLoop(keep)) });

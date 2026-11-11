@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { battleBgm, bgmFile, bgmFor, layersFor, normalizeAudio, seVolume, stepVolume, transitionFor, voicedAt, voiceOf, wobbleFor, BOSS_BGM, DREAM_BGM, ENDING_BGM } from '../src/core/music.js';
+import { battleBgm, battleJingle, bgmFile, bgmFor, layersFor, normalizeAudio, seVolume, stepVolume, transitionFor, voicedAt, voiceOf, wobbleFor, BOSS_BGM, DREAM_BGM, ENDING_BGM } from '../src/core/music.js';
 import { BGM, DEFAULT_AUDIO, SE } from '../src/data/sounds.js';
 import { MAPS } from '../src/data/maps.js';
 import { FOES } from '../src/data/units.js';
 
-test('曲は 小規模版の 24 曲 (M01〜M24)。ファイル名は 番号_英字', () => {
+test('曲は 小規模版の 24 曲 (M01〜M24) と 戦闘の 終わりの 2 曲 (M25・M26)。ファイル名は 番号_英字', () => {
     assert.equal(Object.keys(BGM).length, 26);
     assert.equal(BGM.M25.file, 'M25_victory');
     assert.equal(BGM.M26.file, 'M26_defeat');
@@ -101,4 +101,22 @@ test('音量: 初期は 曲 70%・効果音 80%・声 80%。ホラーの 音は 
     assert.ok(seVolume('SE43', { se: 0.8, horror: 'soft' }) < 0.8);
     assert.equal(stepVolume(0.7), 0.8);
     assert.equal(stepVolume(1), 0);
+});
+
+test('戦闘の 終わりの 短い曲: 勝ちは M25・負けは M26。ナイトメアに 負けたとき・終幕・救った・喰らった・にげたは 鳴らさない', () => {
+    assert.equal(battleJingle('win'), 'M25');
+    assert.equal(battleJingle('lose'), 'M26');
+    assert.equal(battleJingle('lose', 'nightmare'), null);
+    assert.equal(battleJingle('win', 'final'), null);
+    assert.equal(battleJingle('truth'), null);
+    assert.equal(battleJingle('devour'), null);
+    assert.equal(battleJingle('flee'), null);
+});
+
+test('短い曲が 鳴っている あいだは 戦闘の 曲も 場面の 曲も 止めて おく。物語で 決めた 曲は 鳴らす', () => {
+    assert.equal(bgmFor({ mode: 'battle', foes: [], jingle: true }), null);
+    assert.equal(bgmFor({ mode: 'field', map: MAPS.odoriba, jingle: true }), null);
+    assert.equal(bgmFor({ mode: 'field', map: MAPS.home, phase: 'night', jingle: true }), null);
+    assert.equal(bgmFor({ mode: 'scene', override: 'M17', jingle: true }), 'M17');
+    assert.equal(bgmFor({ mode: 'field', map: MAPS.odoriba }), 'M03');   // 鳴り終われば もとの 曲
 });

@@ -171,6 +171,7 @@ export function createSound() {
     }
 
     // 短い 音を 1 回 鳴らす (効果音・声・ジングル)
+    const jingles = new Set();   // 鳴っている 短い曲 (次の 戦闘が 始まったら 止める)
     async function once(kind, dir, file, volume = 1) {
         if (!ctx || !file) return;
         const buffer = await load(dir, file);
@@ -181,6 +182,10 @@ export function createSound() {
         gain.gain.value = volume;
         node.connect(gain).connect(gains[kind]);
         node.start();
+        if (kind === 'bgm') {
+            jingles.add(node);
+            node.addEventListener('ended', () => jingles.delete(node));
+        }
         await new Promise((resolve) => { node.onended = resolve; });   // 鳴り終わるまで (待つ かどうかは 呼ぶ側が 決める)
     }
 
@@ -198,6 +203,13 @@ export function createSound() {
         // 短い曲。返り値は 鳴り終わる (ファイルが 無ければ すぐ) promise
         jingle(id, version = null) {
             return once('bgm', AUDIO_DIR.bgm, bgmFile(id, version));
+        },
+        // 鳴っている 短い曲を 止める (止めると 待っている promise も 終わる)
+        stopJingles() {
+            for (const node of jingles) {
+                try { node.stop(); } catch { /* もう 止まっている */ }
+            }
+            jingles.clear();
         },
         voice(file) {
             once('voice', AUDIO_DIR.voice, file);
