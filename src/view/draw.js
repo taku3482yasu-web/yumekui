@@ -266,9 +266,11 @@ export function drawBattle(ctx, view, time) {
         ctx.drawImage(foe, Math.round(foeX(view, i) - (foe.width * scale) / 2 + shake), Math.round(y), foe.width * scale, foe.height * scale);
     });
 
+    // 仲間: 大きい絵 (幅 24 ドットより 大きい) は 3 倍で、敵と 重ならないように する
     const bak = sprite(view.ally);
     const bakShake = view.allyHit > time ? Math.sin(time / 20) * 4 : 0;
-    ctx.drawImage(bak, Math.round(26 + bakShake), 100, bak.width * 4, bak.height * 4);
+    const allyScale = bak.width > 24 ? 3 : 4;
+    ctx.drawImage(bak, Math.round(26 + bakShake), 172 - bak.height * allyScale, bak.width * allyScale, bak.height * allyScale);
 
     for (const pop of view.pops) {
         const left = (pop.until - time) / 700;
