@@ -20,6 +20,7 @@ import { LINES } from './scenes/story.js';
 import { createInput } from './view/input.js';
 import { createUi } from './view/ui.js';
 import { drawBattle, drawField, drawMorning, drawShadow, drawSky } from './view/draw.js';
+import { hdPath } from './view/art.js';
 import { drawCalendar, drawLapse } from './view/time.js';
 import { drawEncounter, encounterTheme } from './view/encounter.js';
 import { createPainting, drawPainting, finishPainting, updatePainting } from './view/painting.js';
@@ -656,6 +657,9 @@ async function play(battle, events) {
             if (battle.foes.length > 1 && !battle.over) await ui.say('', `${event.name}を たおした！`, { wait: NOTE_MS });
         }
         if (event.t === 'solved') {
+            // 本音が 届いた ユメクイの 大きい 絵を まん中に 出して、ゆっくり 消す (引き継ぎ書 4-3 の 案)
+            const art = hdPath(battleView.foes[event.index]);
+            if (art) await ui.bigArt(art);
             battleView.down[event.index] = true;
             if (!battle.over) await ui.say('', `${event.name}に 本音が とどいた！`, { wait: NOTE_MS * 2 });
         }

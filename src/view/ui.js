@@ -145,6 +145,22 @@ export function createUi(input, sounds = {}) {
         return run.finished.catch(() => {}).then(() => { el.hidden = true; });
     }
 
+    // 大きい 絵を まん中に 出して、ゆっくり 消す。出しきった ところで 返す (消えるのは そのあとも 続く)
+    function bigArt(path) {
+        const el = $('bigart');
+        if (!path || !el.animate) return Promise.resolve();
+        el.src = path;
+        el.hidden = false;
+        const run = el.animate([
+            { opacity: 0, transform: 'translate(-50%, -50%) scale(0.92)' },
+            { opacity: 1, transform: 'translate(-50%, -50%) scale(1)', offset: 0.2 },
+            { opacity: 1, transform: 'translate(-50%, -50%) scale(1.02)', offset: 0.55 },
+            { opacity: 0, transform: 'translate(-50%, -50%) scale(1.06)' }
+        ], { duration: 2200, easing: 'ease-out' });
+        run.finished.catch(() => {}).then(() => { el.hidden = true; });
+        return new Promise((resolve) => setTimeout(resolve, 1200));
+    }
+
     function fade(on) {
         $('fade').style.opacity = on ? 1 : 0;
         return new Promise((resolve) => setTimeout(resolve, 420));
@@ -200,7 +216,7 @@ export function createUi(input, sounds = {}) {
         text.textContent = line;
     }
 
-    return { say, show, menu, hideMsg, fade, hud, hideHud, status, hideStatus, title, portraits, cutin };
+    return { say, show, menu, hideMsg, fade, hud, hideHud, status, hideStatus, title, portraits, cutin, bigArt };
 }
 
 function paintUnit(id, unit) {

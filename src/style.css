@@ -138,6 +138,20 @@ canvas {
     image-rendering: pixelated;
 }
 #cutin[hidden] { display: none; }
+/* 本音が 届いた ユメクイの 大きい 絵 (まん中に 出て、ゆっくり 消える) */
+#bigart {
+    position: absolute;
+    left: 50%;
+    top: 46%;
+    max-width: 72%;
+    max-height: 72%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    image-rendering: pixelated;
+    background: rgba(6, 7, 26, 0.7);
+    box-shadow: 0 0 0 100vmax rgba(6, 7, 26, 0.7);   /* 後ろの 戦闘を 暗く して、絵だけを 見せる */
+}
+#bigart[hidden] { display: none; }
 /* ユメクイ (バクなど) は 横長。メッセージ枠の 上に 乗せる */
 .portrait[data-kind="yumekui"] { height: auto; width: 34%; bottom: 30%; }
 #portrait-left[data-kind="yumekui"] { left: 2%; }

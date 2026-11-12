@@ -2,6 +2,7 @@ import { expToNext, levelOf, statCost, ypLeft, ypMoves, buyMove, buyStat, spentO
 import { LEVEL_MOVES, YP_STATS } from '../data/growth.js';
 import { emotionsOf, rebornOf } from '../core/emotion.js';
 import { sprite } from './sprites.js';
+import { hdPath } from './art.js';
 
 // 育成画面「そだてる」(デザイン「ユメクイ 育成画面」① ②)。
 //   ◀▶ 仲間を きりかえ、▲▼ えらぶ、A のばす／おぼえる (canSpend のときだけ)、B もどる
@@ -68,11 +69,20 @@ function header(units, tab, head) {
 // 左の 列: 絵・名前・属性・レベルと 経験値
 function profile(unit, state) {
     const card = el('div', 'g-card g-profile');
-    const pic = document.createElement('canvas');
-    const art = sprite(unit.sprite);
-    pic.width = art.width;
-    pic.height = art.height;
-    pic.getContext('2d').drawImage(art, 0, 0);
+    // 大きい 絵が ある ユメクイ (バクなど) は それを、ほかは ドット絵を 出す (引き継ぎ書 4-3 の 案)
+    const hd = hdPath(unit.sprite);
+    let pic;
+    if (hd) {
+        pic = document.createElement('img');
+        pic.src = hd;
+        pic.alt = '';
+    } else {
+        pic = document.createElement('canvas');
+        const art = sprite(unit.sprite);
+        pic.width = art.width;
+        pic.height = art.height;
+        pic.getContext('2d').drawImage(art, 0, 0);
+    }
     pic.className = 'g-pic';
     const name = el('div', 'g-name');
     name.append(el('b', '', unit.name), el('span', `g-attr a-${unit.attr}`, unit.attr));

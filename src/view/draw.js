@@ -3,6 +3,7 @@ import { MAPS } from '../data/maps.js';
 import { FOES } from '../data/units.js';
 import { objectsOf } from '../core/field.js';
 import { sprite } from './sprites.js';
+import { HD_ART } from './art.js';
 
 export const TILE = 16;
 const W = 320;
@@ -288,11 +289,7 @@ export function drawBattle(ctx, view, time) {
     }
 }
 
-// 描いた 大きい 絵 (public/img)。読み込めるまでは ドット絵で 描く。faces = 絵の 向き
-const HD_ART = {
-    bak: { src: 'img/yumekui/bak.png', faces: 'left' },
-    gakufume: { src: 'img/yumekui/gakufume.png', faces: 'front' }
-};
+// 描いた 大きい 絵 (view/art.js)。読み込めるまでは ドット絵で 描く。faces = 絵の 向き
 const hdCache = new Map();
 function hdArt(name) {
     const art = HD_ART[name];
