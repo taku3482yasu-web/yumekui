@@ -113,6 +113,7 @@ export function createUi(input, sounds = {}) {
             const path = who ? pathOf(who.name, who.expression) : null;
             el.dataset.want = path ?? '';
             el.dataset.kind = portraitKind(path) ?? '';
+            el.dataset.profile = path?.includes('_profile') ? 'yes' : '';   // 横顔は 左向きに 描いてある
             if (!path || missing.has(path)) {
                 el.hidden = true;
                 continue;

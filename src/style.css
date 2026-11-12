@@ -127,6 +127,9 @@ canvas {
 .portrait[data-kind="yumekui"] { height: auto; width: 34%; bottom: 30%; }
 #portrait-left[data-kind="yumekui"] { transform: scaleX(-1); }   /* バクの 絵は 左向き。左に 立つときは 右 (相手) を 向く */
 #portrait-right[data-kind="yumekui"] { transform: none; }
+/* 横顔 (profile) は 左向きの 絵。左に 立つときは 反転、右に 立つときは そのままで、どちらも 相手の ほうを 向く */
+#portrait-left[data-profile="yes"] { transform: scaleX(-1); }
+#portrait-right[data-profile="yes"] { transform: none; }
 .portrait[data-kind="resident"] { height: 62%; bottom: 28%; }
 
 #speaker {
