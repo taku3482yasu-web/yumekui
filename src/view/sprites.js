@@ -4,7 +4,7 @@ const PALETTE = {
     b: '#7e6bd0', c: '#a795ec', y: '#ffe08a', p: '#f0b6c8', g: '#59509a',
     f: '#eef0ff', h: '#c6c9ea', o: '#6fd0d8', q: '#3f96ac', r: '#ff8f7a', l: '#ffd86b', u: '#6fb0ff', v: '#8fe0a0',
     m: '#fff4dc', a: '#8a6a4a', z: '#5c4630', j: '#c84a48', i: '#2a64a8',
-    x: '#8a2436', X: '#6a2238', A: '#a08a86'
+    x: '#8a2436', X: '#6a2238', A: '#a08a86', B: '#c08a3a', Z: '#3a2a3a'
 };
 
 const ART = {
@@ -348,24 +348,42 @@ const ART = {
         '................',
         '................'
     ],
-    // ヒマワリオン (たてがみが ひまわりの ライオン) と ナイトメア (大鎌の 影。顔に 女の子の 形の 穴)
+    // ヒマワリオン。ひまわりのたてがみは 半分が 茶色く しおれている。ひびの入った 作り笑いの 仮面と、涙を こらえる 目
     himawarion: [
-        '....l..ll..l....',
-        '..l.lllllll.l...',
-        '..llrrrrrrrll...',
-        '.llraaaaaaarll..',
-        '.lraakaaakaarl..',
-        'llraaaaaaaaarll.',
-        '.lraaazzzaaarl..',
-        '.llraaaaaaarll..',
-        '..llrrrrrrrll...',
-        '...laaaaaaal....',
-        '...aaaaaaaaa....',
-        '..aaaaaaaaaaa...',
-        '..aa.aa.aa.aa...',
-        '..aa.aa.aa.aa...',
-        '..zz.zz.zz.zz...',
-        '................'
+        '..................................',
+        '............kkkBkk................',
+        '..........kklllBllkzkk............',
+        '.........klBBllllllazBkkk.........',
+        '........kllllllllllaazaaa.........',
+        '.......kBBllllllBBzazazak.........',
+        '.......kllllaaBBBBzZkazzakk.......',
+        '......kmkllazkmmmmmmkzzzaak.......',
+        '......kllllakmmmmkmmmkazaak.......',
+        '......kBlllBkmZZmmZZmkzaaakk......',
+        '......kBlllBkmkwmmwkmkzzaazk......',
+        '......kllllBkmmmzzmmmkzzaaak......',
+        '......kllllBkmkkkkkkmkzzaaazk.....',
+        '......kBBlllkmkmkkmkmkzaaaak......',
+        '......kBllllkmkkzzkkmkzzaak.......',
+        '......kllllBkmmkkkkmmkzzazk.......',
+        '.......kBBBllkmmmmmmkaaaaak.......',
+        '.......kBBllllkkkkkkzkaaak........',
+        '........kzlllllBBBBzaaaaaak.......',
+        '........klllBllklllzaazzazk.......',
+        '........kzzBBllBlllzaazzzk........',
+        '........kazzzlBBlllazazzzak.......',
+        '........kaazZzzBzlzakzzzaak.......',
+        '.......kaaazzkzzzzzzzzzzaaak......',
+        '.......kaaaazkkkzZZzkkzaaaak......',
+        '.......kaaazkkkkkkkkkkkaaaak..kk..',
+        '......kaaaak.kkk...kkk.kaaaakkk...',
+        '......kaaaak..kk...kk..kaaak......',
+        '......kaaaak.kkk...kkkkzaaaak.....',
+        '..kkkkaaaaakkkkk...kkk.kaaaak.....',
+        '..k.kaaaaazkkkk.kkkkkkkzaaaaakkkk.',
+        '.kkkkaaaaakkkk......kkkkaaaaaak.k.',
+        '....kkzkkkkkk...........kkkkkk....',
+        '...kkkk.....kkk............kkk....'
     ],
     nightmare: [
         '..........hhhh..',
