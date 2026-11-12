@@ -18,6 +18,7 @@ import { DREAM_LAYERS, MAPS } from './data/maps.js';
 import { ALLIES, FOES } from './data/units.js';
 import { LINES } from './scenes/story.js';
 import { createInput } from './view/input.js';
+import { createKeyQueue, pushKey, takeKey } from './core/keyqueue.js';
 import { createUi } from './view/ui.js';
 import { drawBattle, drawField, drawMorning, drawShadow, drawSky } from './view/draw.js';
 import { hdPath } from './view/art.js';
@@ -463,25 +464,15 @@ async function enter(exit) {
     }
 }
 
-// 歩いている とちゅうに ちょんと 押した キーは、1 マス 着いてから 順に 使う。
-//   (着く 直前に 向きを かえたり 調べたり しても、むしされて 止まったように ならないように)
-const QUEUE_MS = 300;   // これより 前に 押した キーは 古いので 捨てる
-const queued = [];
-
-function takeQueued() {
-    while (queued.length) {
-        const { key, at } = queued.shift();
-        if (performance.now() - at <= QUEUE_MS) return key;
-    }
-    return null;
-}
+// 歩いている とちゅうに 押した キーは、1 マス 着いてから 順に 使う (core/keyqueue.js)
+const queued = createKeyQueue();
 
 function updateField(delta) {
     if (walk.left > 0) {
         walk.left = Math.max(0, walk.left - delta / WALK_MS);
         return;
     }
-    const late = takeQueued();
+    const late = takeKey(queued, performance.now());
     if (late === 'a' || late === 'b') {
         fieldPress(late);
         return;
@@ -510,7 +501,7 @@ function updateField(delta) {
 input.onPress((key) => {
     if (mode !== 'field') return;
     if (walk.left > 0) {
-        if (queued.length < 3) queued.push({ key, at: performance.now() });
+        pushKey(queued, key, performance.now());
         return;
     }
     fieldPress(key);
