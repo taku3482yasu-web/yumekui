@@ -118,6 +118,7 @@ export const FOES = {
     // ノーマル: ナイトメア戦 (キズナ攻撃は 使えず、倒すしかない)。倒すと 救えなかった人の ユメクイを 吸って 第 2 形態に なる
     nightmareFinal: {
         id: 'nightmareFinal', name: 'ナイトメア', attr: '哀', sprite: 'nightmare',
+        revealSprite: 'nightmare-reveal', revealRate: 0.3, revealText: 'ナイトメアの 顔の 渦が しずまっていく……。穴の 奥に、女の子の 横顔が 見えた。',
         hp: 200, maxHp: 200, atk: 13, def: 8, spd: 14, exp: 0,
         pattern: ['tackle', 'tackle', 'charge', 'swirl'], chargeText: 'ナイトメアが 大鎌を ふりかぶった……！', bigMove: '大鎌',
         runText: '足が 動かない……！'

@@ -576,9 +576,21 @@ async function play(battle, events) {
             battleView.down[event.index] = true;
             if (!battle.over) await ui.say('', `${event.name}に 本音が とどいた！`, { wait: NOTE_MS * 2 });
         }
+        await reveal(battle);
         ui.status(battle);
     }
     ui.hideMsg();
+}
+
+// 弱った ナイトメアは 顔の 渦が しずまり、女の子の 横顔が 見える (revealSprite / revealRate)
+async function reveal(battle) {
+    for (const [i, foe] of battle.foes.entries()) {
+        if (!foe.revealSprite || foe.revealed || foe.hp <= 0 || foe.hp > foe.maxHp * foe.revealRate) continue;
+        foe.revealed = true;
+        battleView.foes[i] = foe.revealSprite;
+        battleView.foeHit[i] = performance.now() + 600;
+        if (foe.revealText) await ui.say('', foe.revealText, { wait: NOTE_MS * 2 });
+    }
 }
 
 // バトルの 出来事に 合わせた 効果音 (サウンドリスト「バトル」)
@@ -1637,7 +1649,7 @@ function frame(now) {
         ctx.textAlign = 'center';
         ctx.fillText(LINES.scareText, 160 + (Math.random() - 0.5) * 6, 126 + (Math.random() - 0.5) * 6);
         ctx.textAlign = 'left';
-    } else drawField(ctx, state, walk, now, state.chaser ? [{ ...state.chaser, who: 'nightmare' }] : actors, followerView());
+    } else drawField(ctx, state, walk, now, state.chaser ? [{ ...state.chaser, who: 'nightmare-mini' }] : actors, followerView());
     updateMusic();
     requestAnimationFrame(frame);
 }
