@@ -59,6 +59,15 @@ const shot = async (name) => {
 };
 const state = () => read('JSON.stringify({m:yumekui.mode,s:yumekui.state,msg:!document.getElementById("msg").hidden,menu:!document.getElementById("menu").hidden,title:!document.getElementById("title").hidden})').then(JSON.parse);
 
+// 止まったら そのときの 画面と 状態を 残してから 投げる (どこで 止まったか 分かるように)
+async function stuck(message) {
+    try {
+        console.log('状態', JSON.stringify(await read('({m:yumekui.mode,map:yumekui.state.map,x:yumekui.state.x,y:yumekui.state.y,dir:yumekui.state.dir,msg:!document.getElementById("msg").hidden,text:document.getElementById("text").textContent,menu:[...document.querySelectorAll("#menu button")].map(b=>b.textContent)})')));
+        await shot('99-stuck');
+    } catch { /* 画面が 取れなくても 投げる */ }
+    return new Error(message);
+}
+
 // 会話を 終わるまで送る
 async function skip(limit = 80) {
     for (let i = 0; i < limit; i++) {
@@ -68,7 +77,7 @@ async function skip(limit = 80) {
         if (now.msg) await key('j');
         else await sleep(60);
     }
-    throw new Error('会話が終わらない');
+    throw await stuck('会話が終わらない');
 }
 
 // 地図が変わる (出口を くぐる) か、着くか、会話・メニューが 始まったら 止まる
@@ -164,7 +173,12 @@ await send('Page.enable');
 await send('Runtime.enable');
 await send('Log.enable');
 await send('Page.navigate', { url });
-await sleep(1500);
+// タイトルの メニューが 出るまで 待つ (重いとき 最初の キーが 空振りして ずれないように)
+for (let i = 0; i < 100; i++) {
+    if (await read('typeof yumekui !== "undefined" && !document.getElementById("menu").hidden && document.querySelectorAll("#menu button").length > 0').catch(() => false)) break;
+    await sleep(100);
+}
+await sleep(300);
 await shot('01-title');
 await key('ArrowDown');
 await key('j');
@@ -234,6 +248,7 @@ await pick('眠る');
 await skip();
 await sleep(200);
 await shot('02-field');
+if (process.env.PROLOGUE_ONLY) { console.log('プロローグ 通過'); chrome.kill(); process.exit(0); }
 
 await walkTo(9, 5);
 await key('ArrowUp', 40);
@@ -310,7 +325,7 @@ async function pick(text) {
         if (now.msg) await key('j');
         else await sleep(80);
     }
-    throw new Error('メニューが出ない ' + text + ' エラー: ' + JSON.stringify(errors));
+    throw await stuck('メニューが出ない ' + text + ' エラー: ' + JSON.stringify(errors));
 }
 // 夜の キャンバスに 描く 画面: 少し 線を 引いて A で 描き終える
 async function paintNight(name) {
