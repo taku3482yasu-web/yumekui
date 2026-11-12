@@ -5,7 +5,7 @@ import { createKeep } from '../src/core/calendar.js';
 import { createState, isBlocked, objectsOf, pickWord } from '../src/core/field.js';
 import { paint } from '../src/core/brush.js';
 import { canWork, shopHint, useSnack, work, JOBS } from '../src/core/job.js';
-import { isHeroSide, nextStage, portraitPath, startStage } from '../src/core/portraits.js';
+import { flipFor, nextStage, portraitPath, scenePlan, startStage } from '../src/core/portraits.js';
 import { MAPS } from '../src/data/maps.js';
 import { ALLIES, FOES } from '../src/data/units.js';
 import { WORDS } from '../src/data/words.js';
@@ -13,26 +13,42 @@ import { LINES } from '../src/scenes/story.js';
 
 // ---- 会話の 立ち絵 ----------------------------------------------------------
 
-test('立ち絵: 左は 主人公の側 (ハル・バク・仲間)、右は 話している 相手', () => {
+test('立ち絵: 立ち位置は 場面の 最初に 決める (ハルは 左、1 人なら まん中)', () => {
+    const lines = [['', '地の文'], ['リク', 'よっ', 'smile'], ['ハル', '……'], ['バク', 'おい'], ['生徒', 'ねえ']];
+    const plan = scenePlan(lines);
+    assert.equal(plan.left, 'ハル', 'リクが 先に 話しても ハルは 左');
     let stage = startStage();
-    stage = nextStage(stage, '', 'neutral');
-    assert.deepEqual(stage, { left: null, right: null }, '地の文だけなら だれも 出ない');
-    stage = nextStage(stage, 'リク', 'smile');
-    assert.equal(stage.left.name, 'ハル', '相手が 話すと 左に ハルが 立つ');
+    stage = nextStage(stage, '', 'neutral', plan);
+    assert.deepEqual(stage, { left: null, right: null, center: null, speaking: null }, '地の文だけなら だれも 出ない');
+    stage = nextStage(stage, 'リク', 'smile', plan);
     assert.deepEqual(stage.right, { name: 'リク', expression: 'smile' });
-    stage = nextStage(stage, 'バク');
-    assert.equal(stage.left.name, 'バク', 'バクは 主人公の側 (左)');
-    assert.equal(stage.right.name, 'リク', '相手は そのまま');
-    stage = nextStage(stage, '');
-    assert.equal(stage.right.name, 'リク', '地の文では 変わらない');
-    stage = nextStage(stage, '？？？');
-    assert.equal(stage.right, null, '絵の 無い 人が 話すと 右は 空く');
+    assert.equal(stage.left, null, 'ハルは 話すまで 出ない');
+    assert.equal(stage.speaking, 'right');
+    stage = nextStage(stage, 'ハル', undefined, plan);
+    assert.equal(stage.left.name, 'ハル');
+    assert.equal(stage.speaking, 'left', '話している ハルが 明るく、リクは 暗く なる');
+    stage = nextStage(stage, 'バク', undefined, plan);
+    assert.equal(stage.right.name, 'バク', '3 人目は 右を 入れかえる');
+    assert.equal(stage.left.name, 'ハル', '左は 動かさない');
+    stage = nextStage(stage, '生徒', undefined, plan);
+    assert.equal(stage.speaking, 'none', '絵の 無い 人が 話すと みんな 暗く なる');
+    stage = nextStage(stage, '', undefined, plan);
+    assert.equal(stage.speaking, null, '地の文では みんな 明るい');
+
+    const solo = scenePlan([['', '……'], ['アキ先生', 'おはよう！', 'smile'], ['生徒', 'はーい']]);
+    assert.equal(solo.center, 'アキ先生', '話す人が 1 人なら まん中');
+    assert.equal(nextStage(startStage(), 'アキ先生', 'smile', solo).center.name, 'アキ先生');
+    assert.equal(scenePlan([['ミオ', 'カナ……'], ['カナ', '……ミオ']]).left, 'ミオ', 'ハルが いなければ 最初の人が 左');
 });
 
-test('立ち絵: 救った 仲間は 左、まだ 仲間で ない ユメクイは 右', () => {
-    assert.ok(isHeroSide('ガクフメ', ['bak', 'gakufume']));
-    assert.ok(!isHeroSide('ガクフメ', ['bak']));
-    assert.equal(nextStage(startStage(), 'ガクフメ', 'neutral', ['bak']).right.name, 'ガクフメ');
+test('立ち絵の 向き: 左の 人は 右を、右の 人は 左を 向く', () => {
+    assert.ok(!flipFor('left', 'img/chara/haru_neutral.png'), 'ふつうの 立ち絵は 右向き');
+    assert.ok(flipFor('right', 'img/chara/riku_smile.png'));
+    assert.ok(flipFor('left', 'img/chara/haru_profile.png'), '横顔は 左向き');
+    assert.ok(!flipFor('left', 'img/chara/kana_profile.png'), 'カナの 横顔だけ 右向き');
+    assert.ok(flipFor('left', 'img/yumekui/bak.png'), 'バクは 左向き');
+    assert.ok(!flipFor('right', 'img/enemy/queen_mio.png'), '夢の 住人は 正面');
+    assert.ok(!flipFor('center', 'img/chara/aki_smile.png'), 'まん中は そのまま');
 });
 
 test('立ち絵の ファイル名は 素材制作仕様書のとおり', () => {

@@ -1,4 +1,4 @@
-import { portraitKind } from '../core/portraits.js';
+import { flipFor, portraitKind } from '../core/portraits.js';
 
 const $ = (id) => document.getElementById(id);
 const TYPE_MS = 28;
@@ -99,10 +99,10 @@ export function createUi(input, sounds = {}) {
 
     const hideMsg = () => { msg.hidden = true; };
 
-    // 会話の 立ち絵。stage = { left, right } (core/portraits.js)、null で 両方 消す。
-    //   読み込めない 絵 (まだ 無い 人) は 覚えておいて 出さない
+    // 会話の 立ち絵。stage = { left, right, center, speaking } (core/portraits.js)、null で みんな 消す。
+    //   話している人は 明るく、聞いている人は 暗く。読み込めない 絵 (まだ 無い 人) は 覚えておいて 出さない
     const missing = new Set();
-    const sides = { left: $('portrait-left'), right: $('portrait-right') };
+    const sides = { left: $('portrait-left'), right: $('portrait-right'), center: $('portrait-center') };
     for (const el of Object.values(sides)) {
         el.addEventListener('load', () => { if (el.dataset.want === el.getAttribute('src')) el.hidden = false; });
         el.addEventListener('error', () => { missing.add(el.getAttribute('src')); el.hidden = true; });
@@ -113,7 +113,8 @@ export function createUi(input, sounds = {}) {
             const path = who ? pathOf(who.name, who.expression) : null;
             el.dataset.want = path ?? '';
             el.dataset.kind = portraitKind(path) ?? '';
-            el.dataset.profile = path?.includes('_profile') ? 'yes' : '';   // 横顔は 左向きに 描いてある
+            el.classList.toggle('flip', flipFor(side, path));
+            el.classList.toggle('listen', Boolean(stage?.speaking) && stage.speaking !== side);
             if (!path || missing.has(path)) {
                 el.hidden = true;
                 continue;

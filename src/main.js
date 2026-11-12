@@ -32,7 +32,7 @@ import { battleJingle, bgmFor, loopSong, BAK_BGM, FINAL_NIGHT_BGM, layersFor, st
 import { stepsOf } from './core/movie.js';
 import { createMoviePlayer, createStage, drawFilm, playFilm } from './view/movie.js';
 import { MOVIES } from './scenes/movies.js';
-import { nextStage, portraitPath, startStage } from './core/portraits.js';
+import { nextStage, portraitPath, scenePlan, startStage } from './core/portraits.js';
 import { canWork, shopHint, useSnack, work, JOBS } from './core/job.js';
 
 const WALK_MS = 150;
@@ -93,11 +93,12 @@ function followerView() {
 }
 const walk = { dx: 0, dy: 0, left: 0 };
 
-// 会話: 立ち絵を 左 (主人公の側) と 右 (相手) に 出す。セリフの 3 つ目は 表情 (smile など、なければ neutral)
+// 会話: 立ち位置は 場面の 最初に 決める (core/portraits.js)。セリフの 3 つ目は 表情 (smile など、なければ neutral)
 async function talk(lines) {
+    const plan = scenePlan(lines);
     let stage = startStage();
     for (const [name, line, expression] of lines) {
-        stage = nextStage(stage, name, expression, keep.allies);
+        stage = nextStage(stage, name, expression, plan);
         ui.portraits(stage, portraitPath);
         await ui.say(name, line);
     }

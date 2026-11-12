@@ -106,31 +106,33 @@ canvas {
     line-height: 1.55;
 }
 
-/* 会話の 立ち絵: 左が 主人公の側、右が 相手 (左右反転して 左向き)。メッセージ枠の 後ろに 立つ */
+/* 会話の 立ち絵 (引き継ぎ書 5-1): 高さは 画面の 100%、下を そろえる。1 人なら まん中、2 人なら 左右。
+   メッセージ枠の 後ろに 立つ (下半身に かぶる)。聞いている 人は 暗く、向きは JS (.flip) で 決める */
 .portrait {
     position: absolute;
     bottom: 0;
-    height: 82%;
+    height: 100%;
     width: auto;
+    max-width: 55%;
+    object-fit: contain;
+    object-position: bottom;
     pointer-events: none;
     image-rendering: pixelated;
+    transition: filter 0.15s;
 }
 .portrait[hidden] { display: none; }
-#portrait-left { left: 1%; }
-#portrait-right { right: 1%; transform: scaleX(-1); }
-/* 11/12 の 立ち絵 (1024×1536) は 上の 3 割ほどが 空いているので、大きめに 出して 頭の 高さを そろえる。
-   体の 下の ほうは メッセージ枠の 後ろに 隠れる */
-.portrait[data-kind="chara"] { height: 112%; bottom: -8%; }
-#portrait-left[data-kind="chara"] { left: -6%; }
-#portrait-right[data-kind="chara"] { right: -6%; }
-/* ユメクイと 夢の住人は 横長。メッセージ枠の 上に 乗せる */
+#portrait-left { left: -4%; }
+#portrait-right { right: -4%; }
+#portrait-center { left: 50%; transform: translateX(-50%); }
+.portrait.flip { transform: scaleX(-1); }
+#portrait-center.flip { transform: translateX(-50%) scaleX(-1); }
+.portrait.listen { filter: brightness(0.55); }
+/* ユメクイ (バクなど) は 横長。メッセージ枠の 上に 乗せる */
 .portrait[data-kind="yumekui"] { height: auto; width: 34%; bottom: 30%; }
-#portrait-left[data-kind="yumekui"] { transform: scaleX(-1); }   /* バクの 絵は 左向き。左に 立つときは 右 (相手) を 向く */
-#portrait-right[data-kind="yumekui"] { transform: none; }
-/* 横顔 (profile) は 左向きの 絵。左に 立つときは 反転、右に 立つときは そのままで、どちらも 相手の ほうを 向く */
-#portrait-left[data-profile="yes"] { transform: scaleX(-1); }
-#portrait-right[data-profile="yes"] { transform: none; }
-.portrait[data-kind="resident"] { height: 62%; bottom: 28%; }
+#portrait-left[data-kind="yumekui"] { left: 2%; }
+#portrait-right[data-kind="yumekui"] { right: 2%; }
+/* 夢の 住人: 表情なしの 1 枚。横幅は 画面の 70% まで */
+.portrait[data-kind="resident"] { height: 72%; max-width: 70%; bottom: 26%; }
 
 #speaker {
     color: var(--kokoro);
