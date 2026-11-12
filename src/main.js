@@ -463,12 +463,30 @@ async function enter(exit) {
     }
 }
 
+// 歩いている とちゅうに ちょんと 押した キーは、1 マス 着いてから 順に 使う。
+//   (着く 直前に 向きを かえたり 調べたり しても、むしされて 止まったように ならないように)
+const QUEUE_MS = 300;   // これより 前に 押した キーは 古いので 捨てる
+const queued = [];
+
+function takeQueued() {
+    while (queued.length) {
+        const { key, at } = queued.shift();
+        if (performance.now() - at <= QUEUE_MS) return key;
+    }
+    return null;
+}
+
 function updateField(delta) {
     if (walk.left > 0) {
         walk.left = Math.max(0, walk.left - delta / WALK_MS);
         return;
     }
-    const dir = input.direction();
+    const late = takeQueued();
+    if (late === 'a' || late === 'b') {
+        fieldPress(late);
+        return;
+    }
+    const dir = input.direction() ?? late;
     if (!dir) return;
     const from = { x: state.x, y: state.y };
     const result = step(state, dir);
@@ -490,14 +508,22 @@ function updateField(delta) {
 }
 
 input.onPress((key) => {
-    if (mode !== 'field' || walk.left > 0) return;
+    if (mode !== 'field') return;
+    if (walk.left > 0) {
+        if (queued.length < 3) queued.push({ key, at: performance.now() });
+        return;
+    }
+    fieldPress(key);
+});
+
+function fieldPress(key) {
     if (key === 'b') scene(fieldMenu);
     if (key !== 'a') return;
     const object = facing(state);
     if (object && object.kind !== 'exit') scene(() => touch(object));
     else if (state.map === 'home' && facingTile() === 'd') scene(lookDesk);
     else if (MAPS[state.map].real && tileImage()) scene(() => lookAt(tileImage()));
-});
+}
 
 // ---- バトル ------------------------------------------------------------
 
