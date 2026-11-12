@@ -260,7 +260,8 @@ export function drawBattle(ctx, view, time) {
         if (view.down[i]) return;
         const foe = sprite(name);
         const many = view.foes.length > 1;
-        const scale = foe.width >= 64 ? (many ? 1.1 : 1.5) : many ? 3 : 4;
+        const tall = foe.height > 26;   // 背の高い ボス (トゲメトロなど) は 1 段 小さく 描いて 画面に 収める
+        const scale = foe.width >= 64 ? (many ? 1.1 : 1.5) : many ? (tall ? 2 : 3) : tall ? 3 : 4;
         const shake = view.foeHit[i] > time ? Math.sin(time / 20) * 4 : 0;
         const y = 130 - foe.height * scale + Math.sin(time / 500 + i) * 2;
         ctx.drawImage(foe, Math.round(foeX(view, i) - (foe.width * scale) / 2 + shake), Math.round(y), foe.width * scale, foe.height * scale);

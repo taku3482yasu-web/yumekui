@@ -3,7 +3,8 @@ const PALETTE = {
     k: '#20203a', s: '#f2c9a0', e: '#20203a', n: '#2f4a7d', d: '#22365e', w: '#e8ecf5', t: '#141428',
     b: '#7e6bd0', c: '#a795ec', y: '#ffe08a', p: '#f0b6c8', g: '#59509a',
     f: '#eef0ff', h: '#c6c9ea', o: '#6fd0d8', q: '#3f96ac', r: '#ff8f7a', l: '#ffd86b', u: '#6fb0ff', v: '#8fe0a0',
-    m: '#fff4dc', a: '#8a6a4a', z: '#5c4630', j: '#c84a48', i: '#2a64a8'
+    m: '#fff4dc', a: '#8a6a4a', z: '#5c4630', j: '#c84a48', i: '#2a64a8',
+    x: '#8a2436', X: '#6a2238', A: '#a08a86'
 };
 
 const ART = {
@@ -109,20 +110,41 @@ const ART = {
         '.........kkkktkkttkcknkkk..............',
         '.........kkkkkkkkkkkkkkkkk.............'
     ],
+    // トゲメトロ。背中に山のような三角のメトロノーム。体中のトゲは メトロノームの針。仮面の目は つり上がっている
     togemetoro: [
-        '.......aa.......',
-        '.......aa.......',
-        '......azza......',
-        '......azza......',
-        '.....azzzza.....',
-        '..r.razzzzar.r..',
-        '.rrrrrrrrrrrrrr.',
-        'rrrrrrrrrrrmmmm.',
-        'rrrrrrrrrrmmkmm.',
-        'rrrrrrrrrrmmmmkk',
-        'rrrrrrrrrrrmmmk.',
-        '.rrrrrrrrrrrrr..',
-        '..mm.....mm.....'
+        '...................kk...............',
+        '..................kkak..............',
+        '.................kkkazk.............',
+        '.................kzkzzk.............',
+        '.............AA..kzzzzzk............',
+        '.............AA.kzzzzazk..AA........',
+        '...............Akzzzzazzk.AA........',
+        '...............kAzzzzazzkA..........',
+        '...............kAzzzzzzzA...........',
+        '...............kzAzzzzzzAk..........',
+        '..............kzzzAkzzaAzk..........',
+        '..............kaaaaAaaAzzkk.........',
+        '.........A...kaaaaaaAAzzzAk...A.....',
+        '..........A.kkaAaaaaaaazAkzk.A......',
+        '..........AkkaaAkkaaaaakAzzkkA......',
+        '......A....AkxxAxkxakXkkkkkkAk...A..',
+        '.......AA.kxxxxxxxxxxxkxkkkXkkkAA...',
+        '.........AkxxxxxxxxkxxxxkxkxkkAk....',
+        '........kkxxxxxxxxxxxxxxxxkxXXkk....',
+        '....AA..kxxxmmmmmxxxxxxxxxxxXkkk....',
+        '.....kAAxxXXmmmmmmxxXXxxxxxxxxkkkkAA',
+        '.....kxxxXXXkjmjkmxkXXXXXXxxxxxkAA..',
+        '.....kxxxXXkmmmmmmXXXXXXXXXxkxxkkk..',
+        '....kkxxxXkkmmmmmkkkkkkkkXXxxxxAXXk.',
+        '....kxxxxXk.kmmmmkkkkkkkkkXxkxxXkXXk',
+        '...kxxxxXXkkkmmmkkkkkkkkkkxxxxxXkXXk',
+        '..kxxxxxxk.kkkkkkkkkkkkkkxxxxxxXkXXk',
+        '.kxxxxxxxk.kkkkkkk.kkkkkkxxxxxxkkkkk',
+        'kxxXxkkkXk..kkkkkk....kxxxXXxxxkkkkk',
+        'kXxkkkkkkxkkkkkkk....kxkxXkkXxxk.kkk',
+        'kkk..................kk.kkkkkxXk.kkk',
+        '............................kkk.....',
+        '....................................'
     ],
     onpu: [
         '.........uuuu...',
