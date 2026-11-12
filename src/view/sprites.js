@@ -4,7 +4,7 @@ const PALETTE = {
     b: '#7e6bd0', c: '#a795ec', y: '#ffe08a', p: '#f0b6c8', g: '#59509a',
     f: '#eef0ff', h: '#c6c9ea', o: '#6fd0d8', q: '#3f96ac', r: '#ff8f7a', l: '#ffd86b', u: '#6fb0ff', v: '#8fe0a0',
     m: '#fff4dc', a: '#8a6a4a', z: '#5c4630', j: '#c84a48', i: '#2a64a8',
-    x: '#8a2436', X: '#6a2238', A: '#a08a86', B: '#c08a3a', Z: '#3a2a3a'
+    x: '#8a2436', X: '#6a2238', A: '#a08a86', B: '#c08a3a', Z: '#3a2a3a', P: '#5a3a6a', Q: '#8a5a8a'
 };
 
 const ART = {
@@ -255,6 +255,42 @@ const ART = {
         '.kgkmmmmgkhmmk.',
         '..khhmmmmhkkk..',
         '...kkkkkkk.....'
+    ],
+    // 合体ボス「デュエット」(戦闘の 姿)。哀しみの鳥と 怒りの鳥が 溶け合った 1 体。
+    //   五線譜の翼、針のトゲ、メトロノームの 振り子の 尻尾。胸に 金色の 二重奏の 楽譜 (2 人に 共通する 夢)
+    'duet-boss': [
+        '.............kk............................',
+        '...........kkhk............................',
+        '..........khhhk............................',
+        '.........khhmXk.....kkkk............AAk....',
+        '.......kkPhPmXk.....khhhk............A.....',
+        '.......kPmPhPXk....khkhkk.........A........',
+        '......khPhhhPQk....kkkhxk.........A........',
+        '......kPmhhhAPPk...khkhhk....k....A........',
+        '.....khhAhhhQhhk...khhhkXk..kk....kk....kk.',
+        '....kAhhhhhhPhhPkkkPXhhhPPkkggk....kk...kk.',
+        '...kPAhhhhhPhhhhPPPPXXXXXXXXXgk.....kk..kk.',
+        '...PPPhhhhhQhhPhhhPPPPPXXPPXXXk......kkk...',
+        '...kAPhhhhhQhPhhhmQAQQPPPQPAPXXkkkkk...kk..',
+        '...kPhAhhhPQPPhhmyyymAAAAyyyAPPPPXXXk...kk.',
+        '..kPPhPXhhPXPhhhmyymmyyymmyyAPPPPPXXk...kk.',
+        '..kPQAXXAhPXQhhhyymmmmymmmyyAPPPPXPXXkk..kk',
+        '..kQPQXXhhPXPPPPQymmmmymmmmyPXPPPPXXXXk..kk',
+        '..QPQQXPPhPXPPPkkyAmmmymmmyAXXXXXXXXXXk..kk',
+        '..kQPPPPXhXXPPk..kyyyyyyyyyAXXXXPPXXXk..kXk',
+        '..kkPXPPPXPkkkk.khhAAAyyyyyQXXXXPPPPXXkkXk.',
+        '....kXXPPPk.....khPxxxQXXXXXXXXXXXXPPXXXXk.',
+        '....kkPPPPPk...kPPxXXXXXXXXXXXXXXXPPPPXXk..',
+        '......kkPPPk...XPhXXXXXXXXXXXXXXXhXPXXXPk..',
+        '......k.kPk....khXXXXXXXXXXXXXXXXPPPXXXPk..',
+        '........kkk..kkXXXXXXXXXXXXXXXXXXPPPPXXPk..',
+        '..........k.kXXXXXXXXXXXXXXXXXXXPPPPXXXPk..',
+        '.......kk.kkXXXXXXXXXXXXXXXkkXXXPPPPXXXXXk.',
+        '......kXhkPhXXPXXXXXXXXXXXk..kXPXXPPPkkXXk.',
+        '.......kXXXXXXPXXXXXXXXXXXk.kPPPXXXPk..kXXk',
+        '.....kkXXXXXXXXXXXkkkkkkkk..kkXPkkXPP..kkkk',
+        '..kkkkkkkXXXXkkkkk............kk..kkk......',
+        '.........kkkk..............................'
     ],
     // デュエットの 鳥 (右向き)。哀しみの鳥は 青。怒りの鳥は 赤く 塗り替えて 左向きにする。足もとに 1 本の 楽譜
     'bird-ai': [

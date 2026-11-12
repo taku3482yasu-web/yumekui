@@ -80,22 +80,21 @@ export const FOES = {
         hp: 90, maxHp: 90, atk: 12, def: 5, spd: 8, drop: 1, exp: 80,
         pattern: ['tackle', 'tackle', 'charge', 'swirl'], chargeText: 'ムレスイマが、ふたつの音で うずを巻きはじめた……！'
     },
-    // 合体ボス「デュエット」: 1 本の楽譜の上で 背中合わせの 2 羽。片方が 倒れると もう片方が 怒る。
-    // 本音は カナ (怒りの鳥) → ミオ (哀しみの鳥) の 順に 言い当てる。救うと ガクフメと トゲメトロが 仲間になる
-    duetDo: {
-        id: 'duetDo', name: '怒りの鳥', attr: '怒', sprite: 'bird-do', partnerRage: true, solvedAs: 'togemetoro',
-        rageText: '怒りの鳥が、羽を逆立てた！', truthHead: 'カナの本音は？',
-        hp: 90, maxHp: 90, atk: 12, def: 6, spd: 10, exp: 125,
-        pattern: ['tackle', 'charge', 'swirl', 'tackle'], chargeText: '怒りの鳥の テンポが 速くなっていく……！', bigMove: 'せかすリズム',
-        truth: { ...TRUTH.kana }
-    },
-    duetAi: {
-        id: 'duetAi', name: '哀しみの鳥', attr: '哀', sprite: 'bird-ai', partnerRage: true, solvedAs: 'gakufume',
-        rageText: '哀しみの鳥が、高く鳴いた！', truthHead: 'ミオの本音は？', after: 'duetDo',
-        waitText: '哀しみの鳥は、背中を向けたままだ。……先に、トゲのほうだ。',
-        hp: 90, maxHp: 90, atk: 11, def: 6, spd: 9, exp: 125,
-        pattern: ['tackle', 'tackle', 'charge', 'swirl'], chargeText: '哀しみの鳥が 高い音を ためている……！', bigMove: '止まらないソロ',
-        truth: { ...TRUTH.mio }
+    // 合体ボス「デュエット」: 戦う前に 2 羽の 鳥が 溶け合って 1 体に なる (合体ユメクイは 2 体の 特徴を 持つ 新しい 1 体。
+    //   胸の 二重奏の 楽譜が 2 人に 共通する 夢)。本音は カナ → ミオの 順に 言い当てる。
+    //   カナの 本音が 届くと、怒の 姿から 哀の 姿に 変わって 立ち上がる (phases)。救うと ガクフメと トゲメトロが 仲間になる
+    duet: {
+        id: 'duet', name: 'デュエット', attr: '怒', sprite: 'duet-boss', solvedAs: 'togemetoro', pairAttrs: ['怒', '哀'],
+        truthHead: 'カナの本音は？',
+        hp: 150, maxHp: 150, atk: 13, def: 6, spd: 10, exp: 250,
+        pattern: ['tackle', 'charge', 'swirl', 'tackle'], chargeText: 'デュエットの テンポが 速くなっていく……！', bigMove: 'せかすリズム',
+        truth: { ...TRUTH.kana },
+        phases: [{
+            attr: '哀', solvedAs: 'gakufume', truthHead: 'ミオの本音は？', hpRate: 0.6,
+            text: 'トゲが 寝ていく。……けれど 楽譜の 片側が、まだ 泣いている。デュエットが 哀しみの 音で 立ち上がった！',
+            pattern: ['tackle', 'tackle', 'charge', 'swirl'], chargeText: 'デュエットが 高い音を ためている……！', bigMove: '止まらないソロ',
+            truth: { ...TRUTH.mio }
+        }]
     },
     // リクの夢の ボス (台本 4-3)。完全な 空元気で、体力が 減るほど 強くなる (desperate)
     himawarion: {

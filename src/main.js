@@ -462,7 +462,10 @@ async function fight(object) {
     if (object.script === 'boss') await talk(LINES.boss);
     if (object.script === 'pairBoss') await talk(LINES.pairBoss);
     if (object.script === 'duetMid') await talk(LINES.duetMid);
-    if (object.script === 'duetBoss') await talk(LINES.duetBoss);
+    if (object.script === 'duetBoss') {
+        await talk(LINES.duetBoss);
+        await film('DUET_FUSION');   // 2 羽の 鳥が 溶け合って、1 体の デュエットに なる
+    }
     if (object.script === 'rikuBoss') await talk(LINES.rikuBoss);
 
     // 敵は 1 体 (foe) か 複数 (foes)。本音を持つ 敵 (なければ 1 体目) が この戦いの 主

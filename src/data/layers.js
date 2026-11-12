@@ -397,8 +397,8 @@ export const LAYER_MAPS = {
         ],
         objects: [
             ...entrance('', [13, 7], [11, 7]),
-            // 舞台の デュエット (7 日から)
-            { id: 'duetBoss', kind: 'foe', x: 12, y: 2, foe: 'duetDo', foes: ['duetDo', 'duetAi'], sprite: 'duet', needs: 'active', script: 'duetBoss' }
+            // 舞台の 2 羽の 鳥。戦う前に 溶け合って デュエットに なる (7 日から)
+            { id: 'duetBoss', kind: 'foe', x: 12, y: 2, foe: 'duet', sprite: 'duet', needs: 'active', script: 'duetBoss' }
         ]
     }
 };

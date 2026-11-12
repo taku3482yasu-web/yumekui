@@ -15,5 +15,33 @@ export const MOVIES = {
             { text: LINES.scareText, color: '#e8203a', size: 22, jitter: 6, ms: 1600 },
             { text: null }
         ]
+    },
+    // デュエットの 合体: 背中合わせの 2 羽が 寄っていき、光の中で 1 体に 溶け合う。胸に 二重奏の 楽譜が 灯る
+    DUET_FUSION: {
+        steps: [
+            { bg: '#141428' },
+            { show: 'ai', sprite: 'bird-ai', x: 110, y: 120, scale: 4 },
+            { show: 'do', sprite: 'bird-do', x: 210, y: 120, scale: 4 },
+            { say: ['', LINES.duetFuseA], ms: 1400 },
+            { move: 'ai', to: [150, 120], ms: 900 },
+            { move: 'do', to: [170, 120], ms: 900 },
+            { shake: 700 },
+            { dark: 1, ms: 300 },
+            { hide: 'ai' },
+            { hide: 'do' },
+            { show: 'duet', sprite: 'duet-boss', x: 160, y: 120, scale: 1 },
+            { dark: 0, ms: 500 },
+            { zoom: 'duet', scale: 3, ms: 900 },
+            { shake: 500 },
+            { say: ['', LINES.duetFuseB], ms: 1600 },
+            { text: 'デュエット', color: '#e8d6ff', size: 20, ms: 1200 },
+            { text: null }
+        ],
+        short: [
+            { bg: '#141428' },
+            { show: 'duet', sprite: 'duet-boss', x: 160, y: 120, scale: 3 },
+            { shake: 400 },
+            { say: ['', LINES.duetFuseB], ms: 1200 }
+        ]
     }
 };

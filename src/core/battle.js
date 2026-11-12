@@ -6,7 +6,8 @@ import { TARGETED_GROWTH } from '../data/growth.js';
 //   b.chance / b.exhausted / b.step / b.foeSleep は、ねらっている 敵の 値 (1 体のときは 前と 同じ)
 // 敵の 番では、立っている 敵が 順に 1 回ずつ 行動する。全員 倒すと 勝ち
 // partnerRage: その敵の 相方が 倒れる (本音の敵は 体力が尽きる) と、残った敵の 攻撃が rage 倍 (デュエット)
-// after: その敵の 本音は、after の敵に 本音が 届いてから でないと 言い当てられない (デュエット: カナ → ミオの 順)
+// after: その敵の 本音は、after の敵に 本音が 届いてから でないと 言い当てられない
+// phases: 本音が 届くと 次の 姿に 変わって 立ち上がる (合体ボス デュエット: カナ → ミオの 順)。最後の 本音で 救える
 // attrCycle: 行動のたびに 属性が 入れ替わる (二重奏ホールの ムレスイマ: 哀 ↔ 怒)
 const SKILL_WAIT = 3;
 const SHAKE_HIT = 0.85;
@@ -203,6 +204,12 @@ export function answer(b, choice) {
     const foe = chanceFoe(b) ?? b.foe;
     b.foe = foe;
     if (choice === foe.truth.answer) {
+        const next = foe.phases?.[foe.phase ?? 0];
+        if (next) {
+            nextPhase(b, foe, next, events);
+            foesTurn(b, events);
+            return events;
+        }
         foe.chance = false;
         foe.solved = true;
         foe.down = true;
@@ -229,6 +236,16 @@ export function answer(b, choice) {
     }
     foesTurn(b, events);
     return events;
+}
+
+// 本音が 届いて 次の 姿へ (属性・本音・技が 変わり、体力が 少し 戻る)
+function nextPhase(b, foe, next, events) {
+    foe.phase = (foe.phase ?? 0) + 1;
+    const { text, hpRate, ...change } = next;
+    Object.assign(foe, change, { chance: false, exhausted: false, kokoro: 0, step: 0 });
+    foe.hp = Math.max(1, Math.round(foe.maxHp * (hpRate ?? 0.5)));
+    events.push({ t: 'phase', index: foe.index, name: foe.name, attr: foe.attr });
+    events.push({ t: 'say', text: text ?? `${foe.name}の 姿が 変わった！` });
 }
 
 function attack(b, events) {
