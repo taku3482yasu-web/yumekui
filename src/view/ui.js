@@ -115,6 +115,7 @@ export function createUi(input, sounds = {}) {
             el.dataset.kind = portraitKind(path) ?? '';
             el.classList.toggle('flip', flipFor(side, path));
             el.classList.toggle('listen', Boolean(stage?.speaking) && stage.speaking !== side);
+            el.classList.toggle('ghost', Boolean(stage?.ghost));   // 戦闘の 本音の 選択肢: 少し 透かす
             if (!path || missing.has(path)) {
                 el.hidden = true;
                 continue;

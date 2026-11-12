@@ -622,7 +622,13 @@ function chooseTruth(battle) {
     const help = here ? truthHelp(stageOf(keep, here.dream)) : {};   // キャンバスの 段階 4・5
     const choices = sentenceChoices(battle.foe.truth, state.sentences, { solvedBefore, ...help });
     const items = choices.map((line) => ({ id: line, label: line }));
-    return ui.menu(items, { head: battle.foe.truthHead ?? LINES.truthHead, wide: true }).then((line) => answer(battle, line));
+    // 選んでいる あいだ、夢主の 横顔を 左に 少し 透かして 出す (引き継ぎ書 5-2)
+    const owner = OWNER_NAMES[battle.foe.truth?.owner];
+    if (owner) ui.portraits({ left: { name: owner, expression: 'profile' }, speaking: null, ghost: true }, portraitPath);
+    return ui.menu(items, { head: battle.foe.truthHead ?? LINES.truthHead, wide: true }).then((line) => {
+        ui.portraits(null);
+        return answer(battle, line);
+    });
 }
 
 async function chooseSwap(battle) {
