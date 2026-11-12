@@ -65,6 +65,7 @@ export const FOES = {
         hp: 110, maxHp: 110, atk: 11, def: 6, spd: 9, exp: 120,
         pattern: ['tackle', 'tackle', 'charge', 'swirl'],
         chargeText: 'ガクフメが 高い音を ためている……！', bigMove: '止まらないソロ',
+        roarText: 'ガクフメが 破れた 楽譜の 翼を 広げ、高く 鳴いた！',
         truth: TRUTH.mio
     },
     togemetoro: {
@@ -72,6 +73,7 @@ export const FOES = {
         hp: 110, maxHp: 110, atk: 13, def: 6, spd: 10, exp: 120,
         pattern: ['tackle', 'tackle', 'charge', 'swirl'],
         chargeText: 'トゲメトロの テンポが 速くなっていく……！', bigMove: 'せかすリズム',
+        roarText: 'カチッ、カチッ、カチッ……！ トゲメトロの 針が 一斉に 逆立った！',
         truth: TRUTH.kana
     },
     // 二重奏ホール (ミオ×カナの 夢合体)。中ボスの ムレスイマは 行動のたびに 哀 ↔ 怒
@@ -85,7 +87,7 @@ export const FOES = {
     //   カナの 本音が 届くと、怒の 姿から 哀の 姿に 変わって 立ち上がる (phases)。救うと ガクフメと トゲメトロが 仲間になる
     duet: {
         id: 'duet', name: 'デュエット', attr: '怒', sprite: 'duet-boss', solvedAs: 'togemetoro', pairAttrs: ['怒', '哀'],
-        truthHead: 'カナの本音は？',
+        truthHead: 'カナの本音は？', roarText: 'デュエットが ふたつの声で 叫んだ！',
         hp: 150, maxHp: 150, atk: 13, def: 6, spd: 10, exp: 250,
         pattern: ['tackle', 'charge', 'swirl', 'tackle'], chargeText: 'デュエットの テンポが 速くなっていく……！', bigMove: 'せかすリズム',
         truth: { ...TRUTH.kana },
@@ -102,6 +104,7 @@ export const FOES = {
         hp: 120, maxHp: 120, atk: 12, def: 6, spd: 10, exp: 120,
         pattern: ['tackle', 'tackle', 'charge', 'swirl'],
         chargeText: 'ヒマワリオンが「だいじょうぶ！」と 叫びながら 力を ためている……！', bigMove: 'から元気',
+        roarText: 'ヒマワリオンが 胸を張って 吠えた！「だいじょうぶ！ だいじょうぶ！」',
         truth: TRUTH.riku
     },
     // ナイトメア (台本 2-5)。1 周目だけ。こちらの 攻撃は「1」しか 入らず (防御が とても 高い)、本音の 選択肢も 出ない。数ターンで 必ず 負ける

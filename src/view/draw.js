@@ -256,15 +256,19 @@ export function drawBattle(ctx, view, time) {
     ctx.fill();
 
     // 敵: 1 体なら まん中、複数なら 横に 並べる (倒れた 敵は 消える)
+    // ボスの 登場 (view.roar): 体を ふるわせながら ぐっと 迫ってきて、元に 戻る
+    const roar = view.roar && time < view.roar.until ? (time - view.roar.start) / (view.roar.until - view.roar.start) : null;
+    const lunge = roar === null ? 0 : Math.sin(Math.max(0, roar) * Math.PI);
     view.foes.forEach((name, i) => {
         if (view.down[i]) return;
         const foe = sprite(name);
         const many = view.foes.length > 1;
         const tall = foe.height > 26;   // 背の高い ボス (トゲメトロなど) は 1 段 小さく 描いて 画面に 収める
         const scale = foe.width >= 64 ? (many ? 1.1 : 1.5) : many ? (tall ? 2 : 3) : tall ? 3 : 4;
-        const shake = view.foeHit[i] > time ? Math.sin(time / 20) * 4 : 0;
-        const y = 130 - foe.height * scale + Math.sin(time / 500 + i) * 2;
-        ctx.drawImage(foe, Math.round(foeX(view, i) - (foe.width * scale) / 2 + shake), Math.round(y), foe.width * scale, foe.height * scale);
+        const big = scale * (1 + lunge * 0.18);
+        const shake = (view.foeHit[i] > time ? Math.sin(time / 20) * 4 : 0) + Math.sin(time / 15) * 5 * lunge;
+        const y = 130 - foe.height * big + Math.sin(time / 500 + i) * 2;
+        ctx.drawImage(foe, Math.round(foeX(view, i) - (foe.width * big) / 2 + shake), Math.round(y), foe.width * big, foe.height * big);
     });
 
     // 仲間: 大きい絵 (幅 24 ドットより 大きい) は 3 倍で、敵と 重ならないように する

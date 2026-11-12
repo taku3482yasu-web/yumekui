@@ -484,6 +484,7 @@ async function fight(object) {
     ui.hideHud();
     ui.status(battle);
     await ui.fade(false);
+    if (foe.truth) await roar(foe);
 
     while (!battle.over) {
         const names = aliveFoes(battle).map((f) => f.name).join('と');
@@ -519,6 +520,14 @@ async function chooseMove(battle) {
     if (id === 'swap') return chooseSwap(battle);
     if (TARGETED.includes(id) && needsTarget(battle) && !(await chooseTarget(battle))) return null;
     return act(battle, id);
+}
+
+// ボスの 登場: 体を ふるわせ、ぐっと 迫ってきて 叫ぶ。そこから 戦いが 始まる (叫び顔の 絵は 使わない)
+async function roar(foe) {
+    const now = performance.now();
+    battleView.roar = { start: now, until: now + 1100 };
+    sound.se('SE41');
+    await ui.say('', foe.roarText ?? `${foe.name}が 叫んだ！`, { wait: NOTE_MS });
 }
 
 // 敵が 複数のとき、ねらう 敵を 選ぶ (もどると 選び直し)
