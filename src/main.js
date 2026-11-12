@@ -19,7 +19,7 @@ import { ALLIES, FOES } from './data/units.js';
 import { LINES } from './scenes/story.js';
 import { createInput } from './view/input.js';
 import { createUi } from './view/ui.js';
-import { drawBattle, drawField, drawMorning, drawShadow, drawSky, foeX } from './view/draw.js';
+import { drawBattle, drawField, drawMorning, drawShadow, drawSky } from './view/draw.js';
 import { drawCalendar, drawLapse } from './view/time.js';
 import { drawEncounter, encounterTheme } from './view/encounter.js';
 import { createPainting, drawPainting, finishPainting, updatePainting } from './view/painting.js';
@@ -514,12 +514,15 @@ async function fight(object) {
     jinglePlaying = null;   // 前の 戦闘の 短い曲が 残っていたら 止めて、戦闘の 曲へ
     sound.stopJingles();
     mode = 'battle';
-    battleView = { foes: foeList.map((f) => f.sprite), foeIds: foeList.map((f) => f.id), down: [], ally: battle.ally.sprite, foeHit: [], allyHit: 0, pops: [] };
+    battleView = { foes: foeList.map((f) => f.sprite), foeIds: foeList.map((f) => f.id), down: [], ally: battle.ally.sprite, party: battle.party, focus: null, target: battle.foe?.index ?? 0, foeHit: [], allyHit: 0, pops: [] };
     ui.hideHud();
     ui.status(battle);
     await ui.fade(false);
 
     while (!battle.over) {
+        // コマンドを 選ぶ あいだは 全員を 見わたす 絵
+        battleView.focus = null;
+        battleView.target = battle.foe?.index ?? 0;
         const names = aliveFoes(battle).map((f) => f.name).join('と');
         await ui.say('', `${names}が 立ちはだかる。どうする？`, { wait: 0 });
         // たたかう / まもる / アイテム / にげる。技は「たたかう」の中から 選ぶ
@@ -530,7 +533,11 @@ async function fight(object) {
         if (top === 'guard') events = act(battle, 'guard');
         if (top === 'item') events = await chooseItem(battle);
         if (top === 'run') events = act(battle, 'run');
-        if (events) await play(battle, events);
+        if (events) {
+            // 技や 攻撃の あいだは 仲間 1 体と ねらった 敵 1 体に 寄る
+            battleView.focus = battle.foe?.index ?? 0;
+            await play(battle, events);
+        }
     }
 
     // 勝ち・負け: 戦闘が 終わった その場で 戦闘の 曲を 止めて 短い曲 (M25 / M26)。場面の 曲は 鳴り終わってから
@@ -609,10 +616,13 @@ async function play(battle, events) {
     for (const event of events) {
         battleSound(event);
         if (event.t === 'swap') battleView.ally = event.sprite;
+        // 寄った 絵で 映す 敵: 攻撃を 受けた 敵、または 攻撃してきた 敵
+        if (event.t === 'hit' && event.target === 'foe' && event.index != null) battleView.focus = event.index;
+        if (event.t === 'hit' && event.target === 'ally' && event.from != null) battleView.focus = event.from;
         if (event.t === 'say') await ui.say('', event.text, { wait: NOTE_MS });
         if (event.t === 'hit') showHit(event);
-        if (event.t === 'heal') pop(`+${event.amount}`, 70, 92, '#7fe0a8');
-        if (event.t === 'shake') pop(`ゆらぎ +${event.gain}`, foeX(battleView, event.index ?? 0), 40, '#ffc95e');
+        if (event.t === 'heal') pop(`+${event.amount}`, null, '#7fe0a8');
+        if (event.t === 'shake') pop(`ゆらぎ +${event.gain}`, event.index ?? 0, '#ffc95e', true);
         if (event.t === 'chance') await ui.say('', `${event.name}の気持ちが 大きく揺れている！ 本音を言い当てるチャンスだ！（「たたかう」から 選べる）`, { wait: NOTE_MS * 2 });
         if (event.t === 'down') {
             battleView.down[event.index] = true;
@@ -646,11 +656,12 @@ function showHit(event) {
     if (isFoe) battleView.foeHit[event.index ?? 0] = now + 300;
     else battleView.allyHit = now + 300;
     const color = event.aff > 1 ? '#ffc95e' : '#ffffff';
-    pop(String(event.amount), isFoe ? foeX(battleView, event.index ?? 0) : 70, isFoe ? 60 : 92, color);
+    pop(String(event.amount), isFoe ? event.index ?? 0 : null, color);
 }
 
-function pop(text, x, y, color) {
-    battleView.pops.push({ text, x, y, color, until: performance.now() + 700 });
+// 数字を 出す。foe = 敵の 番号 (仲間なら null)、high = 上の ほうに 出す。場所は 今の 絵で 決まる (view/draw.js)
+function pop(text, foe, color, high = false) {
+    battleView.pops.push({ text, foe, high, color, until: performance.now() + 700 });
 }
 
 async function finish(battle, object, foe) {

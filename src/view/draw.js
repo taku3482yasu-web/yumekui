@@ -268,15 +268,82 @@ function drawHal(ctx, state, px, py, walk) {
     ctx.restore();
 }
 
+// バトルの 絵 (11/12 ユーザー指定):
+//   ・始まりと コマンドを 選んでいる あいだは 全員を 見わたす 絵 (view.focus = null)。
+//     左に 仲間 (前に 出ている 1 体を 大きく、控えは 後ろに 小さく)、右に 敵を 並べる
+//   ・技や 攻撃の あいだは 仲間 1 体と 敵 1 体 (ねらった 敵) だけを 大きく 映す (view.focus = 敵の 番号)
 export function drawBattle(ctx, view, time) {
     drawSky(ctx, time);
+    if (view.focus == null) drawOverview(ctx, view, time);
+    else drawCloseUp(ctx, view, time);
+
+    for (const pop of view.pops) {
+        const left = (pop.until - time) / 700;
+        if (left <= 0) continue;
+        const at = popAnchor(view, pop);
+        ctx.fillStyle = pop.color;
+        ctx.font = 'bold 14px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(pop.text, at.x, at.y - (1 - left) * 18);
+    }
+}
+
+// 描いた 大きい 絵 (public/img)。読み込めるまでは ドット絵で 描く。faces = 絵の 向き
+const HD_ART = {
+    bak: { src: 'img/yumekui/bak.png', faces: 'left' },
+    gakufume: { src: 'img/yumekui/gakufume.png', faces: 'front' }
+};
+const hdCache = new Map();
+function hdArt(name) {
+    const art = HD_ART[name];
+    if (!art || typeof Image === 'undefined') return null;
+    if (!hdCache.has(name)) {
+        const image = new Image();
+        image.src = art.src;
+        hdCache.set(name, image);
+    }
+    const image = hdCache.get(name);
+    return image.complete && image.naturalWidth ? { image, faces: art.faces } : null;
+}
+
+// 控えの 仲間 (前に 出ている 1 体 以外)
+function benchOf(view) {
+    return (view.party ?? []).filter((unit) => unit.sprite !== view.ally);
+}
+
+// 絵を 箱に 収まる 大きさに する。ドット絵は 0.5 きざみで 拡大 (most 倍まで)
+function fit(image, maxW, maxH, pixel, most = 4) {
+    const w = image.naturalWidth || image.width;
+    const h = image.naturalHeight || image.height;
+    let scale = Math.min(maxW / w, maxH / h, pixel ? most : 1);
+    if (pixel && scale >= 1) scale = Math.floor(scale * 2) / 2;
+    return { w: Math.round(w * scale), h: Math.round(h * scale) };
+}
+
+function drawFloorShadow(ctx, x, y, rx, ry) {
     ctx.fillStyle = 'rgba(10, 12, 48, 0.55)';
     ctx.beginPath();
-    ctx.ellipse(205, 132, 90, 16, 0, 0, Math.PI * 2);
-    ctx.ellipse(70, 158, 60, 12, 0, 0, Math.PI * 2);
+    ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
     ctx.fill();
+}
 
-    // 敵: 1 体なら まん中、複数なら 横に 並べる (倒れた 敵は 消える)
+// 見わたす 絵: 全員を 小さめに
+function drawOverview(ctx, view, time) {
+    drawFloorShadow(ctx, 205, 132, 90, 16);
+    drawFloorShadow(ctx, 62, 160, 60, 12);
+
+    // 控えの 仲間: 後ろに 小さく、少し 暗く (倒れた 仲間は もっと 暗く)
+    benchOf(view).forEach((unit, i) => {
+        const image = sprite(unit.sprite);
+        const size = fit(image, 36, 30, true, 2);
+        ctx.save();
+        ctx.globalAlpha = unit.hp > 0 ? 0.8 : 0.35;
+        drawFloorShadow(ctx, 26 + i * 44, 98, 18, 4);
+        ctx.drawImage(image, Math.round(26 + i * 44 - size.w / 2), 98 - size.h, size.w, size.h);
+        ctx.restore();
+    });
+
+    // 敵: 1 体なら まん中、複数なら 横に 並べる (倒れた 敵は 消える)。ねらっている 敵の 下に 印
     view.foes.forEach((name, i) => {
         if (view.down[i]) return;
         const foe = sprite(name);
@@ -285,22 +352,59 @@ export function drawBattle(ctx, view, time) {
         const shake = view.foeHit[i] > time ? Math.sin(time / 20) * 4 : 0;
         const y = 130 - foe.height * scale + Math.sin(time / 500 + i) * 2;
         ctx.drawImage(foe, Math.round(foeX(view, i) - (foe.width * scale) / 2 + shake), Math.round(y), foe.width * scale, foe.height * scale);
+        if (many && i === view.target) {
+            const x = Math.round(foeX(view, i));
+            ctx.fillStyle = '#ffc95e';
+            ctx.beginPath();
+            ctx.moveTo(x - 4, 136);
+            ctx.lineTo(x + 4, 136);
+            ctx.lineTo(x, 141);
+            ctx.fill();
+        }
     });
 
-    // 仲間: 大きい絵 (幅 24 ドットより 大きい) は 3 倍で、敵と 重ならないように する
-    const bak = sprite(view.ally);
-    const bakShake = view.allyHit > time ? Math.sin(time / 20) * 4 : 0;
-    const allyScale = bak.width > 24 ? 3 : 4;
-    ctx.drawImage(bak, Math.round(26 + bakShake), 172 - bak.height * allyScale, bak.width * allyScale, bak.height * allyScale);
+    // 前に 出ている 仲間: 手前の 左。敵と 重ならない 幅に 収める
+    const ally = sprite(view.ally);
+    const size = fit(ally, 84, 72, true);
+    const shake = view.allyHit > time ? Math.sin(time / 20) * 4 : 0;
+    ctx.drawImage(ally, Math.round(20 + shake), 166 - size.h, size.w, size.h);
+}
 
-    for (const pop of view.pops) {
-        const left = (pop.until - time) / 700;
-        if (left <= 0) continue;
-        ctx.fillStyle = pop.color;
-        ctx.font = 'bold 14px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(pop.text, pop.x, pop.y - (1 - left) * 18);
+// 寄った 絵: 仲間 1 体 (左) と 敵 1 体 (右) を 大きく
+function drawCloseUp(ctx, view, time) {
+    drawFloorShadow(ctx, 236, 140, 70, 12);
+    drawFloorShadow(ctx, 80, 168, 66, 12);
+
+    const i = view.focus;
+    if (!view.down[i] && view.foes[i]) {
+        const hd = hdArt(view.foes[i]);
+        const image = hd?.image ?? sprite(view.foes[i]);
+        const size = fit(image, 150, 116, !hd, 6);
+        const shake = view.foeHit[i] > time ? Math.sin(time / 20) * 4 : 0;
+        const y = 138 - size.h + Math.sin(time / 500 + i) * 2;
+        ctx.drawImage(image, Math.round(236 - size.w / 2 + shake), Math.round(y), size.w, size.h);
     }
+
+    const hd = hdArt(view.ally);
+    const image = hd?.image ?? sprite(view.ally);
+    const size = fit(image, 140, 110, !hd, 6);
+    const shake = view.allyHit > time ? Math.sin(time / 20) * 4 : 0;
+    const x = Math.round(80 - size.w / 2 + shake);
+    const y = 166 - size.h;
+    ctx.save();
+    if (hd?.faces === 'left') {   // 仲間は 右 (敵の ほう) を 向く
+        ctx.translate(x + size.w, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(image, 0, y, size.w, size.h);
+    } else ctx.drawImage(image, x, y, size.w, size.h);
+    ctx.restore();
+}
+
+// 数字の 出る 場所 (仲間か 敵か と、今の 絵で 決める)。pop.foe = 敵の 番号 (仲間なら 無し)
+function popAnchor(view, pop) {
+    if (pop.foe == null) return view.focus == null ? { x: 62, y: 92 } : { x: 80, y: 70 };
+    if (view.focus == null) return { x: foeX(view, pop.foe), y: pop.high ? 40 : 60 };
+    return { x: 236, y: pop.high ? 22 : 40 };
 }
 
 // 敵の 横の 位置 (1 体なら 205、複数なら 並べる)

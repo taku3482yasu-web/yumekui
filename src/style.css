@@ -118,6 +118,16 @@ canvas {
 .portrait[hidden] { display: none; }
 #portrait-left { left: 1%; }
 #portrait-right { right: 1%; transform: scaleX(-1); }
+/* 11/12 の 立ち絵 (1024×1536) は 上の 3 割ほどが 空いているので、大きめに 出して 頭の 高さを そろえる。
+   体の 下の ほうは メッセージ枠の 後ろに 隠れる */
+.portrait[data-kind="chara"] { height: 112%; bottom: -8%; }
+#portrait-left[data-kind="chara"] { left: -6%; }
+#portrait-right[data-kind="chara"] { right: -6%; }
+/* ユメクイと 夢の住人は 横長。メッセージ枠の 上に 乗せる */
+.portrait[data-kind="yumekui"] { height: auto; width: 34%; bottom: 30%; }
+#portrait-left[data-kind="yumekui"] { transform: scaleX(-1); }   /* バクの 絵は 左向き。左に 立つときは 右 (相手) を 向く */
+#portrait-right[data-kind="yumekui"] { transform: none; }
+.portrait[data-kind="resident"] { height: 62%; bottom: 28%; }
 
 #speaker {
     color: var(--kokoro);

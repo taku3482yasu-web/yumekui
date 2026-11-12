@@ -1,3 +1,5 @@
+import { portraitKind } from '../core/portraits.js';
+
 const $ = (id) => document.getElementById(id);
 const TYPE_MS = 28;
 
@@ -110,6 +112,7 @@ export function createUi(input, sounds = {}) {
             const who = stage?.[side];
             const path = who ? pathOf(who.name, who.expression) : null;
             el.dataset.want = path ?? '';
+            el.dataset.kind = portraitKind(path) ?? '';
             if (!path || missing.has(path)) {
                 el.hidden = true;
                 continue;

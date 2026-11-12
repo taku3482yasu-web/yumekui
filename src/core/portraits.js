@@ -1,8 +1,8 @@
 // 会話の 立ち絵 (仕様書「会話画面」11/11 決定): 一度に 2 人まで。
 //   左 = 主人公の側 (ハル、または バクや 救った仲間)、右 = 話している 相手 (左右反転して 左向き)。
 //   絵の ファイル名は 素材制作仕様書「置き場所とファイル名」: 人は img/chara/<名前>_<表情>.png、
-//   ユメクイは img/yumekui/<id>_normal.png。ファイルが 無い人は 出さない
-export const EXPRESSIONS = ['neutral', 'smile', 'troubled', 'angry', 'cry', 'surprised'];
+//   ユメクイは img/yumekui/<id>.png、夢の住人は img/enemy/<id>.png。絵の 無い人は 出さない
+export const EXPRESSIONS = ['neutral', 'smile', 'troubled', 'angry', 'cry', 'surprised', 'sad', 'frustrated', 'cloudy', 'silent', 'eroded', 'guide', 'resolve', 'profile', 'profile_kizuna'];
 
 // セリフの 話し手の 名前 → 絵の 名前
 export const CHARA_FILES = {
@@ -10,7 +10,8 @@ export const CHARA_FILES = {
     'リク': 'riku',
     'ミオ': 'mio',
     'カナ': 'kana',
-    '父': 'father',
+    '父': 'haru_father',
+    'リクの父': 'riku_father',
     'トメ': 'tome',
     'ケン': 'ken',
     'アキ先生': 'aki',
@@ -18,11 +19,30 @@ export const CHARA_FILES = {
     'ミチル': 'michiru',
     'ヒカリ': 'hikari'
 };
+
+// 描いてある 表情 (11/12 の 立ち絵)。ここに 無い 表情は neutral で 出す。
+//   ハルの 泣き顔 (cry) は ゲームに 入れない (11/12 ユーザー指定)
+export const FACES = {
+    haru: ['neutral', 'smile', 'troubled', 'angry', 'surprised', 'profile', 'profile_kizuna'],
+    riku: ['neutral', 'smile', 'troubled', 'angry', 'cry', 'surprised', 'profile', 'profile_kizuna'],
+    mio: ['neutral', 'smile', 'troubled', 'angry', 'surprised', 'profile', 'profile_kizuna'],
+    kana: ['neutral', 'smile', 'angry', 'surprised', 'frustrated', 'profile', 'profile_kizuna'],
+    aki: ['neutral', 'smile', 'angry', 'surprised', 'cloudy'],
+    haru_father: ['neutral', 'smile', 'silent'],
+    riku_father: ['neutral', 'smile', 'sad'],
+    hikari: ['neutral', 'smile', 'angry', 'surprised', 'sad'],
+    michiru: ['neutral', 'smile', 'surprised', 'sad', 'eroded', 'guide', 'resolve']
+};
+
 export const YUMEKUI_FILES = {
     'バク': 'bak',
-    'ガクフメ': 'gakufume',
-    'トゲメトロ': 'togemetoro',
-    'ヒマワリオン': 'himawarion'
+    'ガクフメ': 'gakufume'
+};
+// 夢の 住人 (階層で 話しかける ゆがんだ 夢主)
+export const RESIDENT_FILES = {
+    '独奏の女王ミオ': 'queen_mio',
+    '審査員カナ': 'judge_kana',
+    'ハルの人形': 'haru_doll'
 };
 const ALLY_IDS = { 'ガクフメ': 'gakufume', 'トゲメトロ': 'togemetoro', 'ヒマワリオン': 'himawarion' };
 
@@ -34,10 +54,23 @@ export function isHeroSide(name, allies = []) {
 
 // 絵の 場所 (無い 名前は null)
 export function portraitPath(name, expression = 'neutral') {
-    const face = EXPRESSIONS.includes(expression) ? expression : 'neutral';
-    if (CHARA_FILES[name]) return `img/chara/${CHARA_FILES[name]}_${face}.png`;
-    if (YUMEKUI_FILES[name]) return `img/yumekui/${YUMEKUI_FILES[name]}_normal.png`;
+    const file = CHARA_FILES[name];
+    if (file) {
+        const faces = FACES[file];
+        if (!faces) return null;
+        return `img/chara/${file}_${faces.includes(expression) ? expression : 'neutral'}.png`;
+    }
+    if (YUMEKUI_FILES[name]) return `img/yumekui/${YUMEKUI_FILES[name]}.png`;
+    if (RESIDENT_FILES[name]) return `img/enemy/${RESIDENT_FILES[name]}.png`;
     return null;
+}
+
+// 絵の 種類 (表示の 大きさを 変える): 人 / ユメクイ / 夢の住人
+export function portraitKind(path) {
+    if (!path) return null;
+    if (path.startsWith('img/yumekui/')) return 'yumekui';
+    if (path.startsWith('img/enemy/')) return 'resident';
+    return 'chara';
 }
 
 // 会話の 始めは だれも いない (地の文だけの 場面では 立ち絵を 出さない)

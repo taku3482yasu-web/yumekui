@@ -37,9 +37,14 @@ test('立ち絵: 救った 仲間は 左、まだ 仲間で ない ユメクイ�
 
 test('立ち絵の ファイル名は 素材制作仕様書のとおり', () => {
     assert.equal(portraitPath('ハル'), 'img/chara/haru_neutral.png');
-    assert.equal(portraitPath('ハル', 'cry'), 'img/chara/haru_cry.png');
+    assert.equal(portraitPath('ハル', 'cry'), 'img/chara/haru_neutral.png');   // ハルの 泣き顔は 入れない
+    assert.equal(portraitPath('リク', 'cry'), 'img/chara/riku_cry.png');
+    assert.equal(portraitPath('父', 'silent'), 'img/chara/haru_father_silent.png');
+    assert.equal(portraitPath('リクの父', 'sad'), 'img/chara/riku_father_sad.png');
+    assert.equal(portraitPath('トメ'), null);   // まだ 絵の 無い 人
+    assert.equal(portraitPath('審査員カナ'), 'img/enemy/judge_kana.png');
     assert.equal(portraitPath('ハル', 'へんな顔'), 'img/chara/haru_neutral.png');
-    assert.equal(portraitPath('バク', 'smile'), 'img/yumekui/bak_normal.png');
+    assert.equal(portraitPath('バク', 'smile'), 'img/yumekui/bak.png');
     assert.equal(portraitPath('生徒'), null);
 });
 
