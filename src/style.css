@@ -128,6 +128,16 @@ canvas {
 #portrait-center.flip { transform: translateX(-50%) scaleX(-1); }
 .portrait.listen { filter: brightness(0.55); }
 .portrait.ghost { opacity: 0.8; bottom: 16%; -webkit-mask-image: linear-gradient(to bottom, #000 72%, transparent); mask-image: linear-gradient(to bottom, #000 72%, transparent); }   /* 顔が 本音の 選択肢の 上に 見えるように 持ち上げる */
+/* キズナ攻撃の カットイン (青い 2 色の 横顔)。右から 左へ すべる */
+#cutin {
+    position: absolute;
+    bottom: 0;
+    left: 30%;
+    height: 100%;
+    pointer-events: none;
+    image-rendering: pixelated;
+}
+#cutin[hidden] { display: none; }
 /* ユメクイ (バクなど) は 横長。メッセージ枠の 上に 乗せる */
 .portrait[data-kind="yumekui"] { height: auto; width: 34%; bottom: 30%; }
 #portrait-left[data-kind="yumekui"] { left: 2%; }

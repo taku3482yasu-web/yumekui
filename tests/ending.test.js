@@ -35,7 +35,9 @@ test('グッド: キズナ攻撃 (救った 仲間 1 人 1 回) で ラスボス
     const b = createBattle(bak(), [FOES.nemuriboshi], { rng: () => 0.5, kizuna: kizunaFriends(state) });
     const plain = act(createBattle(bak(), [FOES.nemuriboshi], { rng: () => 0.5 }), 'attack').find((e) => e.t === 'hit' && e.target === 'foe');
     assert.ok(plain.amount <= 2, 'ふつうの 攻撃は ほとんど 効かない');
-    for (let i = 0; i < 3; i++) act(b, 'kizuna');
+    const first = act(b, 'kizuna');
+    assert.deepEqual(first[0], { t: 'kizuna', name: 'ミオ' }, '最初に カットインの 出来事 (だれの 横顔か)');
+    for (let i = 0; i < 2; i++) act(b, 'kizuna');
     assert.equal(b.over, 'win');
 });
 

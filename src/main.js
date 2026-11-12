@@ -642,6 +642,7 @@ async function play(battle, events) {
     for (const event of events) {
         battleSound(event);
         if (event.t === 'swap') battleView.ally = event.sprite;
+        if (event.t === 'kizuna') await ui.cutin(portraitPath(event.name, 'profile_kizuna'));   // キズナ攻撃の カットイン (引き継ぎ書 5-2)
         // 寄った 絵で 映す 敵: 攻撃を 受けた 敵、または 攻撃してきた 敵
         if (event.t === 'hit' && event.target === 'foe' && event.index != null) battleView.focus = event.index;
         if (event.t === 'hit' && event.target === 'ally' && event.from != null) battleView.focus = event.from;

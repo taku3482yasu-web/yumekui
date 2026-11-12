@@ -1,4 +1,4 @@
-import { flipFor, portraitKind } from '../core/portraits.js';
+import { facingOf, flipFor, portraitKind } from '../core/portraits.js';
 
 const $ = (id) => document.getElementById(id);
 const TYPE_MS = 28;
@@ -128,6 +128,23 @@ export function createUi(input, sounds = {}) {
         }
     }
 
+    // キズナ攻撃の カットイン: 仲間の 青い 横顔を 画面の 右から 左へ 0.8 秒で すべらせる (引き継ぎ書 5-2)。
+    //   左へ 進むので 左を 向かせる (右向きの 絵は 反転)
+    function cutin(path) {
+        const el = $('cutin');
+        if (!path || !el.animate) return Promise.resolve();
+        el.src = path;
+        el.hidden = false;
+        const flip = facingOf(path) === 'right' ? ' scaleX(-1)' : '';
+        const run = el.animate([
+            { transform: `translateX(110%)${flip}`, opacity: 0.2 },
+            { transform: `translateX(20%)${flip}`, opacity: 1, offset: 0.35 },
+            { transform: `translateX(-20%)${flip}`, opacity: 1, offset: 0.75 },
+            { transform: `translateX(-120%)${flip}`, opacity: 0 }
+        ], { duration: 800, easing: 'ease-in-out' });
+        return run.finished.catch(() => {}).then(() => { el.hidden = true; });
+    }
+
     function fade(on) {
         $('fade').style.opacity = on ? 1 : 0;
         return new Promise((resolve) => setTimeout(resolve, 420));
@@ -183,7 +200,7 @@ export function createUi(input, sounds = {}) {
         text.textContent = line;
     }
 
-    return { say, show, menu, hideMsg, fade, hud, hideHud, status, hideStatus, title, portraits };
+    return { say, show, menu, hideMsg, fade, hud, hideHud, status, hideStatus, title, portraits, cutin };
 }
 
 function paintUnit(id, unit) {

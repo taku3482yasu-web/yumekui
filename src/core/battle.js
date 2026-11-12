@@ -647,6 +647,7 @@ function kizunaAttack(b, events) {
     const friend = b.kizuna.shift();
     if (!friend) return;
     const foe = b.foe;
+    events.push({ t: 'kizuna', name: friend });   // 画面では 仲間の 横顔の カットイン
     events.push({ t: 'say', text: `${friend}の 声が 聞こえる。「ハル！」` });
     events.push({ t: 'say', text: `${b.ally.name}の キズナ攻撃！` });
     const amount = Math.round(foe.maxHp * KIZUNA_RATE);
