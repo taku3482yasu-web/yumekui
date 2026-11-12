@@ -79,22 +79,26 @@ test('中ボスの ムレスイマは 行動のたびに 哀と怒が 入れか�
     assert.deepEqual(attrs, ['哀', '怒', '哀', '怒']);
 });
 
-test('デュエット: ミオ (哀しみの鳥) は カナ (怒りの鳥) より 先には 言い当てられない', () => {
-    const b = createBattle({ ...ALLIES.bak, hp: 500, maxHp: 500, atk: 60 }, [FOES.duetDo, FOES.duetAi], { rng: () => 0.5 });
-    setTarget(b, b.foes[1]);
-    for (let i = 0; i < 10 && !b.foes[1].exhausted; i++) act(b, 'attack');
-    assert.ok(b.foes[1].exhausted);
-    assert.equal(b.foes[1].chance, false, 'カナより 先には チャンスに ならない');
-    assert.ok(b.foes[0].raged, '相方が 尽きると 怒りの鳥が 怒る');
-    setTarget(b, b.foes[0]);
-    for (let i = 0; i < 10 && !b.foes[0].exhausted; i++) act(b, 'attack');
+test('デュエット: 2 羽が 合体した 1 体。カナの 本音で 哀の 姿に 変わり、ミオの 本音で 救える', () => {
+    const b = createBattle({ ...ALLIES.bak, hp: 500, maxHp: 500, atk: 60 }, FOES.duet, { rng: () => 0.5 });
+    assert.equal(b.foes.length, 1, '戦うのは 1 体');
+    assert.equal(b.foe.attr, '怒');
+    assert.equal(b.foe.solvedAs, 'togemetoro');
+    for (let i = 0; i < 10 && !b.foe.exhausted; i++) act(b, 'attack');
     assert.equal(chanceFoe(b), b.foes[0]);
-    const events = answer(b, FOES.duetDo.truth.answer);
-    assert.equal(b.over, null);
-    assert.equal(b.foes[1].chance, true, 'カナに 届くと ミオの チャンスが 開く');
-    assert.ok(events.some((e) => e.t === 'chance' && e.index === 1));
-    answer(b, FOES.duetAi.truth.answer);
+    const events = answer(b, FOES.duet.truth.answer);
+    assert.equal(b.over, null, 'カナの 本音だけでは 終わらない');
+    assert.ok(events.some((e) => e.t === 'phase'));
+    assert.equal(b.foe.attr, '哀', '哀の 姿に 変わる');
+    assert.equal(b.foe.solvedAs, 'gakufume');
+    assert.equal(b.foe.truthHead, 'ミオの本音は？');
+    assert.equal(b.foe.chance, false);
+    assert.ok(b.foe.hp > 1, '体力が 少し 戻る');
+    for (let i = 0; i < 10 && !b.foe.exhausted; i++) act(b, 'attack');
+    assert.equal(chanceFoe(b), b.foes[0]);
+    answer(b, FOES.duet.phases[0].truth.answer);
     assert.equal(b.over, 'truth');
+    assert.equal(FOES.duet.attr, '怒', '元の データは 変わらない');
 });
 
 test('夢合体で 2 人とも 救う: だれも 刈り取られず、ガクフメと トゲメトロが 仲間に。夢双の 相性', () => {

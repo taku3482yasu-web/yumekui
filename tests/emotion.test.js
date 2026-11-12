@@ -17,7 +17,7 @@ test('たまり方: 雑魚 ＋2、ボス ＋10、合体ボスは ＋8 ずつ、�
     gainEmotions(keep, party, [FOES.gakufume], 'truth');
     assert.equal(emotionsOf(keep, 'gakufume').哀, 10);
     assert.equal(emotionsOf(keep, 'gakufume').喜, 7);
-    gainEmotions(keep, party, [FOES.duetDo, FOES.duetAi], 'truth');
+    gainEmotions(keep, party, [FOES.duet], 'truth');
     assert.equal(emotionsOf(keep, 'gakufume').怒, 8);
     assert.equal(emotionsOf(keep, 'gakufume').哀, 18);
     gainEmotions(keep, party, [FOES.togemetoro], 'devour');

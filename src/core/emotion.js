@@ -42,7 +42,9 @@ export function addEmotion(keep, id, native, attr, amount) {
 
 // バトルの あと。倒した 敵の 属性の 感情に 入る (雑魚 ＋2、ボス ＋10、合体ボスは 2 つの 属性に ＋8)。
 //   パーティの 3 体に 入り、とどめを 刺した ユメクイは 2 倍。result: 'win' | 'truth' | 'devour'
-export function gainEmotions(keep, party, foes, result) {
+export function gainEmotions(keep, party, list, result) {
+    // 合体ボス (pairAttrs) は、2 つの 属性の ボス 2 体ぶん として 数える
+    const foes = list.flatMap((f) => (f.pairAttrs ? f.pairAttrs.map((attr) => ({ ...f, attr })) : [f]));
     const pair = foes.filter((f) => f.truth).length >= 2;
     for (const foe of foes) {
         const amount = !foe.truth ? GAIN.minion : pair ? GAIN.pairBoss : GAIN.boss;

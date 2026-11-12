@@ -33,7 +33,7 @@ test('敵の 経験値は 仕様書の 表のとおり。合体ボスは 2 羽�
     assert.equal(FOES.nanashi.exp, 6);
     assert.equal(FOES.hari.exp, 9);
     assert.equal(FOES.gakufume.exp, 120);
-    assert.equal(FOES.duetDo.exp + FOES.duetAi.exp, 250);
+    assert.equal(FOES.duet.exp, 250);
     assert.equal(battleExp([FOES.nanashi, FOES.nanashi]), 12);
     assert.equal(battleExp([FOES.suima], 3), 8, '第3層は 1.5倍');
 });

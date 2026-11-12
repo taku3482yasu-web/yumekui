@@ -2,7 +2,7 @@
 // ハルが 家の前から 坂道を 校門まで 歩く様子を 自動で 流す。途中の 3 か所 (stop) で 立ち止まり、その日の 出来事が起きる。
 // 出来事は 日付・周・夢主の状態 (救った / 喰らった / 刈り取られた) で 選ぶ。上から順に 条件に 合う 最初の 1 つ。
 // once: その周で 1 回だけ (見たら state.flags に 残す)。セリフは 口調を キャラクター設定資料集に 合わせた案
-import { PAIR } from '../core/days.js';
+import { PAIR, activeDay, lastRescueDay } from '../core/days.js';
 
 const N = '';
 const HAL = 'ハル';
@@ -81,8 +81,8 @@ export const MORNING_EVENTS = [
         cast: () => cast(1, 'commuterA', 'commuterB'),
         lines: (c) => {
             const d = c.state.day;
-            if (d < 7) return [[GIRL, 'ミオ、放課後はずっと音楽室で、一人で吹いてるんだって。'], [BOY, 'カナは渡り廊下で、メトロノーム鳴らしっぱなしだったぞ。……話しかけたら、なんか言うかもな。']];
-            if (d < 10) return [[GIRL, 'ミオもカナも、目を覚まさないんだって……。'], [BOY, '眠り病ってさ、倒れてから何日もたつと、もう起きないって噂だぜ。……9日くらいが山だって。']];
+            if (d < activeDay(c.state)) return [[GIRL, 'ミオ、放課後はずっと音楽室で、一人で吹いてるんだって。'], [BOY, 'カナは渡り廊下で、メトロノーム鳴らしっぱなしだったぞ。……話しかけたら、なんか言うかもな。']];
+            if (d <= lastRescueDay(c.state)) return [[GIRL, 'ミオもカナも、目を覚まさないんだって……。'], [BOY, '眠り病ってさ、倒れてから何日もたつと、もう起きないって噂だぜ。……9日くらいが山だって。']];
             return [[GIRL, 'コンクール、どうなるんだろうね。'], [BOY, '……なあ、最近、空の色おかしくね？']];
         }
     },
@@ -115,7 +115,7 @@ export const MORNING_EVENTS = [
     },
     {
         id: 'hintAffinity', stop: 3,
-        when: (c) => c.state.day < 7 && c.state.status.mio === 'idle' && c.state.status.kana === 'idle',
+        when: (c) => c.state.day < activeDay(c.state) && c.state.status.mio === 'idle' && c.state.status.kana === 'idle',   // 解放された人の ヒントは 朝にも 聞ける (11/11)
         cast: () => cast(3, null, 'commuterC', 'commuterD'),
         // 相性 (喜 > 怒 > 哀 > 楽 > 喜) の ヒント。ガクフメ (哀) だけ 仲間なら、カナ (怒) は 喜に弱い・バク (楽) は 哀に弱い
         lines: (c) => (c.keep.allies.includes('gakufume') && !c.keep.allies.includes('togemetoro')

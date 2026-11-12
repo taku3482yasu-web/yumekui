@@ -39,7 +39,7 @@ test('ナイトメアに 追われているあいだは M15', () => {
 test('バトルは ボスの 曲、ほかは 通常バトル M04', () => {
     assert.equal(battleBgm(['nanashi', 'suima']), 'M04');
     assert.equal(battleBgm(['gakufume']), 'M10');
-    assert.equal(battleBgm(['duetDo', 'duetAi']), 'M13');
+    assert.equal(battleBgm(['duet']), 'M13');
     assert.equal(bgmFor({ mode: 'battle', foes: ['himawarion'] }), 'M16');
     for (const id of Object.keys(BOSS_BGM)) assert.ok(FOES[id], id);
 });

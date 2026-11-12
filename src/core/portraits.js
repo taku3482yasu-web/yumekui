@@ -15,7 +15,6 @@ export const CHARA_FILES = {
     'トメ': 'tome',
     'ケン': 'ken',
     'アキ先生': 'aki',
-    'リクの母': 'rikumother',
     'ミチル': 'michiru',
     'ヒカリ': 'hikari'
 };

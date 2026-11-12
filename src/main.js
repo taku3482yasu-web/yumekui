@@ -1,6 +1,6 @@
 import { act, aliveFoes, answer, bench, chanceFoe, commands, createBattle, needsTarget, setTarget, TARGETED, TOP_COMMANDS } from './core/battle.js';
 import { ACTIONS, keyName } from './core/keys.js';
-import { advance, createKeep, dateLabel, devour, dreamsTonight, isEarly, nextLoop, sleepAfterNightmare, rescue, rescuePair, ACTIVE_DAY, LAST_DAY, PAIR } from './core/calendar.js';
+import { advance, advanceStory, createKeep, dateLabel, devour, dreamsTonight, isEarly, nextLoop, sleepAfterNightmare, rescue, rescuePair, activeDay, lastRescueDay, LAST_DAY, PAIR, STORY_STEPS } from './core/calendar.js';
 import { bakSkills, bakUnit, grow } from './core/growth.js';
 import { battleExp, gainExp, growUnit, layerFoe, reachLayer, ypLeft } from './core/level.js';
 import { openGrow } from './view/grow.js';
@@ -11,7 +11,7 @@ import { dreamShardOf, giveHeart, heartsOf, isDormant, pickHeart, setDormant, te
 import { HEARTS } from './data/hearts.js';
 import { chaseStep, createState, facing, isBlocked, objectAt, pickWord, placeName, step, tileAt, warp, DIRS } from './core/field.js';
 import { deepTalk, startDay, startMorning, timeLabel, timesBetween, NIGHT_START, PROLOGUE_START, RIKU_BRANCH_Y, TOWN_START } from './core/town.js';
-import { isWeekend, LAST_RESCUE_DAY, WAKE_DAY } from './core/days.js';
+import { isWeekend, WAKE_DAY } from './core/days.js';
 import { frontChoices, makeSentence, nextChoices, sentenceChoices } from './core/sentence.js';
 import { OWNER_NAMES, WORDS } from './data/words.js';
 import { DREAM_LAYERS, MAPS } from './data/maps.js';
@@ -225,10 +225,10 @@ const SCRIPTS = {
     portSign: () => talk(LINES.portSign),
     rikuRoad: () => talk(LINES.rikuRoad(state)),
     rikuDoor: async () => {
-        // 3 周目: ミオと カナを 救ったことが あれば、リクの母から『引っ越し』を 聞ける (台本 4-2)
+        // 3 周目: ミオと カナを 救ったことが あれば、リクの父から『引っ越し』を 聞ける (台本 4-2)
         await talk(LINES.rikuDoor);
         if (keep.loop >= 3 && savedPair() && !state.words.includes('引っ越し')) {
-            await talk(LINES.rikuMom);
+            await talk(LINES.rikuDad);
             state.words.push('引っ越し');
             showHud();
         }
@@ -261,13 +261,20 @@ async function deepTalkTo(who) {
         return;
     }
     await talk(LINES.deepGreet[who]);
-    const id = await ui.menu([{ id: 'yes', label: LINES.deepYes }, { id: 'no', label: LINES.deepNo }], { head: LINES.deepHead(NAMES[who]) });
+    // 次が 最後の段なら、話すと その夜に 活性化する (勝負を 始めるか プレイヤーが 決める)
+    const last = (state.story?.duet ?? 0) === STORY_STEPS - 1;
+    const id = await ui.menu([{ id: 'yes', label: LINES.deepYes }, { id: 'no', label: LINES.deepNo }], { head: last ? LINES.deepHeadLast(NAMES[who]) : LINES.deepHead(NAMES[who]) });
     if (id !== 'yes') return;
     const { count, word } = deepTalk(state, who, LINES.visitWord[who]);
-    const lines = LINES.visit[who];
-    await talk(lines[Math.min(count, lines.length - 1)]);
+    const step = (state.story?.duet ?? 0) < STORY_STEPS ? advanceStory(state) : null;
+    if (step === STORY_STEPS) await talk(LINES.storyLast);
+    else {
+        const lines = LINES.visit[who];
+        await talk(lines[Math.min(count, lines.length - 1)]);
+    }
     showHud();
     if (word) await talk(LINES.wordHeard(word));
+    if (step === STORY_STEPS) await talk(LINES.storyActive);
     await talk(LINES.evening);
     wakeUp();
 }
@@ -304,7 +311,7 @@ async function homeDoor() {
         return;
     }
     const items = [{ id: 'yes', label: LINES.goHomeYes }];
-    if (state.day >= ACTIVE_DAY + 3 && state.day < LAST_DAY) items.push({ id: 'skip', label: LINES.goHomeSkip });
+    if (state.day > lastRescueDay(state) && state.day < LAST_DAY) items.push({ id: 'skip', label: LINES.goHomeSkip });
     items.push({ id: 'no', label: LINES.goHomeNo });
     const id = await ui.menu(items, { head: LINES.goHomeHead });
     if (id === 'skip') state.day = LAST_DAY;
@@ -497,7 +504,10 @@ async function fight(object) {
     if (object.script === 'boss') await talk(LINES.boss);
     if (object.script === 'pairBoss') await talk(LINES.pairBoss);
     if (object.script === 'duetMid') await talk(LINES.duetMid);
-    if (object.script === 'duetBoss') await talk(LINES.duetBoss);
+    if (object.script === 'duetBoss') {
+        await talk(LINES.duetBoss);
+        await film('DUET_FUSION');   // 2 羽の 鳥が 溶け合って、1 体の デュエットに なる
+    }
     if (object.script === 'rikuBoss') await talk(LINES.rikuBoss);
 
     // 敵は 1 体 (foe) か 複数 (foes)。本音を持つ 敵 (なければ 1 体目) が この戦いの 主
@@ -518,6 +528,7 @@ async function fight(object) {
     ui.hideHud();
     ui.status(battle);
     await ui.fade(false);
+    if (foe.truth) await roar(foe);
 
     while (!battle.over) {
         // コマンドを 選ぶ あいだは 全員を 見わたす 絵
@@ -583,6 +594,14 @@ async function chooseMove(battle) {
     return act(battle, id);
 }
 
+// ボスの 登場: 体を ふるわせ、ぐっと 迫ってきて 叫ぶ。そこから 戦いが 始まる (叫び顔の 絵は 使わない)
+async function roar(foe) {
+    const now = performance.now();
+    battleView.roar = { start: now, until: now + 1100 };
+    sound.se('SE41');
+    await ui.say('', foe.roarText ?? `${foe.name}が 叫んだ！`, { wait: NOTE_MS });
+}
+
 // 敵が 複数のとき、ねらう 敵を 選ぶ (もどると 選び直し)
 async function chooseTarget(battle) {
     const items = aliveFoes(battle).map((f) => ({ id: String(f.index), label: `${f.name}（${f.attr}）` }));
@@ -632,9 +651,21 @@ async function play(battle, events) {
             battleView.down[event.index] = true;
             if (!battle.over) await ui.say('', `${event.name}に 本音が とどいた！`, { wait: NOTE_MS * 2 });
         }
+        await reveal(battle);
         ui.status(battle);
     }
     ui.hideMsg();
+}
+
+// 弱った ナイトメアは 顔の 渦が しずまり、女の子の 横顔が 見える (revealSprite / revealRate)
+async function reveal(battle) {
+    for (const [i, foe] of battle.foes.entries()) {
+        if (!foe.revealSprite || foe.revealed || foe.hp <= 0 || foe.hp > foe.maxHp * foe.revealRate) continue;
+        foe.revealed = true;
+        battleView.foes[i] = foe.revealSprite;
+        battleView.foeHit[i] = performance.now() + 600;
+        if (foe.revealText) await ui.say('', foe.revealText, { wait: NOTE_MS * 2 });
+    }
 }
 
 // バトルの 出来事に 合わせた 効果音 (サウンドリスト「バトル」)
@@ -680,6 +711,14 @@ async function finish(battle, object, foe) {
         await nightmareLoss();
         return;
     }
+    // 勝った・負けた: 戦闘の 曲を 止めて 短い曲 (M25 / M26)。町や 夢の 曲は 鳴り終わってから
+    const jingle = battle.over === 'win' ? 'M25' : battle.over === 'lose' ? 'M26' : null;
+    let jingleDone = null;
+    if (jingle) {
+        musicOverride = null;
+        sound.playBgm(null, { transition: 'hard' });
+        jingleDone = Promise.race([sound.jingle(jingle), new Promise((resolve) => setTimeout(resolve, 18000))]);
+    }
     if (battle.over === 'lose') {
         hp = {};
         if (keep.tutorial) {
@@ -691,6 +730,7 @@ async function finish(battle, object, foe) {
         const start = MAPS[state.map].start;
         state.x = start.x;
         state.y = start.y;
+        await jingleDone;
         return;
     }
     await awardExp(battle);
@@ -765,6 +805,7 @@ async function finish(battle, object, foe) {
             await talk(LINES.firstSuima);
         }
     }
+    await jingleDone;
 }
 
 // 経験値: 倒した 敵 (本音を 届けた・喰らった 敵も) の 合計を、パーティは そのまま、控えは 半分
@@ -1182,7 +1223,7 @@ async function dayPhase() {
 //   玄関から 夜の町へ出て 帰って寝ると、夢に入らずに 朝になる (仕様書「1日の流れ」)
 async function nightPhase() {
     Object.assign(state, NIGHT_START);
-    if (keep.loop === 1 && state.day === LAST_RESCUE_DAY && !state.flags.nightmareDone && PAIR.every((id) => state.status[id] === 'idle')) {
+    if (keep.loop === 1 && state.day === lastRescueDay(state) && !state.flags.nightmareDone && PAIR.every((id) => state.status[id] === 'idle')) {
         mode = 'scene';
         await ui.fade(false);
         await talk(LINES.nightmareVisit);
@@ -1222,12 +1263,12 @@ async function useCanvas() {
         keep.canvasTold = true;
         await talk(LINES.firstCanvas);
     }
-    if (dreams.length && state.day < ACTIVE_DAY && !keep.earlyTold) {
+    if (dreams.length && state.day < activeDay(state) && !keep.earlyTold) {
         keep.earlyTold = true;
         await talk(LINES.perfectCanvas);
     }
     if (state.flags.dreamsClosed) await talk(LINES.canvasClosed);
-    else if (!dreams.length && state.day < ACTIVE_DAY) {
+    else if (!dreams.length && state.day < activeDay(state)) {
         // 活性化の 前: 描いても 絵が 漠然としていて、夢の チャンネルに 引っかからない
         await talk(keep.channelTold ? LINES.notActiveAgain : LINES.notActive);
         keep.channelTold = true;
@@ -1693,7 +1734,7 @@ function frame(now) {
         ctx.textAlign = 'center';
         ctx.fillText(LINES.scareText, 160 + (Math.random() - 0.5) * 6, 126 + (Math.random() - 0.5) * 6);
         ctx.textAlign = 'left';
-    } else drawField(ctx, state, walk, now, state.chaser ? [{ ...state.chaser, who: 'nightmare' }] : actors, followerView());
+    } else drawField(ctx, state, walk, now, state.chaser ? [{ ...state.chaser, who: 'nightmare-mini' }] : actors, followerView());
     updateMusic();
     requestAnimationFrame(frame);
 }
