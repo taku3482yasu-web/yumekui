@@ -61,7 +61,7 @@ export const FOES = {
     onpu: { id: 'onpu', name: 'ナナシ・オンプ', attr: '哀', sprite: 'onpu', hp: 24, maxHp: 24, atk: 9, def: 4, spd: 7, exp: 9 },
     hari: { id: 'hari', name: 'ナナシ・ハリ', attr: '怒', sprite: 'hari', hp: 24, maxHp: 24, atk: 10, def: 4, spd: 7, exp: 9 },
     gakufume: {
-        id: 'gakufume', name: 'ガクフメ', attr: '哀', sprite: 'gakufume', dream: 'mio', ally: 'gakufume',
+        id: 'gakufume', name: 'ガクフメ', attr: '哀', sprite: 'gakufume', dream: 'mio', ally: 'gakufume', truthHead: 'ミオの本音は？',
         hp: 110, maxHp: 110, atk: 11, def: 6, spd: 9, exp: 120,
         pattern: ['tackle', 'tackle', 'charge', 'swirl'],
         chargeText: 'ガクフメが 高い音を ためている……！', bigMove: '止まらないソロ',
@@ -69,7 +69,7 @@ export const FOES = {
         truth: TRUTH.mio
     },
     togemetoro: {
-        id: 'togemetoro', name: 'トゲメトロ', attr: '怒', sprite: 'togemetoro', dream: 'kana', ally: 'togemetoro',
+        id: 'togemetoro', name: 'トゲメトロ', attr: '怒', sprite: 'togemetoro', dream: 'kana', ally: 'togemetoro', truthHead: 'カナの本音は？',
         hp: 110, maxHp: 110, atk: 13, def: 6, spd: 10, exp: 120,
         pattern: ['tackle', 'tackle', 'charge', 'swirl'],
         chargeText: 'トゲメトロの テンポが 速くなっていく……！', bigMove: 'せかすリズム',
