@@ -25,7 +25,7 @@ import { hdPath } from './view/art.js';
 import { drawCalendar, drawLapse } from './view/time.js';
 import { drawEncounter, encounterTheme } from './view/encounter.js';
 import { createPainting, drawPainting, finishPainting, updatePainting } from './view/painting.js';
-import { drawIntro } from './view/intro.js';
+import { createIntro, drawIntro, nearHikari, updateIntro } from './view/intro.js';
 import { morningMovie } from './scenes/mornings.js';
 import { canUseBrush, hasImageFor, learnImage, paint } from './core/brush.js';
 import { IMAGES, TILE_IMAGES } from './data/brush.js';
@@ -1756,14 +1756,28 @@ async function prologueCanvas() {
     showHud();
 }
 
-// はじまりの 夢: 青い海の 砂浜に ハルが 一人。ゆがんで 暗くなり、大きな目と「おきろ」。チャイムで 目が覚める (A で 飛ばせる)
+// はじまりの 夢 (台本 1-0): 青い海の 砂浜。操作の 説明 → 左右に 歩く → ？？？ (ヒカリ) と 話す (はい／いいえ) →
+//   右へ 進むと ゆがんで 暗くなり、大きな目と「おきろ」。チャイムで 目が覚める
 async function playIntro() {
     ui.hideHud();
+    intro = createIntro();
+    mode = 'intro';
+    await ui.fade(false);
+    const keysOf = (id) => input.bindings()[id].slice(0, 2).map(keyName).join('・');
+    await talk(LINES.introControls({ move: `${keysOf('left')} ${keysOf('right')}`, a: keysOf('a'), dash: keysOf('dash') }));
     await new Promise((resolve) => {
-        const off = input.onPress((key) => { if (key === 'a') intro.skip = true; });
-        intro = { start: performance.now() + 420, done: () => { off(); resolve(); } };
-        mode = 'intro';
-        ui.fade(false);
+        let busy = false;
+        const off = input.onPress(async (key) => {
+            if (key !== 'a' || busy || intro.talked || !nearHikari(intro)) return;
+            busy = true;
+            await talk(LINES.introHikari);
+            const yes = (await ui.menu([{ id: 'yes', label: 'はい' }, { id: 'no', label: 'いいえ' }])) === 'yes';
+            await talk(yes ? LINES.introHikariYes : LINES.introHikariNo);
+            intro.talked = true;
+            busy = false;
+        });
+        intro.busy = () => busy;
+        intro.done = () => { off(); resolve(); };
     });
     mode = 'black';
     await talk(LINES.introWake);
@@ -1807,7 +1821,8 @@ function frame(now) {
     if (mode === 'field' && state.chaser) updateChase(now);
     if (walk.left > 0 && mode !== 'field') walk.left = Math.max(0, walk.left - delta / WALK_MS);
     if (mode === 'intro' && intro) {
-        if (drawIntro(ctx, intro, now) && !intro.finished) {
+        if (intro.done && !intro.busy()) updateIntro(intro, input.direction(), input.isHeld('dash'), delta, now);
+        if (drawIntro(ctx, intro, now) && !intro.finished && intro.done) {
             intro.finished = true;
             intro.done();
         }

@@ -707,6 +707,7 @@ const PEOPLE = {
     commuterC: { body: 'short', H: '#20203a', T: '#2f4a7d', U: '#e8ecf5', B: '#22365e', F: '#141428', marks: [[4, 4, '#c6c9ea'], [7, 4, '#c6c9ea']] },
     commuterD: { body: 'long', H: '#8a5a32', T: '#2f4a7d', U: '#e8ecf5', B: '#22365e', F: '#141428' },
     rikuFather: { body: 'short', H: '#5c4630', T: '#4a5a6a', U: '#e8ecf5', B: '#3a3a50', F: '#141428' },
+    hikari: { body: 'short', H: '#20203a', T: '#f2d98a', U: '#b8cce8', B: '#b8cce8', F: '#e8ecf5', marks: [[3, 2, '#ff8fb0'], [4, 2, '#8fe0a0']] },   // 黒い ボブに 髪どめ・黄色い カーディガン・水色の パジャマ (立ち絵 hikari_*)
     michiru: { body: 'long', H: '#20203a', T: '#26305a', U: '#e8dcc8', B: '#26305a', F: '#141428', marks: [[5, 8, '#ffd86b'], [6, 8, '#ffd86b']] }   // 紺の ロングコートと 星の ペンダント
 };
 
