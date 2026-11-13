@@ -249,12 +249,16 @@ canvas {
 
 #title h1 {
     margin: 0;
-    font-size: 3em;
-    letter-spacing: 0.2em;
-    text-shadow: 0 0 18px #8d8fe0;
+    line-height: 0;
 }
 
-#title p { color: var(--dim); margin-bottom: 7em; }
+/* タイトルロゴ (バクの耳と マントつき)。画面の 横幅の 8 割 */
+#logo {
+    width: 80cqw;
+    height: auto;
+}
+
+#title p { color: var(--dim); margin: 0.2em 0 7em; }
 
 #fade {
     position: absolute;
