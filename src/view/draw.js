@@ -4,6 +4,7 @@ import { FOES } from '../data/units.js';
 import { objectsOf } from '../core/field.js';
 import { sprite } from './sprites.js';
 import { HD_ART } from './art.js';
+import { cacheOf, drawSea } from './townart.js';
 
 export const TILE = 16;
 const W = 320;
@@ -43,8 +44,35 @@ const FLOORS = {
     sun: ['#a8a04a', '#9c9442', '#c8bc5a']   // リクの夢: ひまわり畑
 };
 
-function drawTile(ctx, tile, x, y, open, theme) {
+// 浮いた 床の 厚み: 南が 空 (w) なら 下に 側面、北が 空なら 上の ふちを 明るく
+function drawLedge(ctx, x, y, theme, at) {
+    const floor = FLOORS[theme ?? 'base'];
+    if (VOID.has(at(0, 1))) {
+        ctx.fillStyle = shade(floor[1], 0.55);
+        ctx.fillRect(x, y + TILE, TILE, 7);
+        ctx.fillStyle = shade(floor[1], 0.4);
+        ctx.fillRect(x, y + TILE + 5, TILE, 2);
+        ctx.fillStyle = shade(floor[1], 0.7);
+        ctx.fillRect(x, y + TILE, TILE, 1);
+        // しずく (夢が 垂れる)
+        const k = (x * 7 + y * 3) % 5;
+        ctx.fillStyle = shade(floor[1], 0.4);
+        ctx.fillRect(x + 3 + k, y + TILE + 7, 2, 2 + (k % 3));
+        ctx.fillRect(x + 11 - k, y + TILE + 7, 1, 1 + (k % 2));
+        if (VOID.has(at(-1, 1)) && !VOID.has(at(-1, 0))) { ctx.fillStyle = shade(floor[1], 0.45); ctx.fillRect(x, y + TILE, 1, 7); }
+    }
+}
+
+function shade(hex, k) {
+    const n = parseInt(hex.slice(1), 16);
+    return `rgb(${Math.round(((n >> 16) & 255) * k)}, ${Math.round(((n >> 8) & 255) * k)}, ${Math.round((n & 255) * k)})`;
+}
+
+// at(dx, dy): となりの タイル (地図の 外は null)。浮いた 床の 下に 厚み (崖の 側面) を 描いて 重厚感を 出す (11/13 ユーザー指定)
+const VOID = new Set(['w', null]);
+function drawTile(ctx, tile, x, y, open, theme, at = () => '.') {
     if (tile === 'w') return;
+    if (tile !== 'M' && tile !== 'V' && !(tile === 'Y' && !open) && !(['G', 'L', 'J'].includes(tile) && !open)) drawLedge(ctx, x, y, theme, at);
     if (tile === 'C') {   // 崩れた階段 (夢筆で 描き直せる): 欠けた段と、すき間から 見える 空
         ctx.fillStyle = '#3a3a78';
         ctx.fillRect(x, y + 10, TILE, 6);
@@ -65,14 +93,26 @@ function drawTile(ctx, tile, x, y, open, theme) {
         return;
     }
     if (tile === 'M') {
-        ctx.fillStyle = '#231f4c';
+        // お面の 壁: 南が 床なら 正面 (お面が 並ぶ)、南も 壁なら 上から 見た 天面
+        const front = at(0, 1) !== 'M' && at(0, 1) !== null;
+        ctx.fillStyle = '#1a1638';
         ctx.fillRect(x, y, TILE, TILE);
+        ctx.fillStyle = '#2a2556';
+        ctx.fillRect(x + 1, y + 1, TILE - 2, front ? 3 : TILE - 2);
+        if (at(0, -1) !== 'M') { ctx.fillStyle = '#4a4488'; ctx.fillRect(x, y, TILE, 1); }
+        if (!front) return;
+        ctx.fillStyle = '#2e2862';
+        ctx.fillRect(x, y + 4, TILE, 12);
         ctx.fillStyle = '#3a3478';
-        ctx.fillRect(x + 4, y + 3, 8, 10);
-        ctx.fillStyle = '#231f4c';
-        ctx.fillRect(x + 5, y + 6, 2, 1);
-        ctx.fillRect(x + 9, y + 6, 2, 1);
-        ctx.fillRect(x + 6, y + 10, 4, 1);
+        ctx.fillRect(x + 4, y + 5, 8, 9);
+        ctx.fillStyle = '#4e4896';
+        ctx.fillRect(x + 4, y + 5, 8, 1);
+        ctx.fillStyle = '#16123a';
+        ctx.fillRect(x + 5, y + 8, 2, 1);
+        ctx.fillRect(x + 9, y + 8, 2, 1);
+        ctx.fillRect(x + 6, y + 11, 4, 1);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+        ctx.fillRect(x, y + 14, TILE, 2);
         return;
     }
     if (tile === 'V') {
@@ -89,8 +129,17 @@ function drawTile(ctx, tile, x, y, open, theme) {
     const floor = FLOORS[theme ?? 'base'];
     ctx.fillStyle = (x / TILE + y / TILE) % 2 ? floor[0] : floor[1];
     ctx.fillRect(x, y, TILE, TILE);
+    // 石だたみの 目地と ひび (場所で 決まる)
+    ctx.fillStyle = shade(floor[1], 0.82);
+    ctx.fillRect(x, y + 7, TILE, 1);
+    ctx.fillRect(x + ((y / TILE) % 2 ? 4 : 11), y, 1, 7);
+    ctx.fillRect(x + ((y / TILE) % 2 ? 11 : 4), y + 8, 1, 7);
     ctx.fillStyle = floor[2];
     ctx.fillRect(x, y + 15, TILE, 1);
+    ctx.fillRect(x + 1, y + 1, 3, 1);
+    if (VOID.has(at(0, -1))) { ctx.fillStyle = shade(floor[2], 1.15); ctx.fillRect(x, y, TILE, 2); }   // 空に 面した ふち
+    if (VOID.has(at(-1, 0))) { ctx.fillStyle = shade(floor[2], 1.05); ctx.fillRect(x, y, 1, TILE); }
+    if (VOID.has(at(1, 0))) { ctx.fillStyle = shade(floor[1], 0.7); ctx.fillRect(x + 15, y, 1, TILE); }
     if (tile === 'B') {
         // 夢筆で かけた 橋 (裂け目の 上の 板)
         ctx.fillStyle = '#0a0a1e';
@@ -114,59 +163,7 @@ function drawTile(ctx, tile, x, y, open, theme) {
 }
 
 
-// ---- 現実の町 (暖かい色: 夕焼け・木・砂) -----------------------------------
-const REAL = {
-    floor: ['#c9a27a', '#bf976e', '#a8805a'],      // 教室・家の 木の床
-    corridor: ['#d8c8a8', '#cfbe9c', '#b8a684'],   // 廊下
-    road: ['#9a8a80', '#928279', '#857469'],       // 坂道
-    walk: ['#d8b890', '#cfae86', '#b89670'],       // 歩道・渡り廊下
-    grass: ['#8fae6a', '#86a462', '#769454']
-};
-
-function checker(ctx, x, y, colors) {
-    ctx.fillStyle = (x / TILE + y / TILE) % 2 ? colors[0] : colors[1];
-    ctx.fillRect(x, y, TILE, TILE);
-    ctx.fillStyle = colors[2];
-    ctx.fillRect(x, y + 15, TILE, 1);
-}
-
-function drawRealTile(ctx, tile, x, y, time) {
-    const box = (color, dx, dy, w, h) => { ctx.fillStyle = color; ctx.fillRect(x + dx, y + dy, w, h); };
-    switch (tile) {
-        case '.': return checker(ctx, x, y, REAL.floor);
-        case 'c': return checker(ctx, x, y, REAL.corridor);
-        case ',': return checker(ctx, x, y, REAL.road);
-        case '_': case 'o': case 'm': checker(ctx, x, y, REAL.walk); if (tile === 'm') box('#7a4a3a', 2, 0, 12, 14); return;
-        case 'g': checker(ctx, x, y, REAL.grass); box('#a8c880', 4, 5, 1, 2); box('#a8c880', 11, 10, 1, 2); return;
-        case 's': checker(ctx, x, y, REAL.corridor); for (let i = 0; i < 4; i++) box('#9a8466', 0, i * 4 + 2, TILE, 1); return;
-        case '#': box('#e8d8bc', 0, 0, TILE, TILE); box('#c8b494', 0, 12, TILE, 4); return;
-        case 'b': box('#e8d8bc', 0, 0, TILE, TILE); box('#3f6a4f', 0, 3, TILE, 9); box('#5c8a6a', 0, 4, TILE, 1); return;
-        case 'k': box('#e8d8bc', 0, 0, TILE, TILE); box('#9fc4dc', 2, 3, 12, 8); box('#e8d8bc', 7, 3, 2, 8); return;
-        case 'd': checker(ctx, x, y, REAL.floor); box('#8a6a4a', 1, 2, 14, 9); box('#a8865e', 1, 2, 14, 2); box('#5c4630', 2, 11, 2, 4); box('#5c4630', 12, 11, 2, 4); return;
-        case 'p': checker(ctx, x, y, REAL.floor); box('#20203a', 0, 2, TILE, 12); box('#e8ecf5', 0, 9, TILE, 3); return;
-        case 'e': checker(ctx, x, y, REAL.floor); box('#8a6a4a', 7, 1, 2, 14); box('#f4ecdc', 3, 2, 10, 8); return;
-        case 'f': checker(ctx, x, y, REAL.walk); box('#8a6a4a', 0, 6, TILE, 2); for (let i = 1; i < TILE; i += 5) box('#8a6a4a', i, 6, 2, 8); return;
-        case 'x': box('#a8b878', 0, 0, TILE, TILE); box('#98a868', 3, 9, 2, 1); return;
-        case 'T': box('#8fae6a', 0, 0, TILE, TILE); box('#4f7a44', 1, 0, 14, 11); box('#6a9a56', 3, 2, 6, 4); box('#6a4a32', 6, 11, 4, 5); return;
-        case 'h': box('#d8b890', 0, 0, TILE, TILE); box('#c09a72', 0, 0, 1, TILE); return;
-        case 'R': box('#b0574a', 0, 0, TILE, TILE); box('#8f4038', 0, 5, TILE, 1); box('#8f4038', 0, 11, TILE, 1); return;
-        case 'n': box('#d8b890', 0, 0, TILE, TILE); box('#3f5a9a', 0, 0, TILE, 9); box('#e8ecf5', 4, 2, 8, 4); return;
-        case '=': checker(ctx, x, y, REAL.walk); box('#e8ecf5', 0, 5, TILE, 2); box('#e8ecf5', 2, 5, 2, 9); box('#e8ecf5', 12, 5, 2, 9); return;
-        case 't': checker(ctx, x, y, REAL.floor); box('#7a5a3e', 0, 3, TILE, 9); return;
-        // 天文台: O = 白い ドーム、D = ドームの まん中の 開く すき間、Q = 外の 望遠鏡 (三脚に 筒)
-        case 'O': box('#d8dde8', 0, 0, TILE, TILE); box('#c4cad8', 0, 14, TILE, 2); box('#eef1f7', 3, 3, 4, 2); return;
-        case 'D': box('#d8dde8', 0, 0, TILE, TILE); box('#c4cad8', 0, 14, TILE, 2); box('#2a2f5a', 5, 0, 6, TILE); box('#59609a', 6, 0, 1, TILE); return;
-        case 'Q': checker(ctx, x, y, REAL.walk); box('#3a3a50', 7, 8, 2, 7); box('#3a3a50', 4, 13, 2, 2); box('#3a3a50', 10, 13, 2, 2); box('#2f4a7d', 2, 3, 11, 4); box('#c6c9ea', 12, 3, 2, 4); box('#e8ecf5', 3, 4, 8, 1); return;
-        case 'w': {
-            box('#4f86b8', 0, 0, TILE, TILE);
-            const wave = Math.round(Math.sin(time / 600 + x / 30) * 2);
-            box('#8fc0e0', 2 + wave, 5, 6, 1);
-            box('#8fc0e0', 8 - wave, 11, 5, 1);
-            return;
-        }
-        default: return checker(ctx, x, y, REAL.floor);
-    }
-}
+// 現実の町の タイルは view/townart.js (壁の 厚み・屋根・木・床板などを となりの タイルを 見て 描く)
 
 // 時間帯の色: 朝は 淡い光、夕方は 橙、夜は 紺 (町は 暖かい色のまま、上から 重ねる)
 const TINT = { morning: 'rgba(255, 236, 200, 0.14)', evening: 'rgba(240, 120, 60, 0.22)', night: 'rgba(16, 20, 70, 0.5)' };
@@ -193,14 +190,18 @@ export function drawField(ctx, state, walk, time, actors = [], follower = null) 
     // キャンバスの 段階 (state.sight): 1 は もやで 近くしか 見えない、2 は 地図だけ 見えて 物は 近くだけ、3 から 敵の 属性も
     const sight = !map.real && state.sight ? state.sight : null;
     const near = (x, y) => Math.abs(x - state.x) + Math.abs(y - state.y) <= SIGHT;
-    map.tiles.forEach((row, y) => [...row].forEach((tile, x) => {
+    if (map.real) {
+        // 現実の 町: 動かない 絵は 地図ごとに 1 枚 (view/townart.js)。海だけ 毎回
+        const art = cacheOf(map);
+        ctx.drawImage(art.canvas, 0, 0);
+        for (const [x, y] of art.sea) drawSea(ctx, map.tiles, x, y, time);
+    } else map.tiles.forEach((row, y) => [...row].forEach((tile, x) => {
         if (sight?.fog && !near(x, y)) return;
-        if (map.real) drawRealTile(ctx, tile, x * TILE, y * TILE, time);
-        else {
+        {
             // 二重奏ホールは 左が 水 (ミオ)、右が トゲ (カナ)。左右の扉は それぞれの 合図で 開く
             const open = tile === 'L' ? state.flags.gateL : tile === 'J' ? state.flags.gateR : tile === 'Y' ? state.flags.rikuWall : state.flags.gateOpen;
             const theme = map.theme === 'duet' ? (x < map.split ? 'water' : 'tempo') : map.theme;
-            drawTile(ctx, tile, x * TILE, y * TILE, open, theme);
+            drawTile(ctx, tile, x * TILE, y * TILE, open, theme, (dx, dy) => map.tiles[y + dy]?.[x + dx] ?? null);
         }
     }));
     for (const object of objectsOf(state)) {
@@ -264,7 +265,7 @@ function drawHal(ctx, state, px, py, walk) {
     const image = sprite(name);
     const bob = walk.left > 0 && walk.left < 0.5 ? 1 : 0;
     ctx.save();
-    ctx.translate(Math.round(px) + 2, Math.round(py) - bob);
+    ctx.translate(Math.round(px + (TILE - image.width) / 2), Math.round(py + TILE - image.height) - bob);   // 足もとを マスの 下に そろえる
     if (state.dir === 'left') {
         ctx.translate(image.width, 0);
         ctx.scale(-1, 1);

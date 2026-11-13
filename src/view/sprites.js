@@ -1,3 +1,5 @@
+import { LOOKS, personCanvas } from './people.js';
+
 // ドット絵。文字 1 つが 1 ドット。. は透明
 const PALETTE = {
     k: '#20203a', s: '#f2c9a0', e: '#20203a', n: '#2f4a7d', d: '#22365e', w: '#e8ecf5', t: '#141428',
@@ -730,7 +732,7 @@ function personArt(id) {
     return canvas;
 }
 
-export const PERSON_IDS = Object.keys(PEOPLE);
+export const PERSON_IDS = [...new Set([...Object.keys(PEOPLE), ...Object.keys(LOOKS).filter((id) => id !== 'hal')])];
 
 // ハルの部屋の キャンバス (イーゼルに 白い布) と ベッド
 const ROOM_ART = {
@@ -851,6 +853,8 @@ export function sprite(name) {
     else if (name === 'bak-mini-wild') canvas = paint(wildRows(ART['bak-mini']));
     else if (name === 'bird-do') canvas = paint(angryBirdRows());
     else if (name === 'duet') canvas = paint(duetRows());
+    else if (name.startsWith('hal-')) canvas = personCanvas('hal', name.slice(4) === 'side' ? 'side' : name.slice(4));   // ハル (立ち絵を 参考に 描き直した 16×24)
+    else if (LOOKS[name]) canvas = personCanvas(name);   // 町の 人 (view/people.js)
     else if (PEOPLE[name]) canvas = personArt(name);
     else if (ROOM_ART[name]) canvas = paint(ROOM_ART[name]);
     else canvas = paint(ART[name]);
