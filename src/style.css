@@ -310,6 +310,22 @@ canvas {
     #app { justify-content: flex-start; }
 }
 
+/* スマホを 横に したとき: 画面を まん中に 置き、十字キーと A・B を 画面の 左右に 出す
+   (下に 並べると 画面が つぶれて 上が 切れるため)。ボタンと かさならないよう 画面の 幅を おさえる */
+@media (pointer: coarse) and (orientation: landscape) {
+    #app { justify-content: center; }
+    #screen { width: min(calc(100vw - 2 * (170px + env(safe-area-inset-left))), 133.33vh, 960px); }
+    #pad {
+        position: fixed;
+        inset: 0;
+        width: auto;
+        padding: 0 calc(8px + env(safe-area-inset-right)) env(safe-area-inset-bottom) calc(8px + env(safe-area-inset-left));
+        pointer-events: none;
+    }
+    #pad button { pointer-events: auto; }
+    .action [data-key="a"] { margin-bottom: 26px; }
+}
+
 /* プロローグで 父が 怒鳴ったとき、画面が 小さく 揺れる */
 #screen.shake {
     animation: shake 0.4s linear;
