@@ -227,21 +227,9 @@ const SCRIPTS = {
         await partTimeJob();
     },
     portSign: () => talk(LINES.portSign),
-    // 丘の上の 天文台 (2 周目から): はじめては ミチルと 出会う (台本 4-2)。夜は 行かない
-    observatory: async () => {
-        if (state.phase === 'night') {
-            await talk(LINES.observatorySign);
-            return;
-        }
-        await ui.fade(true);
-        mode = 'black';
-        await ui.fade(false);
-        await talk(keep.michiruMet ? LINES.michiruAgain : LINES.michiruMeet);
-        keep.michiruMet = true;
-        await ui.fade(true);
-        mode = 'scene';
-        await ui.fade(false);
-    },
+    // 丘の上の 天文台 (2 周目から。台本 4-2)
+    observatoryClosed: () => talk(LINES.observatoryClosed),
+    telescope: () => talk(LINES.telescope),
     rikuRoad: () => talk(LINES.rikuRoad(state)),
     rikuDoor: async () => {
         // 3 周目: ミオと カナを 救ったことが あれば、リクの父から『引っ越し』を 聞ける (台本 4-2)
@@ -266,6 +254,12 @@ const NAMES = { mio: 'ミオ', kana: 'カナ', riku: 'リク', duet: 'ミオと�
 
 // 人に話しかける。元気な夢主 (ミオ・カナ) とは「じっくり話す」か 選べる
 async function talkTo(who) {
+    // 天文台の ミチル: はじめては 出会いの 場面 (台本 4-2)
+    if (who === 'michiru') {
+        await talk(keep.michiruMet ? LINES.town('michiru', state) : LINES.michiruMeet);
+        keep.michiruMet = true;
+        return;
+    }
     if (PAIR.includes(who) && state.status[who] === 'idle') {
         await deepTalkTo(who);
         return;

@@ -8,7 +8,7 @@ import { LINES } from '../src/scenes/story.js';
 
 // ---- 台本 4 章: 星の案内人・ミチル・ヒカリ ----------------------------------
 
-const SCENES = ['starGuide', 'michiruMeet', 'michiruAgain', 'starDream', 'starDreamSky', 'michiruTruth', 'hikariBye', 'hikariAngry'];
+const SCENES = ['starGuide', 'michiruMeet', 'starDream', 'starDreamSky', 'michiruTruth', 'hikariBye', 'hikariAngry'];
 
 test('4 章の 場面が LINES に あり、立ち絵の ある 話し手の 絵が public に ある', () => {
     for (const key of SCENES) {
@@ -36,8 +36,15 @@ test('ノーマルの ナイトメアは 横顔に なったあと ヒカリの 
     assert.equal(FOES.nightmareFinal.revealLines, 'hikariAngry');
 });
 
-test('天文台の 石段は 坂道に あり、2 周目からの 印が いる', () => {
-    const stairs = MAPS.saka.objects.find((object) => object.id === 'observatory');
-    assert.ok(stairs);
-    assert.equal(stairs.needs, 'observatory');
+test('天文台の 地図: 坂道の 石段から 2 周目に 行けて、ミチルと 望遠鏡が いる', () => {
+    const up = MAPS.saka.objects.find((object) => object.id === 'toObservatory');
+    assert.equal(up.needs, 'observatory');
+    assert.equal(up.to, 'observatory');
+    const map = MAPS.observatory;
+    assert.ok(map.real);
+    assert.equal(map.tiles[up.at.y][up.at.x], '_', '着いた 場所は 歩ける');
+    const down = map.objects.filter((object) => object.kind === 'exit');
+    for (const exit of down) assert.equal(MAPS.saka.tiles[exit.at.y][exit.at.x], 's', 'もどると 坂道の 石段');
+    assert.ok(map.objects.some((object) => object.who === 'michiru'));
+    assert.equal(map.tiles[5][6], 'Q', '望遠鏡');
 });

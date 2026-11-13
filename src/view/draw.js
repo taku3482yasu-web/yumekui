@@ -153,6 +153,10 @@ function drawRealTile(ctx, tile, x, y, time) {
         case 'n': box('#d8b890', 0, 0, TILE, TILE); box('#3f5a9a', 0, 0, TILE, 9); box('#e8ecf5', 4, 2, 8, 4); return;
         case '=': checker(ctx, x, y, REAL.walk); box('#e8ecf5', 0, 5, TILE, 2); box('#e8ecf5', 2, 5, 2, 9); box('#e8ecf5', 12, 5, 2, 9); return;
         case 't': checker(ctx, x, y, REAL.floor); box('#7a5a3e', 0, 3, TILE, 9); return;
+        // 天文台: O = 白い ドーム、D = ドームの まん中の 開く すき間、Q = 外の 望遠鏡 (三脚に 筒)
+        case 'O': box('#d8dde8', 0, 0, TILE, TILE); box('#c4cad8', 0, 14, TILE, 2); box('#eef1f7', 3, 3, 4, 2); return;
+        case 'D': box('#d8dde8', 0, 0, TILE, TILE); box('#c4cad8', 0, 14, TILE, 2); box('#2a2f5a', 5, 0, 6, TILE); box('#59609a', 6, 0, 1, TILE); return;
+        case 'Q': checker(ctx, x, y, REAL.walk); box('#3a3a50', 7, 8, 2, 7); box('#3a3a50', 4, 13, 2, 2); box('#3a3a50', 10, 13, 2, 2); box('#2f4a7d', 2, 3, 11, 4); box('#c6c9ea', 12, 3, 2, 4); box('#e8ecf5', 3, 4, 8, 1); return;
         case 'w': {
             box('#4f86b8', 0, 0, TILE, TILE);
             const wave = Math.round(Math.sin(time / 600 + x / 30) * 2);

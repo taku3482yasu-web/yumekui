@@ -25,8 +25,8 @@ const school = [
 
 // 坂道と商店街: 上が 校門、下が ハルの家。右の 分かれ道の先が リクの家
 const saka = [
-    'TTTTTTThhhhhhhhhhTTTTTTT',
-    'TTTTTTThhhhmmhhhhTTTTTTT',
+    'TTTTTTThhhhhhhhhhTTsTTTT',
+    'TTTTTTThhhhmmhhhhTTsTTTT',
     'TTggggg=,,,,,,,,=gggggTT',
     'TTggggg=,,,,,,,,=gggggTT',
     'TTRRRRR_,,,,,,,,_gggggTT',
@@ -57,6 +57,20 @@ const rikuhouse = [
     ',,__________TT',
     'TTggggggggggTT',
     'TTTTTTTTTTTTTT'
+];
+
+// 丘の上の 天文台 (2 周目から。台本 4-2): 坂道の 右上の 石段を のぼった先。白い ドームと、外に 出した 望遠鏡
+//   O ドーム / D ドームの すき間 / h ドームの 台の 壁 / Q 望遠鏡 (どれも 通れない)。下の 石段から 坂道へ もどる
+const observatory = [
+    'TTTTTTTTTTTTTTTT',
+    'TTTTTOODOOTTTTTT',
+    'TTTTOOODOOOTTTTT',
+    'TTgghhhhhhhgggTT',
+    'TTgg________ggTT',
+    'TTgg__Q_____ggTT',
+    'TTgg________ggTT',
+    'TTggggg__gggggTT',
+    'TTTTTTTssTTTTTTT'
 ];
 
 // ハルの家: 左が 居間、右が ハルの部屋 (机・キャンバス・ベッド)
@@ -117,7 +131,9 @@ export const TOWN_MAPS = {
             person('tome', 'tome', 2, 7),
             person('ken', 'ken', 3, 12),
             { id: 'portSign', kind: 'talk', x: 12, y: 17, sprite: 'sign', script: 'portSign' },
-            { id: 'observatory', kind: 'talk', x: 19, y: 2, sprite: 'sign', script: 'observatory', needs: 'observatory' },   // 丘の上の 天文台への 石段 (2 周目から。台本 4-2)
+            // 右上の 石段: 丘の上の 天文台へ (2 周目から。台本 4-2)。1 周目は のぼらない
+            { id: 'observatoryClosed', kind: 'block', x: 19, y: 0, script: 'observatoryClosed', hideIf: 'observatory' },
+            { id: 'toObservatory', kind: 'exit', x: 19, y: 0, to: 'observatory', at: { x: 7, y: 7 }, needs: 'observatory' },
             { id: 'homeDoor', kind: 'door', x: 4, y: 16, script: 'goHome' },
             { id: 'rikuRoad1', kind: 'block', x: 23, y: 8, script: 'rikuRoad', hideIf: 'rikuOpen' },
             { id: 'rikuRoad2', kind: 'block', x: 23, y: 9, script: 'rikuRoad', hideIf: 'rikuOpen' },
@@ -132,6 +148,15 @@ export const TOWN_MAPS = {
             { id: 'fromRiku2', kind: 'exit', x: 0, y: 6, to: 'saka', at: { x: 22, y: 9 } },
             { id: 'rikuDoor', kind: 'door', x: 7, y: 3, script: 'rikuDoor' },
             { ...person('rikuFather', 'rikuFather', 9, 4), needs: 'rikuFather' }
+        ]
+    },
+    observatory: {
+        id: 'observatory', name: '丘の上の天文台', real: true, tiles: observatory, start: { x: 7, y: 7 },
+        objects: [
+            { id: 'fromObservatory1', kind: 'exit', x: 7, y: 8, to: 'saka', at: { x: 19, y: 1 } },
+            { id: 'fromObservatory2', kind: 'exit', x: 8, y: 8, to: 'saka', at: { x: 19, y: 1 } },
+            { id: 'telescope', kind: 'block', x: 6, y: 5, script: 'telescope' },
+            person('michiru', 'michiru', 7, 5)
         ]
     },
     home: {
