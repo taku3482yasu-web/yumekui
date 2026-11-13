@@ -40,13 +40,13 @@ export const MORNING_EVENTS = [
         id: 'savedMio', stop: 1, once: true,
         when: (c) => c.state.status.mio === 'saved',
         cast: () => cast(1, 'mio'),
-        lines: () => [['ミオ', 'ハルくん、おはよう。……昨日、変な夢を見たの。水の中で、ずっと一人で吹いてる夢。', 'smile'], ['ミオ', 'でも最後に、だれかが「一緒に」って言ってくれた気がする。……変だよね。', 'smile'], [HAL, '……ううん。変じゃないよ。', 'smile']]
+        lines: () => [['ミオ', 'ハルくん、おはよう。……昨日、変な夢を見たの。水の中で、ずっと一人で吹いてる夢。'], ['ミオ', 'でも最後に、だれかが「一緒に」って言ってくれた気がする。……変だよね。', 'smile'], [HAL, '……ううん。変じゃないよ。', 'smile']]
     },
     {
         id: 'savedKana', stop: 1, once: true,
         when: (c) => c.state.status.kana === 'saved',
         cast: () => cast(1, 'kana'),
-        lines: () => [['カナ', 'ハル！ おはよ。なんか今日、体が軽いんだ。', 'smile'], ['カナ', 'ずっと頭の中で鳴ってたメトロノーム、止まったの。……なんでだろ。'], [HAL, '……よかった。', 'smile']]
+        lines: () => [['カナ', 'ハル！ おはよ。なんか今日、体が軽いんだ。', 'smile'], ['カナ', 'ずっと頭の中で鳴ってたメトロノーム、止まったの。……なんでだろ。', 'smile'], [HAL, '……よかった。', 'smile']]
     },
     {
         id: 'reaped', stop: 1, once: true,
@@ -61,7 +61,7 @@ export const MORNING_EVENTS = [
         id: 'rikuLoop', stop: 1,
         when: (c) => c.state.day < 3 && c.loop >= 2,
         cast: () => cast(1, null, null, 'riku'),
-        lines: () => [['リク', 'ハル、おはよ！ ……ん？ なんか今日のお前、顔つき違くね？', 'smile'], ['リク', 'ま、いっか！ だいじょうぶだいじょうぶ！', 'smile'], [HAL, '……リク。'], [BAK, '……言っても信じねえよ。今は、やれることをやれ。']]
+        lines: () => [['リク', 'ハル、おはよ！ ……ん？ なんか今日のお前、顔つき違くね？', 'surprised'], ['リク', 'ま、いっか！ だいじょうぶだいじょうぶ！', 'smile'], [HAL, '……リク。', 'troubled'], [BAK, '……言っても信じねえよ。今は、やれることをやれ。']]
     },
     {
         id: 'riku', stop: 1,
