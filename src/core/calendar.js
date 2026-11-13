@@ -27,13 +27,18 @@ export function dreamsTonight(state, keep = null) {
     if (state.day < OPEN_DAY || state.day > lastRescueDay(state)) return riku;
     const list = PAIR.filter((id) => state.status[id] === 'idle');
     if (keep && keep.loop >= 2 && list.length === 2) list.push('duet');
-    if (isActive(state)) return [...list, ...riku];
-    return [...(keep ? list.filter((id) => knowsDream(keep, id)) : []), ...riku];
+    // 目覚める前も 夢には 入れる。ただし ユメクイの いる 奥の 扉は 閉じたまま (2026-11-13 ユーザー指定)
+    return [...list, ...riku];
 }
 
-// 活性化の 前に 入る 夢か (ボスは まだ 活性化していない)
-export function isEarly(state, dream = null) {
-    return dream !== 'riku' && !isActive(state);
+// 活性化の 前に、完ぺきな 絵で 入る 夢か (奥の 扉が 開いていて、まだ 弱い ユメクイと 戦える)
+export function isEarly(state, dream = null, keep = null) {
+    return dream !== 'riku' && !isActive(state) && Boolean(keep && knowsDream(keep, dream));
+}
+
+// 活性化の 前に、ぼんやりした 絵で 入る 夢か (ユメクイの いる 奥の 扉は 開かない。扉の 手前までは 歩ける)
+export function isLocked(state, dream = null, keep = null) {
+    return dream !== 'riku' && !isActive(state) && !(keep && knowsDream(keep, dream));
 }
 
 // 夢合体で 2 人とも 救う。だれも 刈り取られない。ガクフメと トゲメトロが 仲間に (いれば 夢写し)

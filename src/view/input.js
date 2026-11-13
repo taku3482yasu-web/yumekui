@@ -21,7 +21,7 @@ function save(settings) {
 // held は 押している間の向き、press は 押した瞬間の知らせ
 export function createInput() {
     const saved = load();
-    let bindings = saved.bindings ?? DEFAULT_KEYS;
+    let bindings = { ...DEFAULT_KEYS, ...saved.bindings };   // あとから 足した 操作 (ダッシュ) は 最初の キー
     let swapped = Boolean(saved.swapped);
     let capturing = null;
     const held = [];
@@ -73,7 +73,7 @@ export function createInput() {
     paintPad();
 
     return {
-        direction: () => [...held].reverse().find((action) => action !== 'a' && action !== 'b') ?? null,
+        direction: () => [...held].reverse().find((action) => action !== 'a' && action !== 'b' && action !== 'dash') ?? null,
         isHeld: (action) => held.includes(action),   // ムービーを 長押しで 飛ばす
         onPress(listener) {
             listeners.add(listener);

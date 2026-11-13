@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createKeep, dreamsTonight, nextLoop, rescue } from '../src/core/calendar.js';
+import { createKeep, dreamsTonight, isEarly, isLocked, nextLoop, rescue } from '../src/core/calendar.js';
 import { createState, objectsOf } from '../src/core/field.js';
 import { growCanvas, knowsDream } from '../src/core/canvas.js';
 import { gainExp, growUnit, levelOf } from '../src/core/level.js';
@@ -23,7 +23,9 @@ test('完ぺきな 絵 (段階 5 まで 描き上げた 夢) なら、次の周�
     assert.ok(knowsDream(keep, 'mio'), '段階 5');
     const state = nextLoop(keep, createState());
     state.day = 2;
-    assert.deepEqual(dreamsTonight(state, keep).filter((d) => d !== 'riku'), ['mio'], 'カナの 絵は まだ 漠然としている');
+    assert.deepEqual(dreamsTonight(state, keep).filter((d) => d !== 'riku'), ['mio', 'kana', 'duet'], 'どちらの 夢にも、合体の 夢にも 入れる');
+    assert.ok(isEarly(state, 'mio', keep), 'ミオは 完ぺきな 絵なので 奥の 扉が 開いている');
+    assert.ok(isLocked(state, 'kana', keep), 'カナの 絵は まだ 漠然としていて 奥の 扉が 閉まっている');
 });
 
 test('合体の夢も 2 人とも 絵を 知っていれば 活性化前に 入れる', () => {

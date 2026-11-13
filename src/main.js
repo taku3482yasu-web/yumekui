@@ -1,6 +1,6 @@
 import { act, aliveFoes, answer, bench, chanceFoe, commands, createBattle, needsTarget, setTarget, TARGETED, TOP_COMMANDS } from './core/battle.js';
 import { ACTIONS, keyName } from './core/keys.js';
-import { advance, advanceStory, createKeep, dateLabel, devour, dreamsTonight, isEarly, nextLoop, sleepAfterNightmare, rescue, rescuePair, activeDay, lastRescueDay, LAST_DAY, PAIR, STORY_STEPS } from './core/calendar.js';
+import { advance, advanceStory, createKeep, dateLabel, devour, dreamsTonight, isEarly, isLocked, nextLoop, sleepAfterNightmare, rescue, rescuePair, activeDay, lastRescueDay, LAST_DAY, PAIR, STORY_STEPS } from './core/calendar.js';
 import { bakSkills, bakUnit, grow } from './core/growth.js';
 import { battleExp, gainExp, growUnit, layerFoe, reachLayer, ypLeft } from './core/level.js';
 import { openGrow } from './view/grow.js';
@@ -38,6 +38,7 @@ import { nextStage, portraitPath, scenePlan, startStage } from './core/portraits
 import { canWork, shopHint, useSnack, work, JOBS } from './core/job.js';
 
 const WALK_MS = 150;
+const DASH_MS = 80;   // B ボタン (K キー) を 押しながら 歩くと 速くなる (台本 プロローグ「Bボタンでダッシュ」)
 const NOTE_MS = 650;
 const WIN_HEAL = 15;
 const PARTY_SIZE = 3;
@@ -454,6 +455,11 @@ function tileImage() {
 }
 
 async function enter(exit) {
+    // 目覚める前: ユメクイの いる 奥の 階層への 扉は 開かない
+    if (state.flags.locked && layerOf(exit.to)?.deepest) {
+        await talk(LINES.deepDoorClosed);
+        return;
+    }
     await ui.fade(true);
     const goingOut = state.phase === 'night' && state.map === 'home' && exit.to !== 'home';
     warp(state, exit);
@@ -479,7 +485,7 @@ const queued = createKeyQueue();
 
 function updateField(delta) {
     if (walk.left > 0) {
-        walk.left = Math.max(0, walk.left - delta / WALK_MS);
+        walk.left = Math.max(0, walk.left - delta / (input.isHeld('dash') ? DASH_MS : WALK_MS));
         return;
     }
     const late = takeKey(queued, performance.now());
@@ -1324,16 +1330,12 @@ async function useCanvas() {
         keep.canvasTold = true;
         await talk(LINES.firstCanvas);
     }
-    if (dreams.length && state.day < activeDay(state) && !keep.earlyTold) {
+    if (dreams.some((id) => isEarly(state, id, keep)) && !keep.earlyTold) {
         keep.earlyTold = true;
         await talk(LINES.perfectCanvas);
     }
     if (state.flags.dreamsClosed) await talk(LINES.canvasClosed);
-    else if (!dreams.length && state.day < activeDay(state)) {
-        // 活性化の 前: 描いても 絵が 漠然としていて、夢の チャンネルに 引っかからない
-        await talk(keep.channelTold ? LINES.notActiveAgain : LINES.notActive);
-        keep.channelTold = true;
-    } else if (!dreams.length) await talk(LINES.noDreamYet);
+    else if (!dreams.length) await talk(LINES.noDreamYet);
     const items = dreams.map((id) => ({ id, label: LINES.dreamNames[id] }));
     items.push({ id: 'rest', label: LINES.dreamNames.rest });
     items.push({ id: 'cancel', label: LINES.canvasCancel });
@@ -1346,6 +1348,10 @@ async function useCanvas() {
     }
     await talk(id === 'duet' ? LINES.drewDuet : LINES.drew(NAMES[id]));
     await paintCanvas(id);
+    if (!keep.firstDrewTold) {
+        keep.firstDrewTold = true;
+        await talk(LINES.firstDrew);
+    }
     if (id === 'duet' && isNightmare(keep)) await talk(LINES.nightmareWarn);
     wakeUp({ dream: id });
 }
@@ -1408,11 +1414,13 @@ async function enterDream(id) {
     }
     const map = DREAM_LAYERS[id][layer - 1];
     const stage = stageOf(keep, id);
-    const early = isEarly(state, id);   // 完ぺきな 絵で 活性化前に 入る (ボスは まだ 活性化していない)
+    const early = isEarly(state, id, keep);   // 完ぺきな 絵で 活性化前に 入る (ボスは まだ 活性化していない)
+    const locked = isLocked(state, id, keep);   // ぼんやりした 絵で 活性化前に 入る (奥の 扉は 閉じたまま)
     // リクの夢: 3 周目、リクの家で『引っ越し』を 聞いていれば しおれた 壁が 開く (台本 4-3)
     const wallOpens = id === 'riku' && keep.loop >= 3 && state.words.includes('引っ越し') && !state.flags.rikuWall;
     if (wallOpens) state.flags.rikuWall = true;
     state.flags.early = early;
+    state.flags.locked = locked;
     state.dreamsVisited ??= {};
     state.dreamsVisited[id] = true;
     await ui.fade(true);
@@ -1439,6 +1447,7 @@ async function enterDream(id) {
     // 夢から 覚めると、夢の中で 見た 景色が 絵に 描き足される (その日に 言葉を 拾っていれば もう 1 段)
     state.sight = null;
     state.flags.early = false;
+    state.flags.locked = false;
     if (state.nightFailed) {
         state.nightFailed = false;   // ナイトメアに 捕まった 夜は 失敗 (絵は 描き足されない)
         return;
@@ -1636,10 +1645,6 @@ async function prologue() {
 // 歩くたびに 見る: 坂の分かれ道で リクと 別れる・自分の部屋に 入る
 function prologueStep() {
     if (state.flags.rikuWalk && state.map === 'saka' && state.y >= RIKU_BRANCH_Y) scene(rikuLeaves);
-    if (state.map === 'home' && state.x >= 8 && !state.flags.roomEntered) {
-        state.flags.roomEntered = true;
-        scene(() => talk(LINES.prologueRoom));
-    }
 }
 
 async function rikuLeaves() {

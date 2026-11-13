@@ -1,21 +1,23 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createKeep, dreamsTonight, nextLoop } from '../src/core/calendar.js';
+import { createKeep, dreamsTonight, isEarly, isLocked, nextLoop } from '../src/core/calendar.js';
 import { createState } from '../src/core/field.js';
 import { growCanvas, isNightmare, sightOf, stageOf, startLayers, truthHelp } from '../src/core/canvas.js';
 import { sentenceChoices } from '../src/core/sentence.js';
 import { FOES } from '../src/data/units.js';
 
-test('活性化の 前は どの夢にも 入れない (絵が 漠然としていて 夢の チャンネルに 引っかからない)', () => {
+test('目覚める前も 夢には 入れるが、ぼんやりした 絵では 奥の 扉が 開かない (2026-11-13)', () => {
     const state = createState();
     const keep = createKeep();
     keep.loop = 2;
     for (const day of [2, 3, 6]) {
         state.day = day;
-        assert.deepEqual(dreamsTonight(state, keep).filter((d) => d !== 'riku'), [], `${day} 日`);
+        assert.deepEqual(dreamsTonight(state, keep).filter((d) => d !== 'riku'), ['mio', 'kana', 'duet'], `${day} 日`);
+        assert.ok(isLocked(state, 'mio', keep) && !isEarly(state, 'mio', keep), `${day} 日は 奥の 扉が 閉まっている`);
     }
     state.day = 7;
     assert.deepEqual(dreamsTonight(state, keep).filter((d) => d !== 'riku'), ['mio', 'kana', 'duet']);
+    assert.ok(!isLocked(state, 'mio', keep), '目覚めたら 扉が 開く');
     state.day = 10;
     assert.deepEqual(dreamsTonight(state, keep).filter((d) => d !== 'riku'), [], '救える 夜を 過ぎたら 入れない');
 });

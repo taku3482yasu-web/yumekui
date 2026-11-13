@@ -40,7 +40,7 @@ test('二重奏ホールは 2 周目から、2 人とも 元気で 活性化し�
     state.day = 3;
     const keep = createKeep();
     keep.loop = 2;
-    assert.deepEqual(dreamsTonight(state, keep).filter((d) => d !== 'riku'), [], '活性化の 前は 合体の 夢にも 入れない');
+    assert.ok(dreamsTonight(state, keep).includes('duet'), '目覚める前も 合体の 夢に 入れる (奥の 扉は 閉じている)');
     keep.loop = 1;
     state.day = 7;
     assert.ok(!dreamsTonight(state, keep).includes('duet'), '1 周目は 描けない');

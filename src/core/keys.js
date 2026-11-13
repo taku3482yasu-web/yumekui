@@ -2,6 +2,7 @@
 export const ACTIONS = [
     { id: 'a', label: '決定' },
     { id: 'b', label: 'メニュー・もどる' },
+    { id: 'dash', label: 'ダッシュ（押しながら歩く）' },
     { id: 'up', label: '上' },
     { id: 'down', label: '下' },
     { id: 'left', label: '左' },
@@ -11,6 +12,7 @@ export const ACTIONS = [
 export const DEFAULT_KEYS = {
     a: ['j', 'z', 'Enter', ' '],
     b: ['x', 'Escape'],
+    dash: ['k', 'Shift'],
     up: ['ArrowUp', 'w'],
     down: ['ArrowDown', 's'],
     left: ['ArrowLeft', 'a'],
