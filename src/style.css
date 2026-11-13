@@ -303,16 +303,16 @@ canvas {
 .cross [data-key="down"] { grid-area: 3 / 2; }
 
 /* A・B・X を 2 列に まとめる (横に 3 つ 並べると 幅 375px の 端末で はみ出すため)。
-   左下 B (ダッシュ)・右上 A (決定)・B の 上に 小さめの X (メニュー) */
+   左上 X (メニュー)・左下 B (ダッシュ)・右の まん中 A (決定)。大きさは 3 つとも 同じ (11/13 ユーザー指定) */
 .action {
     display: grid;
-    grid-template: 44px 62px / 62px 62px;
+    grid-template: 58px 58px / 58px 58px;
     gap: 8px 12px;
 }
-#pad .action button { width: 62px; height: 62px; border-radius: 50%; }
+#pad .action button { width: 58px; height: 58px; border-radius: 50%; }
+#pad .action [data-key="b"] { grid-area: 1 / 1; }
 .action [data-key="dash"] { grid-area: 2 / 1; }
-.action [data-key="a"] { grid-area: 1 / 2 / 3 / 3; align-self: start; }
-#pad .action [data-key="b"] { grid-area: 1 / 1; width: 44px; height: 44px; justify-self: center; font-size: 15px; }
+.action [data-key="a"] { grid-area: 1 / 2 / 3 / 3; align-self: center; }
 
 @media (pointer: coarse) {
     #pad { display: flex; }

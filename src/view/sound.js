@@ -204,6 +204,10 @@ export function createSound() {
         jingle(id, version = null) {
             return once('bgm', AUDIO_DIR.bgm, bgmFile(id, version));
         },
+        // 短い曲を 先に 読みこんでおく (勝った その瞬間に 鳴らせる ように。ファイルの 読みこみ待ちで 遅れていた)
+        preload(id, version = null) {
+            if (ctx) load(AUDIO_DIR.bgm, bgmFile(id, version));
+        },
         // 鳴っている 短い曲を 止める (止めると 待っている promise も 終わる)
         stopJingles() {
             for (const node of jingles) {

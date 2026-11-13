@@ -48,21 +48,23 @@ export function createUi(input, sounds = {}) {
         });
     }
 
-    function menu(items, { head = '', wide = false, tall = false, center = false } = {}) {
+    // onMove: カーソルが 動くたびに 呼ぶ (item)。ねらう 敵の 矢印を 動かす など
+    function menu(items, { head = '', wide = false, tall = false, center = false, onMove = null, start = null } = {}) {
         return new Promise((resolve) => {
             menuBox.replaceChildren();
             menuBox.hidden = false;
             menuBox.classList.toggle('wide', wide);
             menuBox.classList.toggle('tall', tall);
             menuBox.classList.toggle('center', center);
-            menuBox.classList.toggle('grid', !wide && items.length > 5);
+            const cols = !wide && items.length > 5 ? 2 : 1;   // 6 つ 以上は 2 列に 並べる
+            menuBox.classList.toggle('grid', cols === 2);
             if (head) {
                 const title = document.createElement('div');
                 title.className = 'head';
                 title.textContent = head;
                 menuBox.append(title);
             }
-            let index = items.findIndex((item) => !item.disabled);
+            let index = start != null && items[start] && !items[start].disabled ? start : items.findIndex((item) => !item.disabled);
             const close = (item) => {
                 off();
                 sounds.decide?.(item.id);
@@ -78,19 +80,40 @@ export function createUi(input, sounds = {}) {
                 menuBox.append(button);
                 return button;
             });
-            const paint = () => buttons.forEach((button, i) => button.classList.toggle('on', i === index));
+            const paint = () => {
+                buttons.forEach((button, i) => button.classList.toggle('on', i === index));
+                onMove?.(items[index]);
+            };
+            // 2 列の ときは 上下で 同じ 列の 上下へ、左右で 同じ 行の 左右へ (11/13 ユーザー指定)。端は 反対の 端へ 回る
             const move = (delta) => {
                 let next = index;
-                do {
-                    next = (next + delta + items.length) % items.length;
-                } while (items[next].disabled);
+                for (let tries = 0; tries < items.length; tries++) {
+                    if (Math.abs(delta) === 1 && cols === 2) {
+                        const row = Math.floor(next / 2);
+                        const col = (next % 2 + 1) % 2;
+                        next = row * 2 + col;
+                        if (next >= items.length) next = row * 2;   // 最後の 行に 1 つ しか ない
+                    } else {
+                        const step = cols === 2 ? Math.sign(delta) * 2 : Math.sign(delta);
+                        next += step;
+                        if (cols === 2) {
+                            const col = index % 2;
+                            const rows = Math.ceil((items.length - col) / 2);
+                            if (next >= items.length) next = col;
+                            if (next < 0) next = col + (rows - 1) * 2;
+                        } else next = (next + items.length) % items.length;
+                    }
+                    if (!items[next].disabled) break;
+                }
+                if (next === index) return;
                 index = next;
                 paint();
                 sounds.cursor?.();
             };
             const off = input.onPress((key) => {
-                if (key === 'up') move(-1);
-                if (key === 'down') move(1);
+                if (key === 'up') move(cols === 2 ? -2 : -1);
+                if (key === 'down') move(cols === 2 ? 2 : 1);
+                if (cols === 2 && (key === 'left' || key === 'right')) move(1);
                 if (key === 'a') close(items[index]);
             });
             paint();
@@ -189,7 +212,9 @@ export function createUi(input, sounds = {}) {
             block.className = 'foe';
             block.classList.toggle('down', Boolean(foe.down));
             block.innerHTML = '<div class="row"><span class="name"></span><span class="attr"></span></div><div class="bar hp"><i></i></div>';
-            block.querySelector('.name').textContent = (many && foe === battle.foe && !foe.down ? '▶' : '') + foe.name;
+            const same = battle.foes.filter((f) => f.name === foe.name);   // 同じ 名前は A・B・C で 呼び分ける
+            const name = same.length > 1 ? foe.name + 'ABCDE'[same.indexOf(foe)] : foe.name;
+            block.querySelector('.name').textContent = (many && foe === battle.foe && !foe.down ? '▶' : '') + name;
             block.querySelector('.attr').textContent = foe.attr;
             paintBar(block.querySelector('.hp'), foe.hp / foe.maxHp);
             if (foe.truth) {

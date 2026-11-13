@@ -436,8 +436,10 @@ async function useBrushAt(spot) {
 }
 
 // 現実で 物を 見る。初めて 見た物は、夢筆で 描けるようになる
+// 夢筆を 手に入れる前 (まだ バクに 会っていない プロローグなど) は、見るだけ。バクは しゃべらず、覚えもしない (11/13 ユーザー指定)
 async function lookAt(imageId) {
     const label = IMAGES[imageId].label;
+    if (!keep.brush) return talk(LINES.lookPlain(label));
     await talk(learnImage(keep, imageId) ? LINES.learnImage(label) : LINES.lookAgain(label));
 }
 
@@ -554,6 +556,8 @@ async function fight(object) {
     const scaled = object.scale ? foeList.map((f) => ({ ...f, maxHp: Math.round(f.maxHp * object.scale), hp: Math.round(f.maxHp * object.scale), atk: Math.round(f.atk * object.scale) })) : foeList;
     const battle = createBattle(partyUnits(), scaled, { noEscape: ['firstBattle', 'nightmare', 'final'].includes(object.script), musou: keep.musou, kizuna: object.kizuna ?? null, dreamEat: Boolean(object.dreamEat) });
     battle.starDream = Boolean(object.starDream);   // グッドの ネムリボシ: 体力 半分で 星の夢 (台本 4-3)
+    battle.script = object.script;
+    for (const id of ['M25', 'M26']) sound.preload(id);   // 勝ち・負けの 短い曲を 先に 読みこむ
     sound.se('SE20');
     await playEncounter(encounterTheme(MAPS[state.map], state.x), foeList.some((f) => f.truth));
     await ui.fade(true);
@@ -587,13 +591,12 @@ async function fight(object) {
         }
     }
 
-    // 勝ち・負け: 戦闘が 終わった その場で 戦闘の 曲を 止めて 短い曲 (M25 / M26)。場面の 曲は 鳴り終わってから
-    const jingle = battleJingle(battle.over, object.script);
-    if (jingle) {
-        sound.playBgm(null, { transition: 'hard' });
-        const done = Promise.race([sound.jingle(jingle), new Promise((resolve) => setTimeout(resolve, 18000))]);
-        jinglePlaying = done;
-        done.then(() => { if (jinglePlaying === done) jinglePlaying = null; });
+    startJingle(battle);
+    // 勝ったら ポケモンの ように 戦闘の 画面の まま 結果 (経験値・レベルアップ) を 出す。曲は 勝った 瞬間から M25 (11/13 ユーザー指定)
+    if (battle.over === 'win' && object.script !== 'final') {
+        await ui.say('', LINES.battleWon(battle.foes.map((f) => f.name)), { wait: NOTE_MS });
+        await awardExp(battle);
+        battle.expDone = true;
     }
     // 救った・喰らった: 場面の 曲が 一瞬 鳴らないよう、画面が もどる 前に 静かに しておく
     if (battle.over === 'truth' || battle.over === 'devour') musicOverride = null;
@@ -639,14 +642,36 @@ async function roar(foe) {
 }
 
 // 敵が 複数のとき、ねらう 敵を 選ぶ (もどると 選び直し)
+//   カーソルを 動かすと、名前の 横の ▶ と 敵の 下の 印が その 敵へ 動く (11/13 ユーザー指定)。同じ 名前が いれば A・B・C を つける
 async function chooseTarget(battle) {
-    const items = aliveFoes(battle).map((f) => ({ id: String(f.index), label: `${f.name}（${f.attr}）` }));
+    const before = battle.foe;
+    const alive = aliveFoes(battle);
+    const items = alive.map((f) => ({ id: String(f.index), label: `${foeLabel(battle, f)}（${f.attr}）` }));
     items.push({ id: 'back', label: 'もどる' });
-    const id = await ui.menu(items, { head: 'どれを ねらう？' });
-    if (id === 'back') return false;
+    const preview = (item) => {
+        const foe = battle.foes[Number(item.id)];
+        if (item.id === 'back' || !foe) return;
+        setTarget(battle, foe);
+        battleView.target = foe.index;
+        ui.status(battle);
+    };
+    const id = await ui.menu(items, { head: 'どれを ねらう？', onMove: preview, start: Math.max(0, alive.indexOf(battle.foe)) });   // はじめの カーソルは 今 ねらっている 敵
+    if (id === 'back') {
+        setTarget(battle, before);
+        battleView.target = before?.index ?? 0;
+        ui.status(battle);
+        return false;
+    }
     setTarget(battle, battle.foes[Number(id)]);
+    battleView.target = battle.foe.index;
     ui.status(battle);
     return true;
+}
+
+// 同じ 名前の 敵が いれば「ナナシA」「ナナシB」と 呼び分ける
+function foeLabel(battle, foe) {
+    const same = battle.foes.filter((f) => f.name === foe.name);
+    return same.length > 1 ? foe.name + 'ABCDE'[same.indexOf(foe)] : foe.name;
 }
 
 function chooseTruth(battle) {
@@ -673,9 +698,22 @@ async function chooseSwap(battle) {
     return act(battle, 'swap', list.find((unit) => unit.id === id));
 }
 
+// 勝ち・負け: 戦闘が 終わった その瞬間に 戦闘の 曲を 止めて 短い曲 (M25 / M26)。場面の 曲は 鳴り終わってから
+function startJingle(battle) {
+    if (battle.jingleStarted) return;
+    battle.jingleStarted = true;
+    const jingle = battleJingle(battle.over, battle.script);
+    if (!jingle) return;
+    sound.playBgm(null, { transition: 'hard' });
+    const done = Promise.race([sound.jingle(jingle), new Promise((resolve) => setTimeout(resolve, 18000))]);
+    jinglePlaying = done;
+    done.then(() => { if (jinglePlaying === done) jinglePlaying = null; });
+}
+
 async function play(battle, events) {
     for (const event of events) {
         battleSound(event);
+        if (event.t === 'end') startJingle(battle);
         if (event.t === 'swap') battleView.ally = event.sprite;
         if (event.t === 'quote') battleView.quote = { index: event.index ?? 0, text: event.text, until: performance.now() + 2200 };
         if (event.t === 'kizuna') await ui.cutin(portraitPath(event.name, 'profile_kizuna'));   // キズナ攻撃の カットイン (引き継ぎ書 5-2)
@@ -796,7 +834,7 @@ async function finish(battle, object, foe) {
         state.y = start.y;
         return;
     }
-    await awardExp(battle);
+    if (!battle.expDone) await awardExp(battle);
     if (battle.over === 'truth') {
         musicOverride = null;   // 曲を 止めて、救ったときの 短い曲 (M18)
         sound.jingle('M18', object.script === 'duetBoss' ? null : foe.dream);
@@ -1567,7 +1605,12 @@ async function weaveWords() {
 // ---- 設定 --------------------------------------------------------------
 
 async function fieldMenu() {
-    const items = [{ id: 'grow', label: 'なかま' }, { id: 'shards', label: 'かけら' }, { id: 'bak', label: 'バクの成長' }, { id: 'keys', label: 'ボタン設定' }, { id: 'audio', label: '音の設定' }, { id: 'close', label: 'とじる' }];
+    // バクに 会う前 (プロローグ) は、なかま・かけら・バクの成長を 出さない (ネタバレに なるため。11/13 ユーザー指定)
+    const met = state.flags.bak || keep.loop > 1;
+    const items = [
+        ...(met ? [{ id: 'grow', label: 'なかま' }, { id: 'shards', label: 'かけら' }, { id: 'bak', label: 'バクの成長' }] : []),
+        { id: 'keys', label: 'ボタン設定' }, { id: 'audio', label: '音の設定' }, { id: 'close', label: 'とじる' }
+    ];
     if (keep.tutorial) items.unshift({ id: 'weave', label: '夢合わせ' });
     if (keep.brush) items.unshift({ id: 'brush', label: '夢筆' });
     if (keep.tutorial && MAPS[state.map].dream) items.unshift({ id: 'wake', label: '夢から覚める' });

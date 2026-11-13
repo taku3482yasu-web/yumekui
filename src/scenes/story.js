@@ -170,6 +170,8 @@ export const LINES = {
     brushInfo: (labels) => [[N, `夢筆で 描けるイメージ：${labels}`], [BAK, '光ってる場所の前で、オレを使え。夢に 合わねえ物は 描けねえからな。']],
     // 現実で 物を見て、夢で 描ける イメージを 覚える
     learnImage: (label) => [[N, `${label}を、じっくり 見た。`], [BAK, 'よく 見とけ。見た物は、夢ん中で 描けるようになる。'], [N, `夢筆で ${label}を 描けるようになった。`]],
+    battleWon: (names) => `${[...new Set(names)].join('と')}に 勝った！`,
+    lookPlain: (label) => [[N, `${label}だ。`]],
     lookAgain: (label) => [[N, `${label}だ。……夢でも、はっきり 思い浮かべられる。`]],
     // 台本 1-3 (2026-11-13 ユーザー改稿)
     enterOmen: [
