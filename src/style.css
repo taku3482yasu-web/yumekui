@@ -258,7 +258,7 @@ canvas {
     height: auto;
 }
 
-#title p { color: var(--dim); margin: 0.2em 0 7em; }
+#title p { color: var(--dim); margin: 0.2em 0 10em; }
 
 #fade {
     position: absolute;
