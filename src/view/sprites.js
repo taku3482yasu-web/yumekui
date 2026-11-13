@@ -1,4 +1,5 @@
 import { LOOKS, personCanvas } from './people.js';
+import { ROOM_SPRITES } from './roomart.js';
 
 // ドット絵。文字 1 つが 1 ドット。. は透明
 const PALETTE = {
@@ -734,45 +735,7 @@ function personArt(id) {
 
 export const PERSON_IDS = [...new Set([...Object.keys(PEOPLE), ...Object.keys(LOOKS).filter((id) => id !== 'hal')])];
 
-// ハルの部屋の キャンバス (イーゼルに 白い布) と ベッド
-const ROOM_ART = {
-    canvas: [
-        '................',
-        '.......aa.......',
-        '..kkkkkkkkkkkk..',
-        '..kmmmmmmmmmmk..',
-        '..kmmmmmmmmmmk..',
-        '..kmmmmmmmmmmk..',
-        '..kmmmmmmmmmmk..',
-        '..kmmmmmmmmmmk..',
-        '..kmmmmmmmmmmk..',
-        '..kkkkkkkkkkkk..',
-        '....a......a....',
-        '...a...aa...a...',
-        '...a...aa...a...',
-        '..a....aa....a..',
-        '..a....aa....a..',
-        '................'
-    ],
-    bed: [
-        '................',
-        'kkkkkkkkkkkkkkkk',
-        'kmmmmmkuuuuuuuuk',
-        'kmmmmmkuuuuuuuuk',
-        'kmmmmmkuuuuuuuuk',
-        'kkkkkkkuuuuuuuuk',
-        'kuuuuuuuuuuuuuuk',
-        'kuuuuuuuuuuuuuuk',
-        'kuuuuuuuuuuuuuuk',
-        'kuuuuuuuuuuuuuuk',
-        'kkkkkkkkkkkkkkkk',
-        'kaaaaaaaaaaaaaak',
-        'ka............ak',
-        '................',
-        '................',
-        '................'
-    ]
-};
+// ハルの部屋の キャンバスと ベッドは view/roomart.js (11/13 描き直し)
 
 const cache = new Map();
 
@@ -857,7 +820,7 @@ export function sprite(name) {
     else if (LOOKS[name]) canvas = personCanvas(name);   // 町の 人 (view/people.js)
     else if (name.endsWith('-side') && LOOKS[name.slice(0, -5)]) canvas = personCanvas(name.slice(0, -5), 'side');   // 横を 向いて 歩く 人
     else if (PEOPLE[name]) canvas = personArt(name);
-    else if (ROOM_ART[name]) canvas = paint(ROOM_ART[name]);
+    else if (ROOM_SPRITES[name]) canvas = ROOM_SPRITES[name]();
     else canvas = paint(ART[name]);
     cache.set(name, canvas);
     return canvas;
