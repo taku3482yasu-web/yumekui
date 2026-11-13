@@ -302,9 +302,17 @@ canvas {
 .cross [data-key="right"] { grid-area: 2 / 3; }
 .cross [data-key="down"] { grid-area: 3 / 2; }
 
-.action { display: flex; gap: 14px; align-items: flex-end; }
-#pad .action button { width: 68px; height: 68px; border-radius: 50%; }
-.action [data-key="a"] { margin-bottom: 26px; }
+/* A・B・X を 2 列に まとめる (横に 3 つ 並べると 幅 375px の 端末で はみ出すため)。
+   左下 B (ダッシュ)・右上 A (決定)・B の 上に 小さめの X (メニュー) */
+.action {
+    display: grid;
+    grid-template: 44px 62px / 62px 62px;
+    gap: 8px 12px;
+}
+#pad .action button { width: 62px; height: 62px; border-radius: 50%; }
+.action [data-key="dash"] { grid-area: 2 / 1; }
+.action [data-key="a"] { grid-area: 1 / 2 / 3 / 3; align-self: start; }
+#pad .action [data-key="b"] { grid-area: 1 / 1; width: 44px; height: 44px; justify-self: center; font-size: 15px; }
 
 @media (pointer: coarse) {
     #pad { display: flex; }
@@ -324,7 +332,6 @@ canvas {
         pointer-events: none;
     }
     #pad button { pointer-events: auto; }
-    .action [data-key="a"] { margin-bottom: 26px; }
 }
 
 /* プロローグで 父が 怒鳴ったとき、画面が 小さく 揺れる */
