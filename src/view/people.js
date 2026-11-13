@@ -41,6 +41,12 @@ export const LOOKS = {
     sora: { hair: 'long', hairColor: '#6a4a30', skin: SKIN.light, top: 'smock', jacket: '#eef0f4', ribbon: '#c8343c', bottom: 'skirt', pants: '#262c50', socks: '#262c50', paint: true },
     tome: { hair: 'bun', hairColor: '#c8c8d8', skin: SKIN.light, top: 'cardigan', jacket: '#8a7aa8', inner: '#eef0f4', bottom: 'skirt', pants: '#59509a', socks: '#8a7a6a', old: true },
     ken: { hair: 'short', hairColor: '#1e1c24', skin: SKIN.tan, top: 'tee', jacket: '#5a9ae0', bottom: 'shorts', pants: '#8a6a4a', child: true },
+    // 広げた 町の 人たち (11/13)
+    neighbor: { hair: 'bob', hairColor: '#5c4630', skin: SKIN.light, top: 'cardigan', jacket: '#c87a6a', inner: '#eef0f4', bottom: 'skirt', pants: '#5a5a78', socks: '#c8b8a8', adult: true },
+    oldman: { hair: 'short', hairColor: '#c8c8d8', skin: SKIN.tan, top: 'work', jacket: '#6a7a5a', inner: '#d8d0c0', bottom: 'pants', pants: '#5a5048', old: true, glasses: '#8a8ea8' },
+    postman: { hair: 'short', hairColor: '#2a2230', skin: SKIN.tan, top: 'work', jacket: '#4a6aa8', inner: '#eef0f4', bottom: 'pants', pants: '#2a3a6a', bag: '#8a5a32', adult: true },
+    jogger: { hair: 'spiky', hairColor: '#3a2a20', skin: SKIN.dark, top: 'track', jacket: '#d84a48', inner: '#eef0f4', bottom: 'shorts', pants: '#2a2a3a', adult: true },
+    girlKid: { hair: 'twin', hairColor: '#3a2a20', skin: SKIN.light, top: 'tee', jacket: '#f0a0c0', bottom: 'skirt', pants: '#6fb0ff', socks: '#eef0f4', pins: '#ffd86b', child: true },
     commuterA: { hair: 'long', hairColor: '#3a2a20', skin: SKIN.light, top: 'blazer', jacket: NAVY, ribbon: '#5ab07a', bottom: 'skirt', pants: '#262c50', socks: '#262c50' },
     commuterB: { hair: 'spiky', hairColor: '#5c4630', skin: SKIN.light, top: 'blazer', jacket: NAVY, tie: '#3f6ad0', bottom: 'pants', pants: '#262c50', bag: '#8a6a4a' },
     commuterC: { hair: 'short', hairColor: '#1e1c24', skin: SKIN.light, top: 'blazer', jacket: NAVY, tie: '#3f6ad0', bottom: 'pants', pants: '#262c50', glasses: '#c6c9ea' },

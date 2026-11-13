@@ -23,6 +23,7 @@ export function createUi(input, sounds = {}) {
             const finish = () => {
                 clearInterval(timer);
                 clearTimeout(autoTimer);
+                stopTalking();
                 off();
                 msg.removeEventListener('pointerdown', advance);
                 resolve();
@@ -31,9 +32,14 @@ export function createUi(input, sounds = {}) {
                 clearInterval(timer);
                 text.textContent = line;
                 done = true;
+                stopTalking();
                 if (wait !== null) autoTimer = setTimeout(finish, wait);
             };
             const advance = () => (done ? finish() : reveal());
+            // 話している 人の 立ち絵を 文字が 出ている あいだ 動かす (11/13 ユーザー指定: 本当に しゃべって いるように)
+            const mouth = speakingEl;
+            mouth?.classList.add('talking');
+            const stopTalking = () => mouth?.classList.remove('talking');
             let autoTimer = null;
             const off = input.onPress((key) => {
                 if (key === 'a' || key === 'b') advance();
@@ -126,11 +132,36 @@ export function createUi(input, sounds = {}) {
     //   話している人は 明るく、聞いている人は 暗く。読み込めない 絵 (まだ 無い 人) は 覚えておいて 出さない
     const missing = new Set();
     const sides = { left: $('portrait-left'), right: $('portrait-right'), center: $('portrait-center') };
+    const showPortrait = (el) => {
+        if (el.hidden) {   // はじめて 出る ときは 下から ふわっと
+            el.classList.remove('enter');
+            void el.offsetWidth;
+            el.classList.add('enter');
+        }
+        el.hidden = false;
+    };
     for (const el of Object.values(sides)) {
-        el.addEventListener('load', () => { if (el.dataset.want === el.getAttribute('src')) el.hidden = false; });
+        el.addEventListener('load', () => { if (el.dataset.want === el.getAttribute('src')) showPortrait(el); });
         el.addEventListener('error', () => { missing.add(el.getAttribute('src')); el.hidden = true; });
+        el.addEventListener('animationend', (event) => { if (event.animationName === 'portrait-enter') el.classList.remove('enter'); });
     }
+    // 立ち絵を 先に 読みこんで 持っておく (11/13 ユーザー指定: 会話の とちゅうで 遅れて 出ていた)
+    const loaded = new Map();
+    function preload(paths) {
+        return Promise.all(paths.filter(Boolean).map((path) => {
+            if (!loaded.has(path)) {
+                const image = new Image();
+                image.src = path;
+                loaded.set(path, (image.decode ? image.decode() : Promise.resolve()).catch(() => missing.add(path)));
+            }
+            return loaded.get(path);
+        }));
+    }
+    // 会話の 前に その会話の 絵が そろうのを 待つ (待ちすぎない)
+    const ready = (paths, ms = 700) => Promise.race([preload(paths), new Promise((resolve) => setTimeout(resolve, ms))]);
+    let speakingEl = null;
     function portraits(stage, pathOf) {
+        speakingEl = stage?.speaking ? sides[stage.speaking] : null;
         for (const [side, el] of Object.entries(sides)) {
             const who = stage?.[side];
             const path = who ? pathOf(who.name, who.expression) : null;
@@ -144,11 +175,8 @@ export function createUi(input, sounds = {}) {
                 el.hidden = true;
                 continue;
             }
-            if (el.getAttribute('src') === path && el.complete && el.naturalWidth) el.hidden = false;
-            else {
-                el.hidden = true;
-                el.setAttribute('src', path);
-            }
+            if (el.getAttribute('src') === path && el.complete && el.naturalWidth) showPortrait(el);
+            else el.setAttribute('src', path);   // 表情が 変わる ときは 前の 絵を 出した まま 入れかえる (消えて 遅れて 出ない)
         }
     }
 
@@ -242,7 +270,7 @@ export function createUi(input, sounds = {}) {
         text.textContent = line;
     }
 
-    return { say, show, menu, hideMsg, fade, hud, hideHud, status, hideStatus, title, portraits, cutin, bigArt };
+    return { say, show, menu, hideMsg, fade, hud, hideHud, status, hideStatus, title, portraits, preload, ready, cutin, bigArt };
 }
 
 function paintUnit(id, unit) {

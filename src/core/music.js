@@ -72,7 +72,7 @@ export function bgmFor({ mode, map = null, phase = 'day', foes = [], chase = fal
     if (chase) return 'M15';
     if (map.dream) return DREAM_BGM[map.dream] ?? 'M03';
     // プロローグの 家: 父との 会話は 曲なし (時計の 音)、自分の部屋に 入ってから M07
-    if (prologue && map.id === 'home') return prologue.roomEntered ? 'M07' : null;
+    if (prologue && (map.id === 'home' || map.id === 'home1')) return prologue.roomEntered ? 'M07' : null;
     // プロローグの 帰り道: リクと 歩いている あいだは ハルの テーマ M02「うん、いいよ」(リクと 分かれたら 町の 曲)
     if (prologue && prologue.rikuWalk) return 'M02';
     if (phase === 'night') return 'M07';

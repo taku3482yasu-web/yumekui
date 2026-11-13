@@ -5,9 +5,10 @@
 const TILE = 16;
 
 // 壁の なかま (上に 立つと 影が 落ちる・南が 壁なら 天面に なる)
-const WALLISH = new Set(['#', 'b', 'k', 'h', 'n', 'R', 'O', 'D', 'm']);
+const WALLISH = new Set(['#', 'b', 'k', 'h', 'n', 'R', 'H', 'U', 'z', 'O', 'D', 'm']);
 const INNER_WALL = new Set(['#', 'b', 'k']);
-const ROOF = 'R';
+const ROOFS = { R: ['#a85a48', '#94503f', '#7e4234', '#c47a64', '#4e2e26', '#7e4a3c', '#5e3428'], H: ['#4a78b8', '#3e68a4', '#30548a', '#6a98d0', '#22385e', '#4a6a9a', '#263e66'], U: ['#7a7e8c', '#6c707e', '#5a5e6a', '#9a9eac', '#3a3c46', '#5e606c', '#40424c'] };
+const isRoof = (c) => Boolean(ROOFS[c]);
 
 // 位置から 決まる 乱数 (毎回 同じ 絵に なる)
 function hash(x, y, k = 0) {
@@ -160,11 +161,11 @@ function houseWall(box, at, tx, ty) {
         box(r % 2 ? '#d0b48c' : '#dcc29c', 0, r * 4, TILE, 3);
         box('#b49670', 0, r * 4 + 3, TILE, 1);
     }
-    const near = (c) => c === 'h' || c === 'k' || c === 'n' || c === 'm';
+    const near = (c) => c === 'h' || c === 'k' || c === 'n' || c === 'm' || c === 'z';
     if (!near(at(-1, 0))) box('#7a5a3e', 0, 0, 2, TILE);
     if (!near(at(1, 0))) box('#5e4430', 14, 0, 2, TILE);
     if (!near(at(0, 1)) && at(0, 1) !== null) { box('#8a8478', 0, 13, TILE, 3); box('#a8a296', 0, 13, TILE, 1); }   // 石の 土台
-    if (at(0, -1) === ROOF) box('rgba(30, 20, 30, 0.35)', 0, 0, TILE, 3);   // 軒の 影
+    if (isRoof(at(0, -1))) box('rgba(30, 20, 30, 0.35)', 0, 0, TILE, 3);   // 軒の 影
 }
 
 function houseWindow(box, at, tx, ty) {
@@ -188,7 +189,7 @@ function noren(box, at, tx, ty) {
 }
 
 function door(box, at) {
-    const inHouse = ['h', 'k', 'n'].includes(at(-1, 0)) || ['h', 'k', 'n'].includes(at(1, 0)) || at(0, -1) === ROOF || at(0, -1) === 'h';
+    const inHouse = ['h', 'k', 'n'].includes(at(-1, 0)) || ['h', 'k', 'n'].includes(at(1, 0)) || isRoof(at(0, -1)) || at(0, -1) === 'h';
     if (INNER_WALL.has(at(-1, 0)) || INNER_WALL.has(at(1, 0))) {
         // 家の 中の 戸口 (壁の 切れ目): 床の 色で 抜く
         box('#4a3a48', 0, 0, TILE, 3);
@@ -218,18 +219,20 @@ function door(box, at) {
 }
 
 // 瓦屋根: 段ごとの 瓦と 継ぎ目。北の はしは 棟、南の はしは 軒
-function roof(box, at, tx, ty) {
-    const base = ['#a85a48', '#94503f', '#7e4234'];
+function roof(box, at, tx, ty, kind = 'R') {
+    const c = ROOFS[kind];
+    const base = [c[0], c[1], c[2]];
+    const same = (t) => t === kind;
     for (let r = 0; r < 4; r++) {
         box(base[0], 0, r * 4, TILE, 3);
         box(base[2], 0, r * 4 + 3, TILE, 1);
         for (let i = (r % 2) * 2; i < TILE; i += 4) box(base[1], i, r * 4, 1, 3);   // 瓦の 継ぎ目
-        box('#c47a64', 0, r * 4, TILE, 1);   // 瓦の 丸みの 光
+        box(c[3], 0, r * 4, TILE, 1);   // 瓦の 丸みの 光
     }
-    if (at(0, -1) !== ROOF) { box('#4e2e26', 0, 0, TILE, 3); box('#7e4a3c', 0, 0, TILE, 1); }   // 棟
-    if (at(0, 1) !== ROOF) { box('#5e3428', 0, 13, TILE, 2); box('#2e1c18', 0, 15, TILE, 1); }  // 軒
-    if (at(-1, 0) !== ROOF) box('#6e3a2e', 0, 0, 2, TILE);
-    if (at(1, 0) !== ROOF) box('#4e2a22', 14, 0, 2, TILE);
+    if (!same(at(0, -1))) { box(c[4], 0, 0, TILE, 3); box(c[5], 0, 0, TILE, 1); }   // 棟
+    if (!same(at(0, 1))) { box(c[6], 0, 13, TILE, 2); box('#2e1c18', 0, 15, TILE, 1); }  // 軒
+    if (!same(at(-1, 0))) box(c[2], 0, 0, 2, TILE);
+    if (!same(at(1, 0))) box(c[4], 14, 0, 2, TILE);
 }
 
 // 木: 大きな 丸い 葉 (マスの 上に はみ出す) と 幹。並ぶと 森に なる
@@ -357,6 +360,83 @@ function telescope(box, tx, ty) {
     box('#c6c9ea', 12, 3, 2, 4);
 }
 
+// ---- 広げた 町の 小物 (11/13) ----------------------------------------------
+// 下の 地面: となりで 多い ほう (歩道か 草)
+function groundOf(box, at, tx, ty) {
+    const around = [at(-1, 0), at(1, 0), at(0, 1), at(0, -1)];
+    if (around.includes('_') || around.includes(',')) paving(box, tx, ty);
+    else grass(box, tx, ty);
+}
+
+function postbox(box, at, tx, ty) {
+    groundOf(box, at, tx, ty);
+    box('rgba(30, 20, 40, 0.3)', 3, 13, 10, 2);
+    box('#5a5a68', 7, 10, 2, 4);
+    box('#d83a34', 4, 1, 8, 10);
+    box('#f05a50', 4, 1, 8, 2);
+    box('#a82a28', 10, 3, 2, 8);
+    box('#2a1a1a', 5, 4, 6, 1);   // 投函口
+    box('#f4f4f4', 6, 6, 4, 2);
+}
+
+function pole(box, at, tx, ty) {
+    groundOf(box, at, tx, ty);
+    box('rgba(30, 20, 40, 0.3)', 6, 13, 7, 2);
+    box('#8a8478', 6, -6, 4, 20);
+    box('#a8a296', 6, -6, 1, 20);
+    box('#5e5a52', 3, -4, 10, 2);   // 腕木
+    box('#2a2830', 0, -3, TILE, 1);   // 電線
+}
+
+function vending(box, tx, ty) {
+    paving(box, tx, ty);
+    box('rgba(30, 20, 40, 0.3)', 1, 13, 15, 3);
+    box('#e8ecf4', 1, -4, 14, 17);
+    box('#c8ccd8', 13, -4, 2, 17);
+    box('#3a6ab8', 2, -3, 11, 7);
+    for (let i = 0; i < 4; i++) box(['#e85a50', '#f0c040', '#60b070', '#f4f4f4'][(i + tx) % 4], 3 + i * 3, -1, 2, 3);
+    box('#2a2a38', 3, 8, 7, 2);
+    box('#ffe08a', 11, 6, 2, 1);
+}
+
+function flowerbed(box, tx, ty) {
+    box('#8a6a4a', 0, 4, TILE, 12);
+    box('#a8865e', 0, 4, TILE, 2);
+    box('#6a4a32', 1, 6, 14, 9);
+    for (let i = 0; i < 4; i++) {
+        const x = 2 + i * 3 + (ty % 2);
+        box('#4e8a44', x, 8, 1, 5);
+        box(['#f05a7a', '#ffd86b', '#f4f4f4', '#b07ae0'][(i + tx) % 4], x - 1, 6, 3, 3);
+    }
+}
+
+function bench(box, tx, ty, at) {
+    grass(box, tx, ty);
+    box('rgba(30, 20, 40, 0.3)', 0, 12, TILE, 3);
+    const l = at(-1, 0) === 'P';
+    const r = at(1, 0) === 'P';
+    box('#8a5a32', l ? 0 : 1, 3, 16 - (l ? 0 : 1) - (r ? 0 : 1), 3);   // せもたれ
+    box('#a87a4a', l ? 0 : 1, 7, 16 - (l ? 0 : 1) - (r ? 0 : 1), 3);   // 座面
+    box('#c89a62', l ? 0 : 1, 7, 16 - (l ? 0 : 1) - (r ? 0 : 1), 1);
+    if (!l) box('#4a4a58', 2, 10, 2, 4);
+    if (!r) box('#4a4a58', 12, 10, 2, 4);
+}
+
+function sand(box, tx, ty) {
+    box('#e8d4a4', 0, 0, TILE, TILE);
+    for (let k = 0; k < 6; k++) box(hash(tx, ty, k) < 0.5 ? '#d8c08a' : '#f4e4bc', Math.floor(hash(tx, ty, k + 5) * 15), Math.floor(hash(tx, ty, k + 10) * 15), 2, 1);
+}
+
+function sink(box, tx, ty, at) {
+    woodFloor(box, tx, ty);
+    box('#c8ccd4', 0, 1, TILE, 11);
+    box('#e8ecf2', 0, 1, TILE, 2);
+    box('#9aa0ac', 0, 11, TILE, 1);
+    box('#6a5a4a', 0, 12, TILE, 3);   // 下の 戸棚
+    if (at(1, 0) !== 'K') { box('#8a9098', 3, 4, 8, 5); box('#5a6068', 4, 5, 6, 3); box('#b8bcc4', 12, 2, 1, 4); }   // 流し と 蛇口
+    else { box('#3a3a44', 4, 4, 8, 4); box('#e85a3a', 6, 5, 2, 2); }   // コンロ
+}
+
 // 海 (毎回 描く): 岸に 近いと 白い 波
 export function drawSea(ctx, tiles, tx, ty, time) {
     const box = make(ctx, tx * TILE, ty * TILE);
@@ -395,7 +475,15 @@ export function drawRealTile(ctx, tiles, tx, ty) {
         case 'x': schoolyard(box, tx, ty); return;
         case 'T': tree(box, at, tx, ty); return;
         case 'h': houseWall(box, at, tx, ty); return;
-        case 'R': roof(box, at, tx, ty); return;
+        case 'R': case 'H': case 'U': roof(box, at, tx, ty, tile); return;
+        case 'z': houseWall(box, at, tx, ty); door(box, at); return;
+        case 'u': postbox(box, at, tx, ty); return;
+        case 'y': pole(box, at, tx, ty); return;
+        case 'v': vending(box, tx, ty); return;
+        case 'F': flowerbed(box, tx, ty); return;
+        case 'P': bench(box, tx, ty, at); return;
+        case 'A': sand(box, tx, ty); break;
+        case 'K': sink(box, tx, ty, at); return;
         case 'n': noren(box, at, tx, ty); return;
         case '=': fence(box, tx, ty); return;
         case 't': table(box, tx, ty, at); break;

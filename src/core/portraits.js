@@ -64,6 +64,15 @@ export function portraitPath(name, expression = 'neutral') {
     return null;
 }
 
+// 会話で 使う 絵 ぜんぶ (はじめに 読みこんで おき、会話の とちゅうで 遅れて 出ないように する)
+export function allPortraitPaths() {
+    const paths = Object.entries(FACES).flatMap(([file, faces]) => faces.map((face) => `img/chara/${file}_${face}.png`));
+    paths.push(...Object.values(YUMEKUI_FILES).map((id) => `img/yumekui/${id}.png`));
+    paths.push(...Object.values(RESIDENT_FILES).map((id) => `img/enemy/${id}.png`));
+    paths.push(...Object.values(FIXED_PORTRAITS));
+    return [...new Set(paths)];
+}
+
 // 絵の 種類 (表示の 大きさを 変える): 人 / ユメクイ / 夢の住人
 export function portraitKind(path) {
     if (!path) return null;

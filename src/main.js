@@ -34,7 +34,7 @@ import { battleJingle, bgmFor, loopSong, BAK_BGM, FINAL_NIGHT_BGM, layersFor, st
 import { stepsOf } from './core/movie.js';
 import { createMoviePlayer, createStage, drawFilm, playFilm } from './view/movie.js';
 import { MOVIES } from './scenes/movies.js';
-import { nextStage, portraitPath, scenePlan, startStage } from './core/portraits.js';
+import { allPortraitPaths, nextStage, portraitPath, scenePlan, startStage } from './core/portraits.js';
 import { canWork, shopHint, useSnack, work, JOBS } from './core/job.js';
 
 const WALK_MS = 150;
@@ -100,6 +100,7 @@ const walk = { dx: 0, dy: 0, left: 0 };
 //   options.plan: 立ち位置を 決めて 渡す (ふつうは 場面の セリフから 決める)。options.shade: 立ち絵を 暗く 透かす (一瞬の 声 など)
 async function talk(lines, options = {}) {
     const plan = options.plan ?? scenePlan(lines);
+    await ui.ready(lines.map(([name, , expression]) => portraitPath(name, expression)));   // 絵が そろってから 話しはじめる
     let stage = startStage();
     for (const [name, line, expression] of lines) {
         stage = nextStage(stage, name, expression, plan);
@@ -228,6 +229,8 @@ const SCRIPTS = {
         await partTimeJob();
     },
     portSign: () => talk(LINES.portSign),
+    halPlate: () => talk(LINES.halPlate),
+    fatherRoom: () => talk(LINES.fatherRoom),
     // 丘の上の 天文台 (2 周目から。台本 4-2)
     observatoryClosed: () => talk(LINES.observatoryClosed),
     telescope: () => talk(LINES.telescope),
@@ -463,7 +466,8 @@ async function enter(exit) {
         return;
     }
     await ui.fade(true);
-    const goingOut = state.phase === 'night' && state.map === 'home' && exit.to !== 'home';
+    const goingOut = state.phase === 'night' && state.map === 'home1' && exit.to === 'saka';   // 夜に 玄関から 外へ
+    if (state.flags.prologue && exit.to === 'home') state.flags.roomEntered = true;   // プロローグで 2 階の 自分の部屋に 上がった (曲 M07)
     warp(state, exit);
     resetFollow();
     const here = layerOf();
@@ -1694,18 +1698,23 @@ function prologueStep() {
 async function rikuLeaves() {
     await talk(LINES.rikuBye);
     state.flags.rikuWalk = false;
-    const riku = { who: 'riku', x: follow.x, y: follow.y };
+    // 分かれ道を 右へ 歩いて 去っていく。1 マスずつ 飛ばずに なめらかに (11/13 ユーザー指定: かくかく していた)
+    const riku = { who: 'riku-side', x: follow.x, y: follow.y };
     actors = [riku];
-    while (riku.x < 24) {   // 分かれ道を 右へ 去っていく
-        riku.x++;
-        await sleep(110);
+    const from = riku.x;
+    const start = performance.now();
+    const TILE_MS = 150;
+    while (riku.x < 24) {
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        riku.x = from + (performance.now() - start) / TILE_MS;
+        riku.step = Math.floor((riku.x - from) * 2) % 2;   // 歩くと 上下に ゆれる
     }
     actors = [];
 }
 
 async function enterHomePrologue() {
     await ui.fade(true);
-    Object.assign(state, { map: 'home', x: 3, y: 7, dir: 'up' });
+    Object.assign(state, { map: 'home1', x: 10, y: 7, dir: 'up' });   // 1 階の 玄関 (父は 居間)
     state.time = 'evening';
     resetFollow();
     showHud();
@@ -1800,6 +1809,7 @@ async function start() {
         ui.title(true);
     }
     ui.title(false);
+    ui.preload(allPortraitPaths());   // 会話の 立ち絵を ぜんぶ 先に 読みこむ (待たない)
     await ui.fade(true);
     await playIntro();
     await prologue();

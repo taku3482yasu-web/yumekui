@@ -251,6 +251,9 @@ await pick('……');
 await sleep(200);
 await shot('01e-prologue-father');
 await skip();
+await walkTo(13, 2);   // 1 階の 階段から 2 階の 自分の部屋へ (11/13 から 2 階建て)
+await sleep(400);
+await waitField();
 await walkTo(9, 3);
 await skip();
 await walkTo(9, 3);
@@ -431,8 +434,13 @@ const goHome = async (label = '家に帰る') => {
         await sleep(400);
         await waitField();
     }
-    if ((await state()).s.map === 'home') {   // 土日は 自分の部屋から 玄関へ
-        await walkTo(3, 8);
+    if ((await state()).s.map === 'home') {   // 土日は 2 階の 自分の部屋から 階段で 1 階へ
+        await walkTo(1, 6);
+        await sleep(400);
+        await waitField();
+    }
+    if ((await state()).s.map === 'home1') {   // 1 階の 玄関から 外へ
+        await walkTo(10, 8);
         await sleep(400);
         await waitField();
     }

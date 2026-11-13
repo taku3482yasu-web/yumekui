@@ -241,9 +241,11 @@ test('プロローグ: 教室で 目が覚め、学校を出て 坂道を下っ�
 test('プロローグ: 家では 玄関から 出られず、机・キャンバス・ベッドに 届く', () => {
     const state = dayState(1);
     state.flags.prologue = true;
-    Object.assign(state, { map: 'home', x: 3, y: 7 });
+    // 1 階の 玄関から 入り、階段で 2 階の 自分の部屋へ (11/13 ユーザー指定で 2 階建て)
+    Object.assign(state, { map: 'home1', x: 10, y: 7 });
     assert.equal(step({ ...state }, 'down').object.script, 'prologueStay');
-    const seen = reachable(state, { map: 'home', x: 3, y: 7 });
+    const seen = reachable(state, { map: 'home1', x: 10, y: 7 });
+    assert.ok(seen.has('home1,9,4') || seen.has('home1,10,3'), '居間の 父の そばに 立てる');
     assert.ok(!seen.has('saka,4,17'), '外へは 出られない');
     assert.ok(seen.has('home,9,3') || seen.has('home,10,3'), '机の前に 立てる');
     for (const kind of ['canvas', 'bed']) {

@@ -210,7 +210,7 @@ export function drawField(ctx, state, walk, time, actors = [], follower = null) 
         drawObject(ctx, object, time);
         if (sight?.attrs && object.kind === 'foe') drawAttr(ctx, object);
     }
-    for (const actor of actors) drawObject(ctx, { kind: 'person', x: actor.x, y: actor.y, sprite: actor.who }, time);
+    for (const actor of actors) drawObject(ctx, { kind: 'person', x: actor.x, y: actor.y - (actor.step ? 1 / TILE : 0), sprite: actor.who }, time);
     const behind = follower && follower.y <= state.y;   // バクが 上 (奥) にいるときは ハルより 先に 描く
     if (behind) drawFollower(ctx, follower, walk, time);
     drawHal(ctx, state, px, py, walk);

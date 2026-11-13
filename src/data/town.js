@@ -23,27 +23,48 @@ const school = [
     '#'.repeat(35) + 'x'.repeat(11)
 ];
 
-// 坂道と商店街: 上が 校門、下が ハルの家。右の 分かれ道の先が リクの家
+// 坂道と商店街: 上が 校門、坂の 下に ハルの家 (青い 屋根の 2 階建て)。右の 分かれ道の先が リクの家
+//   2026-11-13 ユーザー指定で 町を 広げた: 右に 海と 丘の 家並み、下に 海辺の 遊歩道・公園・住宅街・南の 大通り。
+//   もとの 24×18 の 部分は 座標を 変えずに 残した (朝の 通学路・出口・リクの 分かれ道が そのまま 使える)
+//   H = ハルの家の 青い 屋根 / U = 灰色の 屋根 / z = よその家の 戸 / u = ポスト / y = 電柱 / v = 自動販売機 / F = 花だん / P = ベンチ / A = 砂場
 const saka = [
-    'TTTTTTThhhhhhhhhhTTsTTTT',
-    'TTTTTTThhhhmmhhhhTTsTTTT',
-    'TTggggg=,,,,,,,,=gggggTT',
-    'TTggggg=,,,,,,,,=gggggTT',
-    'TTRRRRR_,,,,,,,,_gggggTT',
-    'TThhhhh_,,,,,,,,_gggggTT',
-    'TThnmnh_,,,,,,,,_ggTggTT',
-    'TT______,,,,,,,,_gggggTT',
-    'TTRRRRR_,,,,,,,,,,,,,,,,',
-    'TThhhhh_,,,,,,,,,,,,,,,,',
-    'TThkhkh_,,,,,,,,=TTTTTTT',
-    'TT______,,,,,,,,=wwwwwwT',
-    'TTggggg_,,,,,,,,=wwwwwwT',
-    'TTgTggg_,,,,,,,,=wwwwwwT',
-    'TTRRRRR_,,,,,,,,=wwwwwwT',
-    'TThhhhh_,,,,,,,,=wwwwwwT',
-    'TThkmkh_,,,,,,,,=wwwwwwT',
-    'TT______,,,,,,,,=wwwwwwT',
-    'TTTTTTTTTTTTTTTTTTTTTTTT'
+    'TTTTTTThhhhhhhhhhTTsTTTTTTTTTTTTTTTTTTTT',
+    'TTTTTTThhhhmmhhhhTTsTTTTTTTTTTTTTTTTTTTT',
+    'TTggggg=,,,,,,,,=gggggTTgUUUUUgRRRRRRggT',
+    'TTggggg=,,,,,,,,=gggggTTghkhkhghkhhkhggT',
+    'TTRRRRR_,,,,,,,,_gggggTTgUUUUUgRRRRRRggT',
+    'TThhhhh_,,,,,,,,_gggggTTghkzkhghkhzkhggT',
+    'TThnmnh_,,,,,,,,_ggTggTTgFgFgggggFgFgFgT',
+    'TT______,,,,,,,,_gggggggggggTgggggTggggT',
+    'TTRRRRR_,,,,,,,,,,,,,,,,TTTTTTTTTTTTTTTT',
+    'TThhhhh_,,,,,,,,,,,,,,,,TTTTTTTTTTTTTTTT',
+    'TThkhkh_,,,,,,,,=TTTTTTTTTTTTTTTTTTTTTTT',
+    'TT______,,,,,,,,=wwwwwwwwwwwwwwwwwwwwwwT',
+    'TTHHHHH_,,,,,,,,=wwwwwwwwwwwwwwwwwwwwwwT',
+    'TThkhkh_,,,,,,,,=wwwwwwwwwwwwwwwwwwwwwwT',
+    'TTHHHHH_,,,,,,,,=wwwwwwwwwwwwwwwwwwwwwwT',
+    'TThhhhh_,,,,,,,,=wwwwwwwwwwwwwwwwwwwwwwT',
+    'TThkmkh_,,,,,,,,=wwwwwwwwwwwwwwwwwwwwwwT',
+    'TTu_____,,,,,,,,=wwwwwwwwwwwwwwwwwwwwwwT',
+    'TTgFgFg_,,,,,,,,_======================T',
+    'TTUUUUU_,,,,,,,,_______________________T',
+    'TThkhkh_,,,,,,,,_FgFgg__gFF_,,_RRRRRRggT',
+    'TTUUUUU_,,,,,,,,_ggAAAggPPg_,,_hkhhkhggT',
+    'TThkzkh_,,,,,,,,_ggAAAggggg_,,_RRRRRRggT',
+    'TTgFgug_,,,,,,,,_ggggyggggg_,,_hkhzkhvvT',
+    'TTggggg_,,,,,,,,_gTggggggTg_,,_gugFgFggT',
+    'TTRRRRR_,,,,,,,,_gggggggggg_,,_ygggggggT',
+    'TThkhkh_,,,,,,,,_RRRRRUUUUU_,,_gUUUUUUgT',
+    'TTRRRRR_,,,,,,,,_hkhkhhkhkh_,,_ghkhkhkgT',
+    'TThkzkh_,,,,,,,,_RRRRRUUUUU_,,_gUUUUUUgT',
+    'TTguFgg_,,,,,,,,_hkzkhhkzkh_,,_ghkzhkhgT',
+    'TTgTggg_,,,,,,,,_gFguggugFg_,,_ggFgguFgT',
+    'TTgggyg_,,,,,,,,_gggggggggg_,,_ggggggggT',
+    'TT____________________________________TT',
+    'TT,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,TT',
+    'TT,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,TT',
+    'TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT',
+    'TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT'
 ];
 
 // リクの家の前 (3 周目に入れる。小規模版の 段階3 で 使う)
@@ -73,17 +94,31 @@ const observatory = [
     'TTTTTTTssTTTTTTT'
 ];
 
-// ハルの家: 左が 居間、右が ハルの部屋 (机・キャンバス・ベッド)
+// ハルの家 (2026-11-13 ユーザー指定で 2 階建てに)
+//   1 階 (home1): 左が 台所 (K = 流し台)、まん中が 居間 (父)、右に 2 階への 階段。下の 玄関から 町へ
+//   2 階 (home): 左が 廊下と 1 階への 階段 (父の 部屋の 戸)、右が ハルの部屋 (机・キャンバス・ベッド)
+const home1 = [
+    '################',
+    '#kkk#kkkkkkk#kk#',
+    '#KK.#.......#ss#',
+    '#...#..tt...#..#',
+    '#...#..tt...#..#',
+    '#..............#',
+    '#...#.......#..#',
+    '#...#.......#..#',
+    '##########m#####'
+];
+
 const home = [
     '################',
-    '#kkkkkk#kkkkkkk#',
+    '#kk#mkk#kkkkkkk#',
     '#......#.dd....#',
-    '#.tt...#.......#',
-    '#.tt...#.......#',
+    '#......#.......#',
+    '#......#.......#',
     '#..............#',
-    '#......#.......#',
-    '#......#.......#',
-    '###m############'
+    '#ss....#.......#',
+    '#ss....#.......#',
+    '################'
 ];
 
 const person = (id, who, x, y) => ({ id, kind: 'person', who, x, y, sprite: who });
@@ -115,6 +150,12 @@ export const TOWN_MAPS = {
     saka: {
         id: 'saka', name: '坂道と商店街', real: true, tiles: saka, start: { x: 11, y: 2 },
         rooms: [
+            { name: 'ハルの家の前', x: [0, 7], y: [11, 18] },
+            { name: '丘の家並み', x: [17, 39], y: [0, 7] },
+            { name: '海辺の遊歩道', x: [16, 39], y: [18, 19] },
+            { name: '公園', x: [17, 26], y: [20, 25] },
+            { name: '南の大通り', x: [0, 39], y: [32, 36] },
+            { name: '住宅街', x: [0, 39], y: [19, 31] },
             { name: '校門', x: [0, 23], y: [0, 3] },
             { name: '商店街', x: [0, 23], y: [4, 9] },
             { name: '坂道', x: [0, 23], y: [10, 18] }
@@ -129,7 +170,14 @@ export const TOWN_MAPS = {
             { id: 'toSchool2', kind: 'exit', x: 12, y: 1, to: 'school', at: { x: 2, y: 9 } },
             { id: 'tomeShop', kind: 'door', x: 4, y: 6, script: 'tomeShop' },
             person('tome', 'tome', 2, 7),
-            person('ken', 'ken', 3, 12),
+            person('ken', 'ken', 20, 22),   // 公園の 砂場
+            { id: 'halPlate', kind: 'talk', x: 3, y: 17, sprite: 'sign', script: 'halPlate' },   // ハルの家の 表札
+            // 広げた 町の 人たち (11/13)
+            person('neighbor', 'neighbor', 23, 23),
+            person('oldman', 'oldman', 25, 22),
+            person('postman', 'postman', 9, 27),
+            person('jogger', 'jogger', 33, 19),
+            person('girlKid', 'girlKid', 19, 21),
             { id: 'portSign', kind: 'talk', x: 12, y: 17, sprite: 'sign', script: 'portSign' },
             // 右上の 石段: 丘の上の 天文台へ (2 周目から。台本 4-2)。1 周目は のぼらない
             { id: 'observatoryClosed', kind: 'block', x: 19, y: 0, script: 'observatoryClosed', hideIf: 'observatory' },
@@ -159,16 +207,31 @@ export const TOWN_MAPS = {
             person('michiru', 'michiru', 7, 5)
         ]
     },
-    home: {
-        id: 'home', name: 'ハルの家', real: true, indoor: true, tiles: home, start: { x: 3, y: 7 },
+    home1: {
+        id: 'home1', name: 'ハルの家', real: true, indoor: true, tiles: home1, start: { x: 10, y: 7 },
         rooms: [
-            { name: '居間', x: [0, 6], y: [0, 8] },
+            { name: '台所', x: [0, 3], y: [0, 8] },
+            { name: '居間', x: [4, 12], y: [0, 8] },
+            { name: '階段', x: [13, 15], y: [0, 8] }
+        ],
+        objects: [
+            { id: 'prologueStay', kind: 'block', x: 10, y: 8, script: 'prologueStay', needs: 'prologue' },   // 父に 部屋へ 行けと 言われた あと
+            { id: 'toTown', kind: 'exit', x: 10, y: 8, to: 'saka', at: { x: 4, y: 17 } },
+            { id: 'upstairs1', kind: 'exit', x: 13, y: 2, to: 'home', at: { x: 1, y: 5 } },
+            { id: 'upstairs2', kind: 'exit', x: 14, y: 2, to: 'home', at: { x: 2, y: 5 } },
+            person('father', 'father', 9, 3)
+        ]
+    },
+    home: {
+        id: 'home', name: 'ハルの家 2階', real: true, indoor: true, tiles: home, start: { x: 12, y: 5 },
+        rooms: [
+            { name: '2階の廊下', x: [0, 6], y: [0, 8] },
             { name: 'ハルの部屋', x: [7, 15], y: [0, 8] }
         ],
         objects: [
-            { id: 'prologueStay', kind: 'block', x: 3, y: 8, script: 'prologueStay', needs: 'prologue' },   // 父に 部屋へ 行けと 言われた あと
-            { id: 'toTown', kind: 'exit', x: 3, y: 8, to: 'saka', at: { x: 4, y: 17 } },
-            person('father', 'father', 4, 3),
+            { id: 'downstairs1', kind: 'exit', x: 1, y: 6, to: 'home1', at: { x: 13, y: 3 } },
+            { id: 'downstairs2', kind: 'exit', x: 2, y: 6, to: 'home1', at: { x: 14, y: 3 } },
+            { id: 'fatherRoom', kind: 'block', x: 4, y: 1, script: 'fatherRoom' },
             { id: 'canvas', kind: 'canvas', x: 13, y: 3, sprite: 'canvas' },
             { id: 'bed', kind: 'bed', x: 13, y: 6, sprite: 'bed' }
         ]

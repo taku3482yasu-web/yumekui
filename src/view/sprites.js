@@ -855,6 +855,7 @@ export function sprite(name) {
     else if (name === 'duet') canvas = paint(duetRows());
     else if (name.startsWith('hal-')) canvas = personCanvas('hal', name.slice(4) === 'side' ? 'side' : name.slice(4));   // ハル (立ち絵を 参考に 描き直した 16×24)
     else if (LOOKS[name]) canvas = personCanvas(name);   // 町の 人 (view/people.js)
+    else if (name.endsWith('-side') && LOOKS[name.slice(0, -5)]) canvas = personCanvas(name.slice(0, -5), 'side');   // 横を 向いて 歩く 人
     else if (PEOPLE[name]) canvas = personArt(name);
     else if (ROOM_ART[name]) canvas = paint(ROOM_ART[name]);
     else canvas = paint(ART[name]);
