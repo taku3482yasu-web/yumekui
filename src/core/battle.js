@@ -465,6 +465,14 @@ function foeTurn(b, foe, events) {
         events.push({ t: 'say', text: `${foe.name}の 色が 変わった！（${foe.attr}）` });
     }
     foe.step++;
+    // 行動のたびに 吹き出しで 1 つ しゃべる (台本 2-3)。最後まで 言ったら、最後の 2 つを くり返す
+    if (foe.quotes?.length) {
+        const n = foe.quotes.length;
+        const k = foe.quoteAt ?? 0;
+        const at = k < n ? k : n - 2 + ((k - n) % 2);
+        foe.quoteAt = k + 1;
+        events.push({ t: 'quote', index: foe.index, text: foe.quotes[Math.max(0, at)] });
+    }
     if (move === 'charge') {
         events.push({ t: 'say', text: foe.chargeText ?? `${foe.name}が 大きく うずを巻きはじめた……！`, se: 'SE32' });
         return;

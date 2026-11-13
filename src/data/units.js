@@ -52,6 +52,12 @@ const TRUTH = {
 };
 
 // exp: 倒したときの 経験値 (仕様書「経験値とレベル」。合体ボス デュエットは 2 羽で 250)
+// 戦闘中、行動の たびに 吹き出しで しゃべる セリフ (台本 2-3「戦闘時のセリフ」)
+export const QUOTES = {
+    gakufume: ['楽しいね', '初めて吹けたよ', '一緒に吹こうよ', '楽しいよ', 'なんで', 'なんでなんで', 'なんでなんでなんで', 'さみしいよ', '苦しいよ'],
+    togemetoro: ['お前が悪いんだ', '全部お前のせいだ', 'なんで私には', '友達だったのに', 'なんで', '許さない', '話してくれるだけで', 'それだけでよかったのに']
+};
+
 export const FOES = {
     nanashi: { id: 'nanashi', name: 'ナナシ', attr: '喜', sprite: 'nanashi', hp: 20, maxHp: 20, atk: 8, def: 4, spd: 6, exp: 6 },
     'omote-喜': mask('喜', '笑い顔'),
@@ -62,6 +68,7 @@ export const FOES = {
     hari: { id: 'hari', name: 'ナナシ・ハリ', attr: '怒', sprite: 'hari', hp: 24, maxHp: 24, atk: 10, def: 4, spd: 7, exp: 9 },
     gakufume: {
         id: 'gakufume', name: 'ガクフメ', attr: '哀', sprite: 'gakufume', dream: 'mio', ally: 'gakufume', truthHead: 'ミオの本音は？',
+        quotes: QUOTES.gakufume,
         hp: 110, maxHp: 110, atk: 11, def: 6, spd: 9, exp: 120,
         pattern: ['tackle', 'tackle', 'charge', 'swirl'],
         chargeText: 'ガクフメが 高い音を ためている……！', bigMove: '止まらないソロ',
@@ -70,6 +77,7 @@ export const FOES = {
     },
     togemetoro: {
         id: 'togemetoro', name: 'トゲメトロ', attr: '怒', sprite: 'togemetoro', dream: 'kana', ally: 'togemetoro', truthHead: 'カナの本音は？',
+        quotes: QUOTES.togemetoro,
         hp: 110, maxHp: 110, atk: 13, def: 6, spd: 10, exp: 120,
         pattern: ['tackle', 'tackle', 'charge', 'swirl'],
         chargeText: 'トゲメトロの テンポが 速くなっていく……！', bigMove: 'せかすリズム',
@@ -87,13 +95,14 @@ export const FOES = {
     //   カナの 本音が 届くと、怒の 姿から 哀の 姿に 変わって 立ち上がる (phases)。救うと ガクフメと トゲメトロが 仲間になる
     duet: {
         id: 'duet', name: 'デュエット', attr: '怒', sprite: 'duet-boss', solvedAs: 'togemetoro', pairAttrs: ['怒', '哀'],
-        truthHead: 'カナの本音は？', roarText: 'デュエットが ふたつの声で 叫んだ！',
+        truthHead: 'カナの本音は？', roarText: 'デュエットが ふたつの声で 叫んだ！', quotes: QUOTES.togemetoro,
         hp: 150, maxHp: 150, atk: 13, def: 6, spd: 10, exp: 250,
         pattern: ['tackle', 'charge', 'swirl', 'tackle'], chargeText: 'デュエットの テンポが 速くなっていく……！', bigMove: 'せかすリズム',
         truth: { ...TRUTH.kana },
         phases: [{
             attr: '哀', solvedAs: 'gakufume', truthHead: 'ミオの本音は？', hpRate: 0.6,
             text: 'トゲが 寝ていく。……けれど 楽譜の 片側が、まだ 泣いている。デュエットが 哀しみの 音で 立ち上がった！',
+            quotes: QUOTES.gakufume, quoteAt: 0,
             pattern: ['tackle', 'tackle', 'charge', 'swirl'], chargeText: 'デュエットが 高い音を ためている……！', bigMove: '止まらないソロ',
             truth: { ...TRUTH.mio }
         }]

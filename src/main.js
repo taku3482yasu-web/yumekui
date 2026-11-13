@@ -392,7 +392,7 @@ async function touch(object) {
         const opened = pickWord(state, object);
         sound.se('SE05');
         showHud();
-        await talk(LINES.wordFound(object.word));
+        await talk(state.map === 'omen' ? LINES.wordFoundFirst(object.word) : LINES.wordFound(object.word));
         if (opened) {
             sound.se('SE06');
             await talk(LINES.gateOpen);
@@ -677,6 +677,7 @@ async function play(battle, events) {
     for (const event of events) {
         battleSound(event);
         if (event.t === 'swap') battleView.ally = event.sprite;
+        if (event.t === 'quote') battleView.quote = { index: event.index ?? 0, text: event.text, until: performance.now() + 2200 };
         if (event.t === 'kizuna') await ui.cutin(portraitPath(event.name, 'profile_kizuna'));   // キズナ攻撃の カットイン (引き継ぎ書 5-2)
         // 寄った 絵で 映す 敵: 攻撃を 受けた 敵、または 攻撃してきた 敵
         if (event.t === 'hit' && event.target === 'foe' && event.index != null) battleView.focus = event.index;

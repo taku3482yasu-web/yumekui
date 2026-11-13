@@ -282,6 +282,26 @@ export function drawBattle(ctx, view, time) {
     if (view.focus == null) drawOverview(ctx, view, time);
     else drawCloseUp(ctx, view, time);
 
+    // ユメクイの 吹き出し (行動の たびに 1 つ。パッチ 0020)。寄った 絵では 敵は 右 (x=236) に 1 体だけ
+    if (view.quote && time < view.quote.until && !view.down[view.quote.index]) {
+        ctx.font = 'bold 11px sans-serif';
+        const w = Math.ceil(ctx.measureText(view.quote.text).width) + 12;
+        const at = view.focus == null ? foeX(view, view.quote.index) : 236;
+        const cx = Math.min(316 - w / 2, Math.max(4 + w / 2, at));
+        const top = 8;
+        ctx.fillStyle = 'rgba(250, 248, 255, 0.95)';
+        ctx.strokeStyle = '#20203a';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(cx - w / 2, top, w, 20, 6);
+        else ctx.rect(cx - w / 2, top, w, 20);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#20203a';
+        ctx.textAlign = 'center';
+        ctx.fillText(view.quote.text, cx, top + 14);
+    }
+
     for (const pop of view.pops) {
         const left = (pop.until - time) / 700;
         if (left <= 0) continue;

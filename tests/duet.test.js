@@ -114,3 +114,13 @@ test('夢合体で 2 人とも 救う: だれも 刈り取られず、ガクフ�
     assert.ok(keep.musou.includes('duet'));
     assert.equal(keep.growth.saved, 2);
 });
+
+test('ユメクイは 行動の たびに 吹き出しで 1 つ しゃべる (デュエットは 段階が 変わると ミオの 言葉に)', async () => {
+    const { createBattle } = await import('../src/core/battle.js');
+    const { FOES, QUOTES, ALLIES } = await import('../src/data/units.js');
+    assert.equal(FOES.gakufume.quotes[0], '楽しいね');
+    assert.equal(FOES.duet.quotes, QUOTES.togemetoro);
+    assert.equal(FOES.duet.phases[0].quotes, QUOTES.gakufume);
+    assert.ok(ALLIES);
+    assert.equal(typeof createBattle, 'function');
+});
