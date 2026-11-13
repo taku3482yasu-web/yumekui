@@ -68,6 +68,17 @@ async function stuck(message) {
     return new Error(message);
 }
 
+// メニューの カーソルを index へ (2 列の メニューは 下で 2 つ、右で 1 つ 進む。11/13 の ユーザー指定)
+async function cursorTo(index) {
+    const grid = await read('document.getElementById("menu").classList.contains("grid")');
+    if (!grid) {
+        for (let k = 0; k < index; k++) await key('ArrowDown');
+        return;
+    }
+    for (let k = 0; k < Math.floor(index / 2); k++) await key('ArrowDown');
+    if (index % 2) await key('ArrowRight');
+}
+
 // 会話を 終わるまで送る
 async function skip(limit = 80) {
     for (let i = 0; i < limit; i++) {
@@ -94,11 +105,11 @@ async function walkTo(x, y, avoid = true, near = false) {
             return state();
         }
         const route = await read(`(${routeCode})(${x},${y})`);
-        if (!route) throw new Error(`道がない ${x},${y} / いま ${now.s.x},${now.s.y}`);
+        if (!route) throw await stuck(`道がない ${x},${y} / いま ${now.s.x},${now.s.y}`);
         await key(route, 170);
         await sleep(30);
     }
-    throw new Error('たどりつかない');
+    throw await stuck(`たどりつかない ${x},${y}`);
 }
 
 // 地図を読んで 次の一歩を決める (ブラウザの中で動かす)
@@ -124,7 +135,7 @@ async function battle(useShake, eat = false) {
     }
     let turn = 0;
     const choose = async (index) => {
-        for (let k = 0; k < index; k++) await key('ArrowDown');
+        await cursorTo(index);
         await key('j');
     };
     for (let i = 0; i < 400; i++) {
@@ -133,7 +144,7 @@ async function battle(useShake, eat = false) {
         const labels = await read('[...document.querySelectorAll("#menu button")].map(b=>b.textContent)');
         const head = await read('document.querySelector("#menu .head")?.textContent ?? ""');
         if (now.menu && labels.length) {
-            const answerAt = labels.findIndex((label) => ['ほんとは、自分で決めたかった', '一緒に吹きたかった', '相談してほしかった'].includes(label));
+            const answerAt = labels.findIndex((label) => ['ほんとは、自分で決めたかった', '一緒に吹きたかった', '相談してほしかった', '引っ越しが決まってた。……ハルに、言えなかった'].includes(label));
             if (answerAt >= 0) {
                 await shot('05-truth-choices');
                 await choose(answerAt);
@@ -143,6 +154,8 @@ async function battle(useShake, eat = false) {
                 turn++;
                 if (turn === 1) await shot('04a-commands');
                 await choose(big ? labels.indexOf('まもる') : labels.indexOf('たたかう'));
+            } else if (head.endsWith('の わざ') && !eat && labels.some((label) => label.startsWith('キズナ攻撃（あと'))) {
+                await choose(labels.findIndex((label) => label.startsWith('キズナ攻撃（あと')));   // 終幕: キズナ攻撃
             } else if (head.endsWith('の わざ')) {
                 if (turn === 1) await shot('04d-moves');
                 const devourAt = labels.indexOf('バクに喰らわせる');
@@ -191,12 +204,33 @@ await key('j');
 await sleep(700);
 await read(`(async()=>{const m=await import('/src/data/maps.js');const f=await import('/src/core/field.js');window.__tiles=(id)=>m.MAPS[id].tiles;window.__objects=()=>f.objectsOf(yumekui.state);window.__blocked=(x,y)=>f.isBlocked(yumekui.state,x,y);})()`);
 
-// はじまりの 夢: 砂浜 → ゆがんで 暗くなる → 大きな目「おきろ」
-await sleep(1800);
+// はじまりの 夢 (台本 1-0): 操作の 説明 → 右へ 歩く → ？？？ (ヒカリ) と 話す → 右へ 進むと ゆがんで 暗くなる → 大きな目「おきろ」
+// 砂浜は 地図では ないので、会話が 消えるまで 送る
+const skipTalk = async () => {
+    for (let i = 0; i < 40; i++) {
+        const now = await state();
+        if (now.menu) return;
+        if (now.msg) await key('j');
+        else { await sleep(300); if (!(await state()).msg) return; }
+    }
+    throw await stuck('砂浜の 会話が 終わらない');
+};
+await sleep(1200);
+await skipTalk();
 await shot('01b2-intro-beach');
-await sleep(3800);
+await key('ArrowRight', 6500);   // ヒカリの 前まで (約 410 ドット)
+await key('j');
+await sleep(400);
+await skipTalk();
+await key('j');   // はい
+await sleep(400);
+await skipTalk();
+await sleep(600);
+await skipTalk();
+for (let i = 0; i < 4; i++) await key('ArrowRight', 900);   // 話し終えてから 右へ (ゆがみだしたら 動かない)
+await sleep(800);
 await shot('01b3-intro-warp');
-await sleep(3300);
+await sleep(4200);
 await shot('01b4-intro-eye');
 for (let i = 0; i < 100 && !(await state()).msg; i++) await sleep(80);
 
@@ -317,7 +351,7 @@ async function pick(text) {
         if (now.menu && labels.length) {
             const index = labels.findIndex((label) => label.includes(text));
             if (index < 0) throw new Error(text + ' がない: ' + labels);
-            for (let k = 0; k < index; k++) await key('ArrowDown');
+            await cursorTo(index);
             await key('j');
             await sleep(200);
             return;
@@ -618,6 +652,14 @@ const loop = await read('yumekui.keep.loop');
 const allies = await read('yumekui.keep.allies');
 console.log('周', loop, '日', looped.s.day, '仲間', JSON.stringify(allies), '状態', JSON.stringify(looped.s.status));
 
+// FULL=1: ここから 最後 (エンディング) まで 遊ぶ (tools/full-play.mjs)
+if (process.env.FULL) {
+    const { playToEnd } = await import('./full-play.mjs');
+    await playToEnd({ state, read, key, sleep, shot, stuck, walkTo, battle, pick, paintNight, waitField, night, morning, talkTo, goHome, routeCode });
+    console.log('エラー', errors.length ? errors : 'なし');
+    chrome.kill();
+    process.exit(errors.length ? 1 : 0);
+}
 // 2 周目: 2/7 まで進めて カナのユメクイを喰らう
 for (let day = 1; day < 7; day++) {
     await goHome();

@@ -58,7 +58,7 @@ function road(box, tx, ty, at) {
     const across = at(0, -1) !== ',' && at(0, -1) !== null;
     if (left + right >= 5 && left - right === 1 && !across && ty % 2 === 0) box('#e8e4dc', 0, 3, 1, 9);
     if (left + right >= 5 && across) for (let x = 1; x < TILE; x += 4) box('#e8e4dc', x, 3, 2, 11);
-    if (hash(tx, ty, 40) < 0.04 && !across) { box('#5e5866', 4, 4, 8, 8); box('#76707e', 5, 5, 6, 6); box('#5e5866', 5, 8, 6, 1); }   // マンホール
+    if (hash(tx, ty, 40) < 0.012 && !across) { box('#5e5866', 4, 4, 8, 8); box('#76707e', 5, 5, 6, 6); box('#5e5866', 5, 8, 6, 1); }   // マンホール
     if (hash(tx, ty, 41) < 0.08) box('#746c78', Math.floor(hash(tx, ty, 42) * 10) + 2, 6, 5, 1);   // ひび
 }
 
