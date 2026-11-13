@@ -80,7 +80,8 @@ export const VOICES = {
     'リク': 'riku',
     'ミオ': 'mio',
     'カナ': 'kana',
-    'ミチル': 'michiru'
+    'ミチル': 'michiru',
+    '星の案内人': 'michiru'   // 星の案内人は ミチル (台本 4-1)
 };
 export const SILENT_SPEAKERS = ['ナイトメア', '？？？'];
 

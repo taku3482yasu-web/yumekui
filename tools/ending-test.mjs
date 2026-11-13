@@ -78,7 +78,10 @@ for (const [route, setup] of Object.entries(ROUTES)) {
             } else await choose(0);
         } else if (msg) {
             const text = await read('document.getElementById("text").textContent');
-            if (seen.at(-1) !== text && /ネムリボシ……|まだ 終わってねえ|リク・ナイトメアだ|お姉ちゃん|呼べ|だれも、呼べない|夢喰い！|まだだ|駅|部屋/.test(text)) seen.push(text);
+            if (seen.at(-1) !== text && /ネムリボシ……|まだ 終わってねえ|リク・ナイトメアだ|お姉ちゃん|呼べ|だれも、呼べない|夢喰い！|まだだ|駅|部屋|全回復だと|見られて しまいましたね|繰り返したいんじゃ/.test(text)) seen.push(text);
+            // 台本 4 章の 場面 (星の夢・ミチルの 本音・ヒカリ) は 1 枚ずつ 撮る
+            const mark = [['全回復だと', 'star-dream'], ['見られて しまいましたね', 'star-sky'], ['繰り返したいんじゃ', 'michiru-truth'], ['ずっと言いたかった', 'hikari-bye'], ['じゃましないで', 'hikari-angry']].find(([word]) => text.includes(word));
+            if (mark && seen.at(-1) === text) await shot(`21-${mark[1]}-${route}`);
             await key('j');
         } else await sleep(60);
         if (mode === 'battle' && !shotBattle && !menu) await sleep(30);

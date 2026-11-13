@@ -128,6 +128,7 @@ canvas {
 #portrait-center.flip { transform: translateX(-50%) scaleX(-1); }
 .portrait.listen { filter: brightness(0.55); }
 .portrait.ghost { opacity: 0.8; bottom: 16%; -webkit-mask-image: linear-gradient(to bottom, #000 72%, transparent); mask-image: linear-gradient(to bottom, #000 72%, transparent); }   /* 顔が 本音の 選択肢の 上に 見えるように 持ち上げる */
+.portrait.shade { opacity: 0.5; filter: brightness(0.5); }   /* 一瞬だけ 聞こえる 声 (台本 4-6) */
 /* キズナ攻撃の カットイン (青い 2 色の 横顔)。右から 左へ すべる */
 #cutin {
     position: absolute;

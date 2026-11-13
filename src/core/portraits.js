@@ -45,8 +45,14 @@ export const RESIDENT_FILES = {
     'ハルの人形': 'haru_doll'
 };
 
+// 表情の 変わらない 1 枚絵の 人 (台本 4-1: 星の案内人は ミチルの 全身 michiru_guide)
+export const FIXED_PORTRAITS = {
+    '星の案内人': 'img/chara/michiru_guide.png'
+};
+
 // 絵の 場所 (無い 名前は null)
 export function portraitPath(name, expression = 'neutral') {
+    if (FIXED_PORTRAITS[name]) return FIXED_PORTRAITS[name];
     const file = CHARA_FILES[name];
     if (file) {
         const faces = FACES[file];

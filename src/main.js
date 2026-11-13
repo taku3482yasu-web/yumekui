@@ -96,12 +96,13 @@ function followerView() {
 const walk = { dx: 0, dy: 0, left: 0 };
 
 // 会話: 立ち位置は 場面の 最初に 決める (core/portraits.js)。セリフの 3 つ目は 表情 (smile など、なければ neutral)
-async function talk(lines) {
-    const plan = scenePlan(lines);
+//   options.plan: 立ち位置を 決めて 渡す (ふつうは 場面の セリフから 決める)。options.shade: 立ち絵を 暗く 透かす (一瞬の 声 など)
+async function talk(lines, options = {}) {
+    const plan = options.plan ?? scenePlan(lines);
     let stage = startStage();
     for (const [name, line, expression] of lines) {
         stage = nextStage(stage, name, expression, plan);
-        ui.portraits(stage, portraitPath);
+        ui.portraits(options.shade ? { ...stage, shade: true } : stage, portraitPath);
         await ui.say(name, line);
     }
     ui.portraits(null);
@@ -226,6 +227,21 @@ const SCRIPTS = {
         await partTimeJob();
     },
     portSign: () => talk(LINES.portSign),
+    // 丘の上の 天文台 (2 周目から): はじめては ミチルと 出会う (台本 4-2)。夜は 行かない
+    observatory: async () => {
+        if (state.phase === 'night') {
+            await talk(LINES.observatorySign);
+            return;
+        }
+        await ui.fade(true);
+        mode = 'black';
+        await ui.fade(false);
+        await talk(keep.michiruMet ? LINES.michiruAgain : LINES.michiruMeet);
+        keep.michiruMet = true;
+        await ui.fade(true);
+        mode = 'scene';
+        await ui.fade(false);
+    },
     rikuRoad: () => talk(LINES.rikuRoad(state)),
     rikuDoor: async () => {
         // 3 周目: ミオと カナを 救ったことが あれば、リクの父から『引っ越し』を 聞ける (台本 4-2)
@@ -537,6 +553,7 @@ async function fight(object) {
     const foe = foeList.find((f) => f.truth) ?? foeList[0];
     const scaled = object.scale ? foeList.map((f) => ({ ...f, maxHp: Math.round(f.maxHp * object.scale), hp: Math.round(f.maxHp * object.scale), atk: Math.round(f.atk * object.scale) })) : foeList;
     const battle = createBattle(partyUnits(), scaled, { noEscape: ['firstBattle', 'nightmare', 'final'].includes(object.script), musou: keep.musou, kizuna: object.kizuna ?? null, dreamEat: Boolean(object.dreamEat) });
+    battle.starDream = Boolean(object.starDream);   // グッドの ネムリボシ: 体力 半分で 星の夢 (台本 4-3)
     sound.se('SE20');
     await playEncounter(encounterTheme(MAPS[state.map], state.x), foeList.some((f) => f.truth));
     await ui.fade(true);
@@ -681,9 +698,33 @@ async function play(battle, events) {
             if (!battle.over) await ui.say('', `${event.name}に 本音が とどいた！`, { wait: NOTE_MS * 2 });
         }
         await reveal(battle);
+        await starDream(battle);
         ui.status(battle);
     }
     ui.hideMsg();
+}
+
+// 星の夢 (台本 4-3): グッドの ネムリボシは 体力が 半分を 切ると 全回復して、戦いが いったん 止まる。
+//   夢が ほどけた 夜空で ミチルの 体の ことが 分かり、そのあと 戦いに もどる。1 回の 終幕で 1 度だけ (負けて やり直しても 出ない)
+const STAR_DREAM_RATE = 0.5;
+async function starDream(battle) {
+    const foe = battle.foes[0];
+    if (!battle.starDream || state.flags.starDream || battle.over || foe.hp <= 0 || foe.hp > foe.maxHp * STAR_DREAM_RATE) return;
+    state.flags.starDream = true;
+    foe.hp = foe.maxHp;
+    sound.se('SE24');
+    pop(`+${foe.maxHp}`, 0, '#7fe0a8');
+    ui.status(battle);
+    await talk(LINES.starDream);
+    await ui.fade(true);
+    mode = 'black';
+    ui.hideStatus();
+    await ui.fade(false);
+    await talk(LINES.starDreamSky);
+    await ui.fade(true);
+    mode = 'battle';
+    ui.status(battle);
+    await ui.fade(false);
 }
 
 // 弱った ナイトメアは 顔の 渦が しずまり、女の子の 横顔が 見える (revealSprite / revealRate)
@@ -694,6 +735,7 @@ async function reveal(battle) {
         battleView.foes[i] = foe.revealSprite;
         battleView.foeHit[i] = performance.now() + 600;
         if (foe.revealText) await ui.say('', foe.revealText, { wait: NOTE_MS * 2 });
+        if (foe.revealLines) await talk(LINES[foe.revealLines], { plan: { center: null, left: null }, shade: true });   // ヒカリの 声 (台本 4-6)
     }
 }
 
@@ -910,10 +952,15 @@ async function finale() {
     await talk(LINES.finaleCommon);
     if (route === 'good') {
         await talk(LINES.goodBefore);
-        await finalBattle('nemuriboshi', { kizuna: kizunaFriends(state) });   // キズナ攻撃で ラスボスに 挑む
+        state.flags.starDream = false;
+        await finalBattle('nemuriboshi', { kizuna: kizunaFriends(state), starDream: true });   // キズナ攻撃で ラスボスに 挑む
         mode = 'black';
         musicOverride = ENDING_BGM.good;
-        await talk(LINES.goodAfter);
+        // ミチルの 本音 → 夜空に ひび → ヒカリとの お別れ → ループが 止まる (台本 4-4・4-5)
+        await talk(LINES.michiruTruth);
+        await talk(LINES.goodAfter.slice(0, 1));
+        await talk(LINES.hikariBye, { plan: { center: null, left: 'ミチル' } });   // 左 ミチル / 右 ヒカリ
+        await talk(LINES.goodAfter.slice(1));
     } else if (route === 'yumekui') {
         await talk(LINES.yumekuiBefore);
         await finalBattle('rikuNightmare');   // ナイトメアの 代わりに リク・ナイトメア
@@ -1211,6 +1258,7 @@ async function morningPhase() {
 async function dayPhase() {
     startDay(state);
     if (keep.loop >= 3 && savedPair()) state.flags.rikuOpen = true;   // 3 周目、ミオと カナを 救ったことが あれば リクの家へ
+    state.flags.observatory = keep.loop >= 2;   // 2 周目から 丘の上の 天文台へ 行ける (台本 4-2)
     const done = explore();
     mode = 'scene';   // 日の始めの 出来事を 見せるまで 歩けない
     await ui.fade(false);
@@ -1385,6 +1433,11 @@ async function enterDream(id) {
             if (early) await talk(LINES.earlyIn);
             else if (!state.flags.active && id !== 'riku') await talk(LINES.noBoss);
             if (wallOpens) await talk(LINES.rikuWallOpen);
+            // 2 周目の 最初の 夢: 毛布の そばに 星の案内人 (台本 4-1)
+            if (keep.loop >= 2 && !keep.starGuide) {
+                keep.starGuide = true;
+                await talk(LINES.starGuide);
+            }
         } else await talk(LINES.layerEnter(layerLabel(id, layer)));
         if (state.sight.nightmare) await talk(LINES.nightmareIn);
     });

@@ -117,6 +117,7 @@ export const TOWN_MAPS = {
             person('tome', 'tome', 2, 7),
             person('ken', 'ken', 3, 12),
             { id: 'portSign', kind: 'talk', x: 12, y: 17, sprite: 'sign', script: 'portSign' },
+            { id: 'observatory', kind: 'talk', x: 19, y: 2, sprite: 'sign', script: 'observatory', needs: 'observatory' },   // 丘の上の 天文台への 石段 (2 周目から。台本 4-2)
             { id: 'homeDoor', kind: 'door', x: 4, y: 16, script: 'goHome' },
             { id: 'rikuRoad1', kind: 'block', x: 23, y: 8, script: 'rikuRoad', hideIf: 'rikuOpen' },
             { id: 'rikuRoad2', kind: 'block', x: 23, y: 9, script: 'rikuRoad', hideIf: 'rikuOpen' },

@@ -116,6 +116,7 @@ export function createUi(input, sounds = {}) {
             el.classList.toggle('flip', flipFor(side, path));
             el.classList.toggle('listen', Boolean(stage?.speaking) && stage.speaking !== side);
             el.classList.toggle('ghost', Boolean(stage?.ghost));   // 戦闘の 本音の 選択肢: 少し 透かす
+            el.classList.toggle('shade', Boolean(stage?.shade));   // 一瞬の 声 (ナイトメアの 中の ヒカリ): 暗く 透かす
             if (!path || missing.has(path)) {
                 el.hidden = true;
                 continue;
